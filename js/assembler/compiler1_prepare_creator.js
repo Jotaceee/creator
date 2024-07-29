@@ -297,7 +297,7 @@ function crasm_prepare_context_pseudoinstructions ( context, CU_data )
 	        elto.signature_definition = elto_i.signature_definition ;  // TODO: ??
 
                 if (typeof elto.fields !== "undefined") {
-		    elto.fields = elto.fields ;  // TODO: check fields are matching fields (without co/cop) 
+		    elto.fields = elto.fields ;  // TODO: check fields are matching fields (without co/cop)
                                                  //       and not encoding fields (with co/cop)
 		}
 
@@ -367,6 +367,12 @@ function crasm_prepare_context ( CU_data, options )
 
            // Fill the assembler configuration
            context.options = wsasm_expand_options(options) ;
+// <WepSIM>
+//         options.relative_offset_unit  = "byte"      ; // "byte" | "word"
+// </WepSIM>
+// </CREATOR>
+           options.relative_offset_unit  = "word"      ; // "byte" | "word"
+// </CREATOR>
 
 	   // Fill register names
            for (i=0; i<CU_data.components.length; i++)
