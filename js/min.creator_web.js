@@ -44,14 +44,16 @@ const moduleKeys = [
 ];
 
 moduleKeys.forEach(key => {
-delete Module[key];
+  delete Module[key];
 });
 if ( typeof preprocess_run === "function")
-preprocess_run = undefined;
+  preprocess_run = undefined;
 if (typeof preprocess_ld === "function")
-preprocess_ld = undefined;
+  preprocess_ld = undefined;
 if (typeof preprocess_sail === "function")
-preprocess_sail = undefined;
+  preprocess_sail = undefined;
+if (typeof preprocess_dissamble === "function")
+  preprocess_dissamble = undefined;
 }
 
 // Funcion para limpiar el entorno en caso de que haya ocurrido algun error durante la ejecución 
@@ -61,13 +63,15 @@ function resetenvironment (){
   scriptas = document.querySelector('script[src="toolchain_compiler/as-new.js"]');
   scriptld = document.querySelector('script[src="toolchain_compiler/ld-new.js"]');
   scriptsail = document.querySelector('script[src="toolchain_compiler/riscv_sim_RV32.js"]');
-
+  scriptdump = document.querySelector('script[src="toolchain_compiler/objdump.js"]')
   if(scriptas)
   scriptas.parentNode.removeChild(scriptas);
   if(scriptld)
   scriptld.parentNode.removeChild(scriptld);
   if(scriptsail)
   scriptsail.parentNode.removeChild(scriptsail);
+  if(scriptdump)
+    scriptdump.parentNode.removeChild(scriptdump);
 
   scriptas = document.createElement('script');
   scriptas.src = 'as-new.js';
@@ -82,6 +86,7 @@ async function loadSailFunction(){
   await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100 ms antes de volver a verificar
   }
   preprocess_sail(elffile, enablefpd, enablevec);
+  // resetenvironment();
 
 }
 
@@ -92,6 +97,18 @@ async function dissamble_binary(maxAttemps = 50) {
     await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100 ms antes de volver a verificar
   }
   var dissambled = preprocess_dissamble(elffile); // Llamamos a runner_ld cuando preprocess_ld esté definida
+  clean_environment();
+  scriptdump.parentNode.removeChild(scriptdump);
+  // }
+
+  // Se carga el script ld.js para ejecutar el enlazador.
+  scriptsail = document.createElement('script');
+  scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
+  scriptsail.async = true;
+  scriptsail.id = 'riscv_sim_RV32';
+  scriptsail.type = 'text/javascript';
+  document.head.appendChild(scriptsail);
+
 }
 
 
@@ -119,7 +136,7 @@ async function waitForFunction(maxAttemps = 50) {
   scriptdump.id = 'objdump';
   scriptdump.type = 'text/javascript';
   document.head.appendChild(scriptdump);
-  dissamble_binary();
+  // dissamble_binary();
 
 }
 
@@ -3242,8 +3259,10 @@ function assembly_compiler()
     scriptld.type = 'text/javascript';
     document.head.appendChild(scriptld);
 
-    waitForFunction();
-
+    waitForFunction().then(() => {
+      dissamble_binary();
+    });
+    console.log("He terminado!");
         // // TODO: fill ret with the "thing" returned by SAIL, navy SAIL
 
         // /* Enter the compilated instructions in the text segment */
@@ -3274,7 +3293,7 @@ function assembly_compiler()
 
         // // save current value as default values for reset()...
         // creator_memory_prereset() ;
-
+        // Como se llama a  una funcion asíncrona  tenemos que esperar a que termine su ejecución para hacer el return;
         return ret;
 }
 
@@ -7574,30 +7593,31 @@ var uielto_toolbar_btngroup = {
       var ret;
       creator_ga("execute", "execute.run", "execute.run");
       execution_mode = 1;
-      if (run_program == 0) {
-        run_program = 1;
-      }
-      if (instructions.length === 0) {
-        show_notification("No instructions in memory", "danger");
-        run_program = 0;
-        return;
-      }
-      if (execution_index < -1) {
-        show_notification("The program has finished", "warning");
-        run_program = 0;
-        return;
-      }
-      if (execution_index == -1) {
-        show_notification("The program has finished with errors", "danger");
-        run_program = 0;
-        return;
-      }
-      this.reset_disable = true;
-      this.instruction_disable = true;
-      this.run_disable = true;
-      this.stop_disable = false;
-      app._data.main_memory_busy = true;
-      uielto_toolbar_btngroup.methods.execute_program_packed(ret, this);
+      loadSailFunction(enablefpd, enablevec);
+      // if (run_program == 0) {
+      //   run_program = 1;
+      // }
+      // if (instructions.length === 0) {
+      //   show_notification("No instructions in memory", "danger");
+      //   run_program = 0;
+      //   return;
+      // }
+      // if (execution_index < -1) {
+      //   show_notification("The program has finished", "warning");
+      //   run_program = 0;
+      //   return;
+      // }
+      // if (execution_index == -1) {
+      //   show_notification("The program has finished with errors", "danger");
+      //   run_program = 0;
+      //   return;
+      // }
+      // this.reset_disable = true;
+      // this.instruction_disable = true;
+      // this.run_disable = true;
+      // this.stop_disable = false;
+      // app._data.main_memory_busy = true;
+      // uielto_toolbar_btngroup.methods.execute_program_packed(ret, this);
     },
     execute_program_packed(ret, local_this) {
       for (var i = 0; i < instructions_packed && execution_index >= 0; i++) {
