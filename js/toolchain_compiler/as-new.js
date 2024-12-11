@@ -5699,7 +5699,7 @@ function run(args) {
     for (let i = 0; i < asmfile.length; i++){
       FS.writeFile('./' + asmfile[i], asmcontent[i]);
     }
-    console.log(FS.readdir('./'));
+    // console.log(FS.readdir('./'));
     preMain();
 
     if (Module['onRuntimeInitialized']) Module['onRuntimeInitialized']();
@@ -5708,7 +5708,7 @@ function run(args) {
 
 
     ofile = FS.readFile('./input.o');
-    console.log(ofile);
+    // console.log(ofile);
 
     postRun();
   }
@@ -5787,7 +5787,7 @@ function preprocess_run(file_p, content_p, enablefpd, enablevec) {
     asmcontent.push(content_p[i]);
   }
 
-  console.log("argumentos", asarguments);
+  // console.log("argumentos", asarguments);
   run(asarguments);
   // para la version de 64bits run(["-march=rv64g", "-mabi=lp64d", "-o", "my_code_v2.o", "integer_code.s"]);
   

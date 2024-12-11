@@ -5387,7 +5387,7 @@ function run(args) {
   if (ABORT) return;
   initRuntime();
   FS.writeFile('./input.elf', inputdis);
-  console.log("Directorio desensamblado input.elf: ", FS.readFile('./input.elf'));
+  // console.log("Directorio desensamblado input.elf: ", FS.readFile('./input.elf'));
   preMain();
   if (Module["onRuntimeInitialized"]) Module["onRuntimeInitialized"]();
   if (shouldRunNow) callMain(args);
@@ -5446,7 +5446,7 @@ if (Module["preInit"]) {
 var shouldRunNow = false;
 function preprocess_dissamble(elffile){
     inputdis = elffile;
-    console.log("Ejecuto");
+    // console.log("Ejecuto");
     dissamble_code = run(["-D", "input.elf"]);
     
     return dissamble_code;

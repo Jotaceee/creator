@@ -93,7 +93,7 @@ async function loadSailFunction(){
 async function dissamble_binary(maxAttemps = 50) {
   let attempsdis = 0;
   while ((typeof preprocess_dissamble === 'undefined' || typeof preprocess_ld === "function" ) && attempsdis < maxAttemps ) {
-    console.log("Espero");
+    // console.log("Espero");
     await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100 ms antes de volver a verificar
   }
   var dissambled = preprocess_dissamble(elffile); // Llamamos a runner_ld cuando preprocess_ld esté definida
@@ -121,8 +121,8 @@ async function waitForFunction(maxAttemps = 50) {
   }
   elffile = preprocess_ld(objectcontent, linkercontent); // Llamamos a runner_ld cuando preprocess_ld esté definida
 
-  const outputfile = FS.readFile('./input.o');
-  console.log("Binario ",elffile);
+  // const outputfile = FS.readFile('./input.o');
+  // console.log("Binario ",elffile);
   // scriptld = document.getElementById('ld-new');
     // if(scriptld){
   clean_environment();
@@ -3238,31 +3238,31 @@ function assembly_compiler()
     enablefpd = true;
     if(filecontents[i].match(regexvec))
     enablevec = true;
-    }
-    console.log("post comprobacion del flag", enablefpd, enablevec);
-    objectcontent = preprocess_run(filenames, filecontents, enablefpd, enablevec);
-    console.log("salida ensamblador", objectcontent);
-    
-    // console.log(window.location.href);
-    // scriptas = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/as-new.js"]');
-    scriptas = document.getElementById('as-new');
-    if(scriptas){
-    clean_environment();
-    scriptas.parentNode.removeChild(scriptas);
-    }
+  }
+  console.log("post comprobacion del flag", enablefpd, enablevec);
+  objectcontent = preprocess_run(filenames, filecontents, enablefpd, enablevec);
+  // console.log("salida ensamblador", objectcontent);
+  
+  // console.log(window.location.href);
+  // scriptas = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/as-new.js"]');
+  scriptas = document.getElementById('as-new');
+  if(scriptas){
+  clean_environment();
+  scriptas.parentNode.removeChild(scriptas);
+  }
 
-    // Se carga el script ld.js para ejecutar el enlazador.
-    scriptld = document.createElement('script');
-    scriptld.src = window.location.href +'js/toolchain_compiler/ld-new.js';
-    scriptld.async = true;
-    scriptld.id = 'ld-new';
-    scriptld.type = 'text/javascript';
-    document.head.appendChild(scriptld);
+  // Se carga el script ld.js para ejecutar el enlazador.
+  scriptld = document.createElement('script');
+  scriptld.src = window.location.href +'js/toolchain_compiler/ld-new.js';
+  scriptld.async = true;
+  scriptld.id = 'ld-new';
+  scriptld.type = 'text/javascript';
+  document.head.appendChild(scriptld);
 
-    waitForFunction().then(() => {
-      dissamble_binary();
-    });
-    console.log("He terminado!");
+  waitForFunction().then(() => {
+    dissamble_binary();
+  });
+  console.log("He terminado!");
         // // TODO: fill ret with the "thing" returned by SAIL, navy SAIL
 
         // /* Enter the compilated instructions in the text segment */
