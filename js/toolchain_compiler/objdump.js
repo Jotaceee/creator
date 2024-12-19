@@ -190,6 +190,95 @@ if (ENVIRONMENT_IS_NODE) {
  throw new Error("environment detection error");
 }
 
+const dumptextinstructions = [];
+const dumpdatainstructions = [];
+const dumplabels           = [];
+var sectionasm = 0;
+Module['print'] = function (message) {
+  // console.log(typeof message);
+
+  // console.log("En que seccion estoy: ", sectionasm);
+  var exaaa = [];
+  const auxiliar = message.trim();
+  const insnmatch = auxiliar.match(/^(\w+):\s+(\w+)\s+([^\#]*)(?:#(.*))?$/);
+  const labelmatch = auxiliar.match(/^([0-9a-f]{8})\s+<(.+?)>:$/);
+  if (insnmatch && sectionasm != 0) {
+    const address = insnmatch[1].trim();                       // Parte 1: dirección
+    const hexInstruction = insnmatch[2].trim();                // Parte 2: instrucción hexadecimal
+    const asmInstruction = (insnmatch[3].trim()).replace(/\\t/g, ' ');                // Parte 3: instrucción ensamblador (sin el comentario)
+    // const comment = match[4] ? insnmatchmatch[4].trim() : null;  // Parte 4: comentario (opcional)
+    let axx = dumpdatainstructions.findIndex(sublist => sublist.includes(address)); 
+    if (axx !== -1 && sectionasm === 2) {
+        dumpdatainstructions[axx][1] = hexInstruction;
+        dumpdatainstructions[axx][2] = asmInstruction.replace(/\\t/g, ' ');
+    }
+    else if (sectionasm === 2) {
+      exaaa.push(address);
+      exaaa.push(hexInstruction);
+      exaaa.push(asmInstruction.replace(/\\t/g, ' '));
+      exaaa.push(0);
+      exaaa.push("");
+      dumpdatainstructions.push(exaaa);
+    }
+    axx = dumptextinstructions.findIndex(sublist => sublist.includes(address));
+    if (axx != -1 && sectionasm === 1) {
+      dumptextinstructions[axx][1] = hexInstruction;
+      dumptextinstructions[axx][2] = asmInstruction.replace(/\\t/g, ' ');
+    }
+    else if (sectionasm === 1){
+      exaaa.push(address);
+      exaaa.push(hexInstruction);
+      exaaa.push(asmInstruction.replace(/\\t/g, ' '));
+      exaaa.push(0);
+      exaaa.push("");
+      dumptextinstructions.push(exaaa);
+    }
+    // if(sectionasm === 2){
+    //   // seccion de datos
+    //   // exaaa.push(address);
+    //   // exaaa.push(hexInstruction); // Es el valor hexadecimal del dato
+    //   // exaaa.push(asmInstruction);
+    //   // dumpdatainstructions.push(exaaa);
+    // }
+    // else {
+    // exaaa.push(address);
+    // exaaa.push(hexInstruction);
+    // exaaa.push(asmInstruction);
+    // exaaa.push(comment);
+    // dumptextinstructions.push(exaaa);
+    // }
+  }
+  else if(labelmatch && sectionasm != 0){
+    console.log("Identificado:", labelmatch);
+    exaaa.push(labelmatch[1].trim());
+    exaaa.push("");
+    exaaa.push("");
+    exaaa.push(1);
+    exaaa.push(labelmatch[2].trim());
+    if (sectionasm === 1){
+      dumptextinstructions.push(exaaa);
+    }else if (sectionasm === 2){
+      dumpdatainstructions.push(exaaa);
+    }
+
+  }
+
+  else {
+    console.log(message);
+  }
+
+  // identificacion de que seccion de codigo entramos.
+  if (message.search(".text") != -1)
+    sectionasm = 1;
+  if (message.search(".data") != -1)
+    sectionasm = 2;
+  if (message.search(".riscv.attributes") != -1)
+    sectionasm = 0;
+
+// }
+// );
+}
+
 var out = Module["print"] || console.log.bind(console);
 
 var err = Module["printErr"] || console.warn.bind(console);
@@ -5446,10 +5535,10 @@ if (Module["preInit"]) {
 var shouldRunNow = false;
 function preprocess_dissamble(elffile){
     inputdis = elffile;
-    // console.log("Ejecuto");
-    dissamble_code = run(["-D", "input.elf"]);
-    
-    return dissamble_code;
+    console.log("Ejecuto");
+    run(["-D", "input.elf"]);
+    console.log("instrucciones .text desensambladas: ", dumptextinstructions);
+    console.log("instrucciones .data desensambladas: ", dumpdatainstructions);
 }
 
 

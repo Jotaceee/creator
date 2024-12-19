@@ -5806,11 +5806,13 @@ if (Module['preInit']) {
 var shouldRunNow = false;
 
 function preprocess_ld(objectfile, linkerfile){
+  console.log("Antes");
   outpufile = undefined;
   objfile = objectfile;
   linkfile = linkerfile;
 
   run(["-T", "linker.ld", "-o", "output.elf", "input.o"]);
+  console.log("Despues");
   return outpufile;
 
   // Para descargar el fichero generado

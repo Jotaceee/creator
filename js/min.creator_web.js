@@ -31,29 +31,31 @@ linkercontent = data;
 });
 
 function clean_environment() {
-const moduleKeys = [
-'ENVIRONMENT', 'HEAP16', 'HEAP32', 'HEAP8', 'HEAPF32', 'HEAPF64', 'HEAPU16', 
-'HEAPU32', 'HEAPU8', 'INITIAL_MEMORY', 'TOTAL_MEMORY', 'TOTAL_STACK', '_main', 
-'arguments', 'asm', 'calledRun', 'cdInitializerPrefixURL', 'extraStackTrace', 
-'filePackagePrefixURL', 'inspect', 'instantiateWasm', 'locateFile', 'logReadFiles', 
-'memoryInitializerPrefixURL', 'monitorRunDependencies', 'noExitRuntime', 'noInitialRun', 
-'onAbort', 'onExit', 'onRuntimeInitialized', 'postRun', 'preInit', 'preRun', 'print', 
-'printErr', 'pthreadMainPrefixURL', 'quit', 'read', 'readAsync', 'readBinary', 'run', 
-'setStatus', 'setWindowTitle', 'stderr', 'stdin', 'stdout', 'thisProgram', 'wasmBinary', 
-'wasmMemory'
-];
+  const moduleKeys = [
+    'ENVIRONMENT', 'HEAP16', 'HEAP32', 'HEAP8', 'HEAPF32', 'HEAPF64', 'HEAPU16', 
+    'HEAPU32', 'HEAPU8', 'INITIAL_MEMORY', 'TOTAL_MEMORY', 'TOTAL_STACK', '_main', 
+    'arguments', 'asm', 'calledRun', 'cdInitializerPrefixURL', 'extraStackTrace', 
+    'filePackagePrefixURL', 'inspect', 'instantiateWasm', 'locateFile', 'logReadFiles', 
+    'memoryInitializerPrefixURL', 'monitorRunDependencies', 'noExitRuntime', 'noInitialRun', 
+    'onAbort', 'onExit', 'onRuntimeInitialized', 'postRun', 'preInit', 'preRun', 'print', 
+    'printErr', 'pthreadMainPrefixURL', 'quit', 'read', 'readAsync', 'readBinary', 'run', 
+    'setStatus', 'setWindowTitle', 'stderr', 'stdin', 'stdout', 'thisProgram', 'wasmBinary', 
+    'wasmMemory'
+  ];
 
-moduleKeys.forEach(key => {
-  delete Module[key];
-});
-if ( typeof preprocess_run === "function")
-  preprocess_run = undefined;
-if (typeof preprocess_ld === "function")
-  preprocess_ld = undefined;
-if (typeof preprocess_sail === "function")
-  preprocess_sail = undefined;
-if (typeof preprocess_dissamble === "function")
-  preprocess_dissamble = undefined;
+  moduleKeys.forEach(key => {
+    delete Module[key];
+  });
+  if ( typeof preprocess_run === "function")
+    preprocess_run = undefined;
+  if (typeof preprocess_ld === "function")
+    preprocess_ld = undefined;
+  if (typeof preprocess_sail === "function")
+    preprocess_sail = undefined;
+  if (typeof preprocess_dissamble === "function")
+    preprocess_dissamble = undefined;
+  // Module = null;
+  delete window.Module;
 }
 
 // Funcion para limpiar el entorno en caso de que haya ocurrido algun error durante la ejecución 
@@ -81,33 +83,32 @@ function resetenvironment (){
 }
 
 // Funcion asíncrona para lanzar el motor de sail
-async function loadSailFunction(){
-  while (typeof preprocess_sail === 'undefined' ) {
-  await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100 ms antes de volver a verificar
-  }
-  preprocess_sail(elffile, enablefpd, enablevec);
-  // resetenvironment();
-
-}
-
-async function dissamble_binary(maxAttemps = 50) {
-  let attempsdis = 0;
-  while ((typeof preprocess_dissamble === 'undefined' || typeof preprocess_ld === "function" ) && attempsdis < maxAttemps ) {
-    // console.log("Espero");
-    await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100 ms antes de volver a verificar
-  }
-  var dissambled = preprocess_dissamble(elffile); // Llamamos a runner_ld cuando preprocess_ld esté definida
-  clean_environment();
-  scriptdump.parentNode.removeChild(scriptdump);
-  // }
-
-  // Se carga el script ld.js para ejecutar el enlazador.
+async function loadSailFunction(maxAttemps = 50){
+  let attempssail = 0;
   scriptsail = document.createElement('script');
   scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
   scriptsail.async = true;
   scriptsail.id = 'riscv_sim_RV32';
   scriptsail.type = 'text/javascript';
   document.head.appendChild(scriptsail);
+
+  while ((typeof preprocess_sail === 'undefined' || typeof preprocess_dissamble !== 'undefined' ) && attempssail <= maxAttemps) {
+    await new Promise(resolve => setTimeout(resolve, 200)); // Espera 100 ms antes de volver a verificar
+    attempssail++;
+  }
+  await preprocess_sail(elffile, enablefpd, enablevec);
+}
+
+async function dissamble_binary(maxAttemps = 50) {
+  let attempsdis = 0;
+  
+  while ((typeof preprocess_dissamble !== "function" || typeof preprocess_ld === "function" ) && attempsdis < maxAttemps ) {
+    await new Promise(resolve => setTimeout(resolve, 200)); // Espera 100 ms antes de volver a verificar
+    attempsdis++;
+  }
+  await preprocess_dissamble(elffile); // Llamamos al run de objdump cuando preprocess_dissamble esté definida
+  
+
 
 }
 
@@ -117,27 +118,22 @@ async function dissamble_binary(maxAttemps = 50) {
 async function waitForFunction(maxAttemps = 50) {
   let attemps = 0;
   while (typeof preprocess_ld === 'undefined' && attemps < maxAttemps) {
-    await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100 ms antes de volver a verificar
+    await new Promise(resolve => setTimeout(resolve, 200)); // Espera 100 ms antes de volver a verificar
+    attemps++;
   }
-  elffile = preprocess_ld(objectcontent, linkercontent); // Llamamos a runner_ld cuando preprocess_ld esté definida
+  console.log("Voy a ejecutar ld");
+  elffile = await preprocess_ld(objectcontent, linkercontent); // Llamamos a runner_ld cuando preprocess_ld esté definida
+  console.log("Terminé de ejecutar ld");
 
-  // const outputfile = FS.readFile('./input.o');
-  // console.log("Binario ",elffile);
-  // scriptld = document.getElementById('ld-new');
-    // if(scriptld){
-  clean_environment();
   scriptld.parentNode.removeChild(scriptld);
-  // }
-
-  // Se carga el script ld.js para ejecutar el enlazador.
+  clean_environment();
   scriptdump = document.createElement('script');
   scriptdump.src = window.location.href +'js/toolchain_compiler/objdump.js';
   scriptdump.async = true;
   scriptdump.id = 'objdump';
   scriptdump.type = 'text/javascript';
   document.head.appendChild(scriptdump);
-  // dissamble_binary();
-
+  console.log("Vuelvo");
 }
 
 
@@ -3260,41 +3256,86 @@ function assembly_compiler()
   document.head.appendChild(scriptld);
 
   waitForFunction().then(() => {
-    dissamble_binary();
+    
+    console.log("Ahora ejecuto el desensamblado!");
+    dissamble_binary().then(() => {
+      console.log("Terminado el desensamblado");
+      scriptdump.parentNode.removeChild(scriptdump);
+      clean_environment();
+      align = 1;
+      for (let i = 0; i < dumptextinstructions.length; i++){
+        console.log(creator_insert_instruction(parseInt(dumptextinstructions[i][0], 16), dumptextinstructions[i][2], dumptextinstructions[i][2], false, dumptextinstructions[i][1], "00", dumptextinstructions[i][4]));
+        instructions.push({
+          Break: null,
+          Address: "0x" + dumptextinstructions[i][0],
+          Label: dumptextinstructions[i][4],
+          loaded: dumptextinstructions[i][2],
+          user: "",
+          _rowVariant: "",
+          visible: true,
+          hide: false,
+        });
+      }
+      for (let i = 0; i < dumpdatainstructions.length; i++){
+        if (dumpdatainstructions[i][1] === ""){
+          const regex = new RegExp(`(${dumpdatainstructions[i][4]}):\\s*[\\n\\t ]*\\.(zero|space)\\s+(\\d+)`, 'g');
+          let match;
+          while ((match = regex.exec(code_assembly)) !== null) {
+              console.log(`Label = ${match[1]}, Directiva = ${match[2]}, Número extraído = ${match[3]}`);
+              console.log(creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2));
+            }
+
+        }else{
+          console.log("Address:  ", parseInt(dumpdatainstructions[i][0], 16));
+          console.log("valor:    ", dumpdatainstructions[i][1]);
+          console.log("tamaño:   ", 4);
+          console.log("Label:    ", dumpdatainstructions[i][4]);
+          console.log("DefValue: ", parseInt(dumpdatainstructions[i][1], 16) >> 0);
+          console.log("Tipo:     ", "word");
+          console.log(creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",));
+        }
+      }
+      
+      creator_memory_prereset();
+      creator_memory_reset();
+    });
   });
   console.log("He terminado!");
-        // // TODO: fill ret with the "thing" returned by SAIL, navy SAIL
-
-        // /* Enter the compilated instructions in the text segment */
-        // for (var i = 0; i < IMAGEN_MEMORIA_DE_sAIl.length; i++)
-        //   {
-        //     var hex = bin2hex(instructions_binary[i].loaded);
-        //     var auxAddr = parseInt(instructions_binary[i].Address, 16);
-        //     var label = instructions_binary[i].Label;
-        //     var binNum = 0;
   
-        //     if (update_binary.instructions_binary != null) {
-        //         binNum = update_binary.instructions_binary.length
-        //     }
+  return ret;
+  // // TODO: fill ret with the "thing" returned by SAIL, navy SAIL
+
+  // /* Enter the compilated instructions in the text segment */
+  // for (var i = 0; i < IMAGEN_MEMORIA_DE_sAIl.length; i++)
+  //   {
+  //     var hex = bin2hex(instructions_binary[i].loaded);
+  //     var auxAddr = parseInt(instructions_binary[i].Address, 16);
+  //     var label = instructions_binary[i].Label;
+  //     var binNum = 0;
+
+  //     if (update_binary.instructions_binary != null) {
+  //         binNum = update_binary.instructions_binary.length
+  //     }
+
+  //     auxAddr = creator_insert_instruction(auxAddr, instructions[i + binNum].loaded, instructions[i + binNum].loaded, false, hex, "00", label);
+  //   }
+
+  // if (typeof app != "undefined") {
+  //     app._data.instructions = instructions;
+  // }
+
+  // /* Initialize stack */
+  // writeMemory("00", parseInt(stack_address), "word") ;
+
+  // address = parseInt(architecture.memory_layout[0].value);
+  // data_address = parseInt(architecture.memory_layout[2].value);
+  // stack_address = parseInt(architecture.memory_layout[4].value);
+
+  // save current value as default values for reset()...
+  // creator_memory_prereset() ;
+  // Como se llama a  una funcion asíncrona  tenemos que esperar a que termine su ejecución para hacer el return;
   
-        //     auxAddr = creator_insert_instruction(auxAddr, instructions[i + binNum].loaded, instructions[i + binNum].loaded, false, hex, "00", label);
-        //   }
-
-        // if (typeof app != "undefined") {
-        //     app._data.instructions = instructions;
-        // }
-
-        // /* Initialize stack */
-        // writeMemory("00", parseInt(stack_address), "word") ;
-
-        // address = parseInt(architecture.memory_layout[0].value);
-        // data_address = parseInt(architecture.memory_layout[2].value);
-        // stack_address = parseInt(architecture.memory_layout[4].value);
-
-        // // save current value as default values for reset()...
-        // creator_memory_prereset() ;
-        // Como se llama a  una funcion asíncrona  tenemos que esperar a que termine su ejecución para hacer el return;
-        return ret;
+  
 }
 
 function data_segment_compiler() {
