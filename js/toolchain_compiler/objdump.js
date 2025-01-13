@@ -264,7 +264,7 @@ Module['print'] = function (message) {
   }
 
   else {
-    console.log(message);
+    console.log("objdump: 1", message);
   }
 
   // identificacion de que seccion de codigo entramos.

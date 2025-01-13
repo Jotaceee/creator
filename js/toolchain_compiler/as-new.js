@@ -5699,7 +5699,7 @@ function run(args) {
     for (let i = 0; i < asmfile.length; i++){
       FS.writeFile('./' + asmfile[i], asmcontent[i]);
     }
-    // console.log(FS.readdir('./'));
+    // console.log("Contenido de /dev/ :",FS.readdir('./dev'));
     preMain();
 
     if (Module['onRuntimeInitialized']) Module['onRuntimeInitialized']();

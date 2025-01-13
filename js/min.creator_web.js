@@ -1,4 +1,21 @@
 // Lista de instrucciones especificas de cada extension para indicarle al compilador que flags tiene que activar en el proceso de ensamblado y enlazado del binario
+let interrupted_execution = false;
+var execution_mode_run = -1;
+var variablechula = -1;
+// function waitForButtonValue(callback) {
+//   function checkstep() {
+//     console.log("Funcion comprueba si se pulsa.");
+//     if (interrupted_execution) {           // Si el botón fue pulsado
+//       console.log("Se ha pulsao");
+//       interrupted_execution = false;     // Reiniciamos la bandera
+//       callback(variablechula); // Llamamos al callback con el valor
+//     }else{
+//       setTimeout(checkstep, 100);
+//     }
+//   }
+//   checkstep();
+// }
+
 // FP Extension:
 const fpdextension = ["fadd.s", "fadd.d", "fsub.s", "fsub.d", "fmul.s", "fmul.d", "fdiv.s", "fdiv.d", "fsqrt.s", "fsqrt.d", "fmadd.s", 
   "fmadd.d", "fmsub.s", "fmsub.d", "fnmadd.s", "fnmadd.d", "fnmsub.s", "fnmsub.d", "fcvt.w.s", "fcvt.wu.s", "fcvt.w.d", 
@@ -83,20 +100,21 @@ function resetenvironment (){
 }
 
 // Funcion asíncrona para lanzar el motor de sail
-async function loadSailFunction(maxAttemps = 50){
-  let attempssail = 0;
-  scriptsail = document.createElement('script');
-  scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
-  scriptsail.async = true;
-  scriptsail.id = 'riscv_sim_RV32';
-  scriptsail.type = 'text/javascript';
-  document.head.appendChild(scriptsail);
+/*async*/ function loadSailFunction(maxAttemps = 50){
+  // let attempssail = 0;
+  // scriptsail = document.createElement('script');
+  // scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
+  // scriptsail.async = true;
+  // scriptsail.id = 'riscv_sim_RV32';
+  // scriptsail.type = 'text/javascript';
+  // document.head.appendChild(scriptsail);
 
-  while ((typeof preprocess_sail === 'undefined' || typeof preprocess_dissamble !== 'undefined' ) && attempssail <= maxAttemps) {
-    await new Promise(resolve => setTimeout(resolve, 200)); // Espera 100 ms antes de volver a verificar
-    attempssail++;
-  }
-  await preprocess_sail(elffile, enablefpd, enablevec);
+  // while ((typeof preprocess_sail === 'undefined' || typeof preprocess_dissamble !== 'undefined' ) && attempssail <= maxAttemps) {
+  //   await new Promise(resolve => setTimeout(resolve, 200)); // Espera 100 ms antes de volver a verificar
+  //   attempssail++;
+  // }
+  console.log("Preprocesamos sail");
+  preprocess_sail(elffile, enablefpd, enablevec);
 }
 
 async function dissamble_binary(maxAttemps = 50) {
@@ -3214,9 +3232,45 @@ function assembly_compiler() {
   return ret;
 }
 */
+var list_user_instructions = [];
+function identify_pseudo(instruction_assembly){
+  // Identificamos las pseudo instrucciones
+  if(instruction_assembly.search("li") != -1){
+    list_user_instructions.push(instruction_assembly);
+    let parts = instruction_assembly.split(',');
+    if(!(-2048 >= parseInt(parts[1]?.trim(), 10) <= 2047))  
+      list_user_instructions.push("");
+  }
+  else if (instruction_assembly.search("la") != -1)
+    {
+      list_user_instructions.push(instruction_assembly);
+      list_user_instructions.push("");
+    } 
+  else if (instruction_assembly.search("call") != -1)
+  {
+    list_user_instructions.push(instruction_assembly);
+    list_user_instructions.push("");
+  } 
+  else if (instruction_assembly.search("lw") != -1)
+    {
+      list_user_instructions.push(instruction_assembly);
+      let parts = instruction_assembly.split(',');
+      console.log("PArtes del lw: ",parts);
+      if( isNaN(parts[1]?.trim()) ){
+        list_user_instructions.push("");
+        console.log("vuelvo");
+        return;
+      }
+    } 
+  else 
+    list_user_instructions.push(instruction_assembly);
+
+}
 
 function assembly_compiler()
 {
+  var is_text = false;
+  var labeltext = "";
   var ret = {
           errorcode: "",
           token: "",
@@ -3228,6 +3282,18 @@ function assembly_compiler()
         /* Google Analytics */
         creator_ga('compile', 'compile.assembly');
   filecontents.push(code_assembly);
+  console.log("Codigo en bruto: ", code_assembly);
+  console.log("Tipo de code_assembly: ", typeof code_assembly);
+  var code_assembly_array = code_assembly.split('\n').map(line => line.split('#')[0].trim()).filter(line => line !== '');
+  for (var i = 0; i < code_assembly_array.length; i++){
+    if (code_assembly_array[i].search(".text") != -1)
+      is_text = true;
+    if (is_text && code_assembly_array[i].endsWith(':'))
+      labeltext = code_assembly_array[i].slice(0, -1);
+    else if (is_text && labeltext !== ""){
+      identify_pseudo(code_assembly_array[i]);
+    }
+  }
   filenames.push("input.s");
   for (let i = 0; i < filecontents.length; i++){
     if(filecontents[i].match(regexfpd))
@@ -3270,7 +3336,7 @@ function assembly_compiler()
           Address: "0x" + dumptextinstructions[i][0],
           Label: dumptextinstructions[i][4],
           loaded: dumptextinstructions[i][2],
-          user: "",
+          user : list_user_instructions[i],
           _rowVariant: "",
           visible: true,
           hide: false,
@@ -3298,6 +3364,19 @@ function assembly_compiler()
       
       creator_memory_prereset();
       creator_memory_reset();
+      scriptsail = document.createElement('script');
+      scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
+      scriptsail.async = true;
+      scriptsail.id = 'riscv_sim_RV32';
+      scriptsail.type = 'text/javascript';
+      document.head.appendChild(scriptsail);
+      Module.onRuntimeInitialized = function () {
+        // Vincular el botón al evento onclick
+        document.getElementById("resumeButton").onclick = function () {
+            // Llamar a la función exportada desde el módulo
+            Module._reanudar_ejecucion(0);
+        };
+    };
     });
   });
   console.log("He terminado!");
@@ -7617,24 +7696,67 @@ var uielto_toolbar_btngroup = {
       app.$bvToast.hide();
     },
     execute_instruction() {
+      var ret;
       creator_ga("execute", "execute.instruction", "execute.instruction");
-      execution_mode = 0;
-      var ret = execute_instruction();
-      if (typeof ret === "undefined") {
-        console.log("Something weird happened :-S");
+      if (execution_mode_run === -1){
+        execution_mode_run = 1;
+        // execution_mode = 0;
+        console.log("Vamos paso a paso");
+        loadSailFunction(enablefpd, enablevec);
+        // var ret = execute_instruction();
+        // if (typeof ret === "undefined") {
+        //   console.log("Something weird happened :-S");
+        // }
+        // if (ret.msg != null) {
+        //   show_notification(ret.msg, ret.type);
+        // }
+        // if (ret.draw != null) {
+        //   this.execution_UI_update(ret);
+        // }
       }
-      if (ret.msg != null) {
-        show_notification(ret.msg, ret.type);
+      else if(execution_mode_run === 1){
+        variablechula = 1;
+        // interrupted_execution = true;
+        // hacemos el resume de la pausa
+        console.log("Continuas paso a paso");
+        // Module["onRuntimeInitialized"]();
+        // Module.ccall('reanudar_ejecucion', null, ['number'], [variablechula]); // Llama con valor 1
+        Module._reanudar_ejecucion(parseInt(1,10));
+        // Module.ccall('reanudar_ejecucion',
+        //               null,
+        //               ['number'],
+        //               [variablechula]);
       }
-      if (ret.draw != null) {
-        this.execution_UI_update(ret);
+      else{
+        console.log("Funciona el boton esperando");
       }
+
+      
     },
     execute_program() {
       var ret;
       creator_ga("execute", "execute.run", "execute.run");
-      execution_mode = 1;
-      loadSailFunction(enablefpd, enablevec);
+      if(execution_mode_run === -1){
+        console.log("vamos de seguido");
+        execution_mode_run = 0;
+        loadSailFunction(enablefpd, enablevec);
+        // console.log("Ejecutado!");
+      }else if (execution_mode_run === 1){
+        execution_mode_run = 0;
+        variablechula = 0;
+        interrupted_execution = true;
+        console.log("Ahora ejecutas de seguido");
+        //Hacemos el resume de la pausa
+      //   Module.onRuntimeInitialized = function() {
+      //     console.log("Runtime inicializado. Ahora puedes llamar a reanudar_ejecucion.");
+      //     Module.ccall('reanudar_ejecucion', null, ['number'], [variablechula]); // Llama con valor 1
+      // };
+        Module._reanudar_ejecucion(parseInt(0,10));
+        // Module.ccall('reanudar_ejecucion',
+        //   null,
+        //   ['number'],
+        //   [variablechula]);
+      }
       // if (run_program == 0) {
       //   run_program = 1;
       // }

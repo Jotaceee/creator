@@ -3224,7 +3224,8 @@ function console_log ( msg )
 
 /*Compile assembly code*/
 function packCompileError(err_code, err_token, err_ti, err_bgcolor )
-{
+{ 
+  console.log("Fallo");
   var ret = {} ;
 
   ret.status     = "error" ;
@@ -3412,7 +3413,8 @@ function next_token()
 /*Compile assembly code*/
 function assembly_compiler()
 {
-  var ret = {
+  console.log("Llamo al compiler");
+  /*var ret = {
           errorcode: "",
           token: "",
           type: "",
@@ -3420,7 +3422,7 @@ function assembly_compiler()
           status: "ok"
         } ;
 
-        /* Google Analytics */
+
         creator_ga('compile', 'compile.assembly');
         
         instructions = [];
@@ -3472,7 +3474,7 @@ function assembly_compiler()
         var numBinaries = instructions.length;
 
 
-        /*Allocation of memory addresses*/
+
         architecture.memory_layout[4].value = backup_stack_address;
         architecture.memory_layout[3].value = backup_data_address;
         data_address = parseInt(architecture.memory_layout[2].value);
@@ -3494,13 +3496,6 @@ function assembly_compiler()
             }
           }
         }
-
-        /*architecture.components[1].elements[29].value = bi_intToBigInt(stack_address,10) ;
-        architecture.components[0].elements[0].value  = bi_intToBigInt(address,10) ;
-        architecture.components[1].elements[29].default_value = bi_intToBigInt(stack_address,10) ;
-        architecture.components[0].elements[0].default_value  = bi_intToBigInt(address,10) ;*/
-
-        /*Reset stats*/
         totalStats = 0;
         for (var i = 0; i < stats.length; i++){
           stats[i].percentage = 0;
@@ -3511,7 +3506,6 @@ function assembly_compiler()
         align = 1;
         var empty = false;
 
-        /*Start of compilation*/
         first_token();
         if (get_token() == null) {
           return packCompileError('m0', 'Please enter the assembly code before compiling', 'warning', 'danger') ;
@@ -3638,7 +3632,6 @@ function assembly_compiler()
         }
 
 
-        /*Check pending instructions*/
         for (var i = 0; i < pending_instructions.length; i++)
         {
           var exit = 0;
@@ -3928,7 +3921,6 @@ function assembly_compiler()
           }
         }
 
-        /* Enter the binary in the text segment */
         if (update_binary.instructions_binary != null)
         {
           for (var i = 0; i < update_binary.instructions_binary.length; i++)
@@ -3959,7 +3951,6 @@ function assembly_compiler()
           }
         }
 
-        /* Enter the compilated instructions in the text segment */
         for (var i = 0; i < instructions_binary.length; i++)
         {
           var hex = bin2hex(instructions_binary[i].loaded);
@@ -4017,7 +4008,7 @@ function assembly_compiler()
 */
 
         /*Save binary*/
-        for(var i = 0; i < instructions_binary.length; i++){
+/*        for(var i = 0; i < instructions_binary.length; i++){
           if(extern.length === 0 && instructions_binary[i].Label != ""){
             instructions_binary[i].Label = instructions_binary[i].Label + "_symbol";
             instructions_binary[i].globl = false;
@@ -4038,7 +4029,7 @@ function assembly_compiler()
         }
 
         /*Save tags*/
-        for(var i = 0; i < instructions_tag.length; i++){
+/*        for(var i = 0; i < instructions_tag.length; i++){
           if(extern.length === 0 && instructions_tag[i].tag != ""){
             instructions_tag[i].tag = instructions_tag[i].tag + "_symbol";
             instructions_tag[i].globl = false;
@@ -4063,16 +4054,16 @@ function assembly_compiler()
             app._data.instructions = instructions;
 
         /* Initialize stack */
-        writeMemory("00", parseInt(stack_address), "word") ;
+  //       writeMemory("00", parseInt(stack_address), "word") ;
 
-        address = parseInt(architecture.memory_layout[0].value);
-        data_address = parseInt(architecture.memory_layout[2].value);
-        stack_address = parseInt(architecture.memory_layout[4].value);
+  //       address = parseInt(architecture.memory_layout[0].value);
+  //       data_address = parseInt(architecture.memory_layout[2].value);
+  //       stack_address = parseInt(architecture.memory_layout[4].value);
 
-  // save current value as default values for reset()...
-        creator_memory_prereset() ;
+  // // save current value as default values for reset()...
+  //       creator_memory_prereset() ;
 
-        return ret;
+  //       return ret;*/
 }
 
 /*Compile data segment*/
