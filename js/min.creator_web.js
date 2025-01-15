@@ -1,5 +1,5 @@
 // Lista de instrucciones especificas de cada extension para indicarle al compilador que flags tiene que activar en el proceso de ensamblado y enlazado del binario
-let interrupted_execution = false;
+// let interrupted_execution = false;
 var execution_mode_run = -1;
 var variablechula = -1;
 // function waitForButtonValue(callback) {
@@ -2387,7 +2387,7 @@ var codemirrorHistory = null;
 var code_assembly = "";
 var tokenIndex = 0;
 var nEnters = 0;
-var pc = 4;
+var pc = 80000000;
 var address;
 var data_address;
 var stack_address;
@@ -3341,6 +3341,8 @@ function assembly_compiler()
           visible: true,
           hide: false,
         });
+        if (i == 0)
+          instructions[i]._rowVariant = 'success';
       }
       for (let i = 0; i < dumpdatainstructions.length; i++){
         if (dumpdatainstructions[i][1] === ""){
@@ -3370,13 +3372,7 @@ function assembly_compiler()
       scriptsail.id = 'riscv_sim_RV32';
       scriptsail.type = 'text/javascript';
       document.head.appendChild(scriptsail);
-      Module.onRuntimeInitialized = function () {
-        // Vincular el botón al evento onclick
-        document.getElementById("resumeButton").onclick = function () {
-            // Llamar a la función exportada desde el módulo
-            Module._reanudar_ejecucion(0);
-        };
-    };
+      
     });
   });
   console.log("He terminado!");
@@ -7714,8 +7710,9 @@ var uielto_toolbar_btngroup = {
         //   this.execution_UI_update(ret);
         // }
       }
-      else if(execution_mode_run === 1){
+      else if(execution_mode_run !== -1){
         variablechula = 1;
+        execution_mode_run = 1;
         // interrupted_execution = true;
         // hacemos el resume de la pausa
         console.log("Continuas paso a paso");
@@ -7727,9 +7724,6 @@ var uielto_toolbar_btngroup = {
         //               ['number'],
         //               [variablechula]);
       }
-      else{
-        console.log("Funciona el boton esperando");
-      }
 
       
     },
@@ -7737,14 +7731,14 @@ var uielto_toolbar_btngroup = {
       var ret;
       creator_ga("execute", "execute.run", "execute.run");
       if(execution_mode_run === -1){
-        console.log("vamos de seguido");
+        // console.log("vamos de seguido");
         execution_mode_run = 0;
         loadSailFunction(enablefpd, enablevec);
         // console.log("Ejecutado!");
-      }else if (execution_mode_run === 1){
+      }else if (execution_mode_run !== -1){
         execution_mode_run = 0;
         variablechula = 0;
-        interrupted_execution = true;
+        // interrupted_execution = true;
         console.log("Ahora ejecutas de seguido");
         //Hacemos el resume de la pausa
       //   Module.onRuntimeInitialized = function() {

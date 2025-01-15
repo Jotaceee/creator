@@ -1,4 +1,6 @@
 var inputelffile, outputlogfile;
+var is_breakpoint = instructions[0].Break;
+var pc_sail = crex_findReg_bytag("program_counter");
 var Module = typeof Module != "undefined" ? Module : {};
 var moduleOverrides = Object.assign({}, Module);
 var arguments_ = [];
@@ -127,7 +129,9 @@ if (ENVIRONMENT_IS_SHELL) {
 } else {
   throw new Error("environment detection error");
 }
-const instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+) ([^,]+), ([^,]+)(?:, (.+))?/;
+
+// const instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+) ([^,]+), ([^,]+)(?:, (.+))?/;
+const instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+)(?: ([^,]+), ([^,]+)(?:, (.+))?)?/;
 const registerExp = /(x\d+) (<-|->) 0x([0-9A-Fa-f]+)/;
 const memoryExp = /mem\[0x([0-9A-Fa-f]+)\]\s*(<-|->)\s*0x([0-9A-Fa-f]+)/;
                   
@@ -139,11 +143,53 @@ Module['print'] = function (message) {
   let regiMatch = message.match(registerExp);
   let memoMatch = message.match(memoryExp);
   if (instMatch && instMatch[2] === 'U'){
+
+    //Actualizamos el pc
+    writeRegister(parseInt(instMatch[3], 16), pc_sail.indexComp, pc_sail.indexElem);
+    console.log("PC actual:",pc_sail);
+
     userMode = true;
+    console.log("Se viene un breakpoint? ",is_breakpoint);
     console.log("Instruccion: ", instMatch);
+    console.log(instMatch[3].toLowerCase());
+    const current_ins = instructions.findIndex(insn => insn.Address === ("0x"+instMatch[3].toLowerCase()));
+    console.log("Execution_mode_run: ", execution_mode_run);
+    // Primero caso de paso a paso
+    if (execution_mode_run === 1){
+      instructions[current_ins]._rowVariant = 'info';
+      if (current_ins < instructions.length - 1){
+        instructions[current_ins + 1]._rowVariant = 'success';
+        is_breakpoint = instructions[current_ins + 1].Break;
+      }
+      if (current_ins > 0 /*&& execution_mode_run === 1*/)
+        instructions[current_ins - 1]._rowVariant = '';
+    }
+    // Para el caso de run without stop y la siguiente instruccion es un breakpoint
+    else if (execution_mode_run === 0){
+      if (current_ins < instructions.length - 1) {
+        is_breakpoint = instructions[current_ins + 1].Break;
+      }
+      if(is_breakpoint){
+        instructions[current_ins]._rowVariant = 'info';
+        if (current_ins < instructions.length - 1) {
+          instructions[current_ins + 1]._rowVariant = 'success';
+        }
+      }else {
+        instructions[current_ins]._rowVariant = '';
+      }
+      if (current_ins > 0)
+        instructions[current_ins - 1]._rowVariant = '';
+
+    }
+
+    else
+      instructions[current_ins]._rowVariant = '';
+    
+
+
+
     instoper = instMatch[5];
-    // Comprobar que es la que tiene que ser ejecutada
-    // Y marcar en que está activa
+    console.log("En un futuro será un breakpoint: ",is_breakpoint);
   }
   else if (instMatch && instMatch[2] !== 'U')
     userMode = false;
@@ -3859,6 +3905,9 @@ function runtimeKeepalivePush() {
   runtimeKeepaliveCounter += 1;
 }
 function _exit(status) {
+  for (let i = 0; i < instructions.length; i++){
+    instructions[i]._rowVariant = '';
+  }
   exit(status);
 }
 function maybeExit() {
@@ -4676,9 +4725,6 @@ var Browser = {
 function _emscripten_memcpy_big(dest, src, num) {
   HEAPU8.copyWithin(dest, src, src + num);
 }
-function _emscripten_pause_main_loop() {
-  Browser.mainLoop.pause();
-}
 function _emscripten_get_heap_max() {
   return 2147483648;
 }
@@ -4733,9 +4779,6 @@ function _emscripten_resize_heap(requestedSize) {
       " bytes, not enough memory!",
   );
   return false;
-}
-function _emscripten_resume_main_loop() {
-  Browser.mainLoop.resume();
 }
 function _emscripten_run_script_int(ptr) {
   return eval(UTF8ToString(ptr)) | 0;
@@ -5284,9 +5327,7 @@ var asmLibraryArg = {
   _munmap_js: __munmap_js,
   abort: _abort,
   emscripten_memcpy_big: _emscripten_memcpy_big,
-  emscripten_pause_main_loop: _emscripten_pause_main_loop,
   emscripten_resize_heap: _emscripten_resize_heap,
-  emscripten_resume_main_loop: _emscripten_resume_main_loop,
   emscripten_run_script_int: _emscripten_run_script_int,
   emscripten_sleep: _emscripten_sleep,
   exit: _exit,
