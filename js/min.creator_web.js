@@ -1,20 +1,10 @@
-// Lista de instrucciones especificas de cada extension para indicarle al compilador que flags tiene que activar en el proceso de ensamblado y enlazado del binario
-// let interrupted_execution = false;
-var execution_mode_run = -1;
+var execution_mode_run = -1; // -1: not running, 0: stepbystep, 1: run without stop, 2: pending of input
 var variablechula = -1;
-// function waitForButtonValue(callback) {
-//   function checkstep() {
-//     console.log("Funcion comprueba si se pulsa.");
-//     if (interrupted_execution) {           // Si el botón fue pulsado
-//       console.log("Se ha pulsao");
-//       interrupted_execution = false;     // Reiniciamos la bandera
-//       callback(variablechula); // Llamamos al callback con el valor
-//     }else{
-//       setTimeout(checkstep, 100);
-//     }
-//   }
-//   checkstep();
-// }
+var can_reset = false;
+var assembled = false;
+var linked = false;
+var dissambled = false;
+var comp_after_run = false;
 
 // FP Extension:
 const fpdextension = ["fadd.s", "fadd.d", "fsub.s", "fsub.d", "fmul.s", "fmul.d", "fdiv.s", "fdiv.d", "fsqrt.s", "fsqrt.d", "fmadd.s", 
@@ -63,8 +53,8 @@ function clean_environment() {
   moduleKeys.forEach(key => {
     delete Module[key];
   });
-  if ( typeof preprocess_run === "function")
-    preprocess_run = undefined;
+  if ( typeof preprocess_as === "function")
+    preprocess_as = undefined;
   if (typeof preprocess_ld === "function")
     preprocess_ld = undefined;
   if (typeof preprocess_sail === "function")
@@ -73,46 +63,102 @@ function clean_environment() {
     preprocess_dissamble = undefined;
   // Module = null;
   delete window.Module;
+  // delete window.Asyncify;
 }
 
 // Funcion para limpiar el entorno en caso de que haya ocurrido algun error durante la ejecución 
 // o si ha ido exitoso para volver a utilizarlo sin tener que recargar la página.
-function resetenvironment (){
-  clean_environment();
-  scriptas = document.querySelector('script[src="toolchain_compiler/as-new.js"]');
-  scriptld = document.querySelector('script[src="toolchain_compiler/ld-new.js"]');
-  scriptsail = document.querySelector('script[src="toolchain_compiler/riscv_sim_RV32.js"]');
-  scriptdump = document.querySelector('script[src="toolchain_compiler/objdump.js"]')
-  if(scriptas)
-  scriptas.parentNode.removeChild(scriptas);
-  if(scriptld)
-  scriptld.parentNode.removeChild(scriptld);
-  if(scriptsail)
-  scriptsail.parentNode.removeChild(scriptsail);
-  if(scriptdump)
-    scriptdump.parentNode.removeChild(scriptdump);
+function resetenvironment (value){
+  if (can_reset || value === 2) {
+      clean_environment();
+      scriptas = document.querySelector('script[src="toolchain_compiler/as-new.js"]');
+      scriptld = document.querySelector('script[src="toolchain_compiler/ld-new.js"]');
+      scriptsail = document.querySelector('script[src="toolchain_compiler/riscv_sim_RV32.js"]');
+      scriptdump = document.querySelector('script[src="toolchain_compiler/objdump.js"]')
+      if(scriptas)
+      scriptas.parentNode.removeChild(scriptas);
+      if(scriptld)
+      scriptld.parentNode.removeChild(scriptld);
+      if(scriptsail)
+      scriptsail.parentNode.removeChild(scriptsail);
+      if(scriptdump)
+        scriptdump.parentNode.removeChild(scriptdump);
+    if (value === 0) {
+      can_reset = false;
+      filenames.length = 0;
+      filecontents.length = 0;
+      calledRun = false;
+      calledMain = false;
+      calledRun = false;
+      err_comp = false;
+      runtimeInitialized = false;
+      scriptas = document.createElement('script');
+      scriptas.src = window.location.href +'js/toolchain_compiler/as-new.js';
+      scriptas.async = true;
+      scriptas.type = 'text/javascript';
+      document.head.appendChild(scriptas);
+    } else if (value === 1){
+      last_execution_mode_run = -1;
+      execution_mode_run = -1;
+      calledRun = false;
+      calledMain = false;
+      calledRun = false;
+      runtimeInitialized = false;
+      scriptsail = document.createElement('script');
+      scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
+      scriptsail.async = true;
+      scriptsail.type = 'text/javascript';
+      document.head.appendChild(scriptsail);
+      can_reset = false;
+    } else if (value === 2){
+      if(can_reset){
+        last_execution_mode_run = -1;
+        execution_mode_run = -1;
+        assembled = false;
+        linked = false;
+        dissambled = false;
+        can_reset = false;
+      }else if (execution_mode_run === -1 || can_reset) {
+        // En caso de que no este ejecutando el motor o 
+        // que si que estuviese ejecutando y quieres parar 
+        // y recompilar con cambios
+        calledRun = false;
+        calledMain = false;
+        calledRun = false;
+        err_comp = false;
+        runtimeInitialized = false;
+        enablefpd = false;
+        enablevec = false;
+        objectcontent = undefined;
+        elffile = undefined;
+        instructions.length = 0;
+        dumpdatainstructions.length = 0;
+        dumptextinstructions.length = 0;
+        list_user_instructions.length = 0;
+        filenames.length = 0;
+        filecontents.length = 0;
+        scriptas = document.createElement('script');
+        scriptas.id = 'as-new';
+        scriptas.src = window.location.href +'js/toolchain_compiler/as-new.js';
+        scriptas.async = true;
+        scriptas.type = 'text/javascript';
+        document.head.appendChild(scriptas);
+        comp_after_run = true;
+        if(execution_mode_run === -1){
+          assembled = false;
+          linked = false;
+          dissambled = false;
+        }
+      }
+    }
 
-  scriptas = document.createElement('script');
-  scriptas.src = 'as-new.js';
-  scriptas.async = true;
-  scriptas.type = 'text/javascript';
-  document.head.appendChild(scriptas);
+    can_reset = false;
+
+  }
+  else setTimeout(resetenvironment, 100, 1);
 }
-
 // Funcion asíncrona para lanzar el motor de sail
-/*async*/ function loadSailFunction(maxAttemps = 50){
-  // let attempssail = 0;
-  // scriptsail = document.createElement('script');
-  // scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
-  // scriptsail.async = true;
-  // scriptsail.id = 'riscv_sim_RV32';
-  // scriptsail.type = 'text/javascript';
-  // document.head.appendChild(scriptsail);
-
-  // while ((typeof preprocess_sail === 'undefined' || typeof preprocess_dissamble !== 'undefined' ) && attempssail <= maxAttemps) {
-  //   await new Promise(resolve => setTimeout(resolve, 200)); // Espera 100 ms antes de volver a verificar
-  //   attempssail++;
-  // }
+function loadSailFunction(maxAttemps = 50){
   console.log("Preprocesamos sail");
   preprocess_sail(elffile, enablefpd, enablevec);
 }
@@ -123,14 +169,53 @@ async function dissamble_binary(maxAttemps = 50) {
   while ((typeof preprocess_dissamble !== "function" || typeof preprocess_ld === "function" ) && attempsdis < maxAttemps ) {
     await new Promise(resolve => setTimeout(resolve, 200)); // Espera 100 ms antes de volver a verificar
     attempsdis++;
+    console.log("Esperando");
   }
-  await preprocess_dissamble(elffile); // Llamamos al run de objdump cuando preprocess_dissamble esté definida
-  
+  if (!preprocess_dissamble(elffile)){
+    scriptdump.parentNode.removeChild(scriptdump);
+    clean_environment();
+    scriptdump = document.createElement('script');
+    scriptdump.src = window.location.href +'js/toolchain_compiler/objdump.js';
+    scriptdump.async = true;
+    scriptdump.id = 'objdump';
+    scriptdump.type = 'text/javascript';
+    document.head.appendChild(scriptdump);
+    return new Promise(resolve => setTimeout(resolve(false), 200));
+  }
+  else{
+    scriptdump.parentNode.removeChild(scriptdump);
+    clean_environment();
+    scriptsail = document.createElement('script');
+    scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
+    scriptsail.async = true;
+    scriptsail.id = 'riscv_sim_RV32';
+    scriptsail.type = 'text/javascript';
+    document.head.appendChild(scriptsail);
+    return new Promise(resolve => setTimeout(resolve(true), 200));
+  }
 
 
 }
 
-
+function preprocess_run(asfilen, ascode, fpd, vec){
+  objectcontent = preprocess_as(asfilen, ascode, fpd, vec);
+  scriptas = document.getElementById('as-new');
+  if(scriptas){
+    clean_environment();
+  scriptas.parentNode.removeChild(scriptas);
+  }
+  if (!assembled) {
+    return false;
+  }
+  // Se carga el script ld.js para ejecutar el enlazador.
+  scriptld = document.createElement('script');
+  scriptld.src = window.location.href +'js/toolchain_compiler/ld-new.js';
+  scriptld.async = true;
+  scriptld.id = 'ld-new';
+  scriptld.type = 'text/javascript';
+  document.head.appendChild(scriptld);
+  return true;
+}
 
 // Funcion asíncrona que se espera a terminar el ensamblado y cargar el enlazador para poder generar el binario que se envia al motor de ejecución
 async function waitForFunction(maxAttemps = 50) {
@@ -139,19 +224,33 @@ async function waitForFunction(maxAttemps = 50) {
     await new Promise(resolve => setTimeout(resolve, 200)); // Espera 100 ms antes de volver a verificar
     attemps++;
   }
-  console.log("Voy a ejecutar ld");
-  elffile = await preprocess_ld(objectcontent, linkercontent); // Llamamos a runner_ld cuando preprocess_ld esté definida
-  console.log("Terminé de ejecutar ld");
+  
+  elffile = preprocess_ld(objectcontent, linkercontent); // Llamamos a runner_ld cuando preprocess_ld esté definida
+  
+  console.log("Terminé de ejecutar ld: ", elffile);
 
   scriptld.parentNode.removeChild(scriptld);
   clean_environment();
-  scriptdump = document.createElement('script');
-  scriptdump.src = window.location.href +'js/toolchain_compiler/objdump.js';
-  scriptdump.async = true;
-  scriptdump.id = 'objdump';
-  scriptdump.type = 'text/javascript';
-  document.head.appendChild(scriptdump);
-  console.log("Vuelvo");
+
+  if(elffile === undefined){
+    // retornas una promesa mala
+    scriptld = document.createElement('script');
+    scriptld.src = window.location.href +'js/toolchain_compiler/ld-new.js';
+    scriptld.async = true;
+    scriptld.id = 'ld-new';
+    scriptld.type = 'text/javascript';
+    document.head.appendChild(scriptld);
+    return new Promise(resolve => setTimeout(resolve(false), 200));
+  }
+  else {
+    scriptdump = document.createElement('script');
+    scriptdump.src = window.location.href +'js/toolchain_compiler/objdump.js';
+    scriptdump.async = true;
+    scriptdump.id = 'objdump';
+    scriptdump.type = 'text/javascript';
+    document.head.appendChild(scriptdump);
+    return new Promise(resolve => setTimeout(resolve(true), 200));
+  }
 }
 
 
@@ -1154,7 +1253,9 @@ function capi_read_int(value1) {
   if (typeof document != "undefined") {
     document.getElementById("enter_keyboard").scrollIntoView();
   }
-  run_program = 3;
+  // run_program = 3;
+  last_execution_mode_run = execution_mode_run;
+  execution_mode_run = 2;
   return keyboard_read(kbd_read_int, ret1);
 }
 function capi_read_float(value1) {
@@ -1171,7 +1272,9 @@ function capi_read_float(value1) {
   if (typeof document != "undefined") {
     document.getElementById("enter_keyboard").scrollIntoView();
   }
-  run_program = 3;
+  // run_program = 3;
+  last_execution_mode_run = execution_mode_run;
+  execution_mode_run = 2;
   return keyboard_read(kbd_read_float, ret1);
 }
 function capi_read_double(value1) {
@@ -1188,7 +1291,9 @@ function capi_read_double(value1) {
   if (typeof document != "undefined") {
     document.getElementById("enter_keyboard").scrollIntoView();
   }
-  run_program = 3;
+  // run_program = 3;
+  last_execution_mode_run = execution_mode_run;
+  execution_mode_run = 2;
   return keyboard_read(kbd_read_double, ret1);
 }
 function capi_read_char(value1) {
@@ -1205,7 +1310,9 @@ function capi_read_char(value1) {
   if (typeof document != "undefined") {
     document.getElementById("enter_keyboard").scrollIntoView();
   }
-  run_program = 3;
+  // run_program = 3;
+  last_execution_mode_run = execution_mode_run;
+  execution_mode_run = 2;
   return keyboard_read(kbd_read_char, ret1);
 }
 function capi_read_string(value1, value2) {
@@ -1233,7 +1340,9 @@ function capi_read_string(value1, value2) {
   }
   ret1.indexComp2 = ret2.indexComp;
   ret1.indexElem2 = ret2.indexElem;
-  run_program = 3;
+  // run_program = 3;
+  last_execution_mode_run = execution_mode_run;
+  execution_mode_run = 2;
   return keyboard_read(kbd_read_string, ret1);
 }
 function capi_sbrk(value1, value2) {
@@ -2527,6 +2636,7 @@ function packCompileError(err_code, err_token, err_ti, err_bgcolor) {
   ret.msg = compileError[err_code](ret);
   creator_ga("compile", "compile.error", "compile.error." + ret.msg);
   creator_ga("compile", "compile.type_error", "compile.type_error." + err_code);
+  assembled = false;
   return ret;
 }
 function first_token() {
@@ -2564,8 +2674,8 @@ function first_token() {
 function get_token() {
   var assembly = code_assembly;
 
-  console.log("El codigo ensamblador: ", assembly);
-  preprocess_run(["input.s"], [assembly], false, false);
+  // console.log("El codigo ensamblador: ", assembly);
+  // preprocess_run(["input.s"], [assembly], true, false);
   var index = tokenIndex;
   if (index >= assembly.length) {
     return null;
@@ -3246,6 +3356,8 @@ function identify_pseudo(instruction_assembly){
       list_user_instructions.push(instruction_assembly);
       list_user_instructions.push("");
     } 
+  else if (instruction_assembly.search("ecall") != -1)
+    list_user_instructions.push(instruction_assembly);
   else if (instruction_assembly.search("call") != -1)
   {
     list_user_instructions.push(instruction_assembly);
@@ -3255,10 +3367,10 @@ function identify_pseudo(instruction_assembly){
     {
       list_user_instructions.push(instruction_assembly);
       let parts = instruction_assembly.split(',');
-      console.log("PArtes del lw: ",parts);
+      // console.log("PArtes del lw: ",parts);
       if( isNaN(parts[1]?.trim()) ){
         list_user_instructions.push("");
-        console.log("vuelvo");
+        // console.log("vuelvo");
         return;
       }
     } 
@@ -3269,148 +3381,191 @@ function identify_pseudo(instruction_assembly){
 
 function assembly_compiler()
 {
-  var is_text = false;
-  var labeltext = "";
-  var ret = {
-          errorcode: "",
-          token: "",
-          type: "",
-          update: "",
-          status: "ok"
-        } ;
 
-        /* Google Analytics */
-        creator_ga('compile', 'compile.assembly');
-  filecontents.push(code_assembly);
-  console.log("Codigo en bruto: ", code_assembly);
-  console.log("Tipo de code_assembly: ", typeof code_assembly);
-  var code_assembly_array = code_assembly.split('\n').map(line => line.split('#')[0].trim()).filter(line => line !== '');
-  for (var i = 0; i < code_assembly_array.length; i++){
-    if (code_assembly_array[i].search(".text") != -1)
-      is_text = true;
-    if (is_text && code_assembly_array[i].endsWith(':'))
-      labeltext = code_assembly_array[i].slice(0, -1);
-    else if (is_text && labeltext !== ""){
-      identify_pseudo(code_assembly_array[i]);
+  if(!assembled && !linked && !dissambled){
+    var is_text = false;
+    var labeltext = "";
+    var ret = {
+            errorcode: "",
+            token: "",
+            type: "",
+            update: "",
+            status: "ok"
+          } ;
+
+          /* Google Analytics */
+          creator_ga('compile', 'compile.assembly');
+    filecontents.push(code_assembly);
+    // console.log("Codigo en bruto: ", code_assembly);
+    // console.log("Tipo de code_assembly: ", typeof code_assembly);
+    var code_assembly_array = code_assembly.split('\n').map(line => line.split('#')[0].trim()).filter(line => line !== '');
+    for (var i = 0; i < code_assembly_array.length; i++){
+      if (code_assembly_array[i].search(".text") != -1)
+        is_text = true;
+      if (is_text && code_assembly_array[i].endsWith(':'))
+        labeltext = code_assembly_array[i].slice(0, -1);
+      else if (is_text && labeltext !== ""){
+        identify_pseudo(code_assembly_array[i]);
+      }
+    }
+    filenames.push("input.s");
+    for (let i = 0; i < filecontents.length; i++){
+      if(filecontents[i].match(regexfpd))
+      enablefpd = true;
+      if(filecontents[i].match(regexvec))
+      enablevec = true;
+    }
+    // console.log("post comprobacion del flag", enablefpd, enablevec);
+    // objectcontent = preprocess_run(filenames, filecontents, enablefpd, enablevec);
+    // console.log("Mal?");
+    if(!preprocess_run(filenames, filecontents, enablefpd, enablevec)){
+      console.log("Malardo");
+      nEnters = parseInt(objectcontent[1], 10)-1;
+      can_reset = true;
+      if(comp_after_run){
+        //Imprimimos mensaje de error
+        console.log("Comp_After_run");
+        uielto_toolbar_btngroup.methods.compile_error(
+          "Incorrect instruction syntax for '"+objectcontent[2]+"'",
+          objectcontent[2],
+          parseInt(objectcontent[1], 10)-1,
+        );
+        comp_after_run = false;
+      }
+      resetenvironment(0);
+      return packCompileError("m3", 
+        objectcontent[2],
+        "error",
+        "danger"
+      );
+    }
+    
+    (async function loop() {
+      do {
+        linked = await waitForFunction();
+      } while (elffile === undefined && !linked);
+    })().then(() => {
+
+      (async function loop() {
+        do {
+          dissambled = await dissamble_binary();
+        } while ((dumptextinstructions.length === 0 && dumpdatainstructions.length === 0) && !dissambled);
+      })().then(() => {
+        align = 1;
+        for (let i = 0; i < dumptextinstructions.length; i++){
+          /*console.log(*/creator_insert_instruction(parseInt(dumptextinstructions[i][0], 16), dumptextinstructions[i][2], dumptextinstructions[i][2], false, dumptextinstructions[i][1], "00", dumptextinstructions[i][4])/*)*/;
+          instructions.push({
+            Break: null,
+            Address: "0x" + dumptextinstructions[i][0],
+            Label: dumptextinstructions[i][4],
+            loaded: dumptextinstructions[i][2],
+            user : list_user_instructions[i],
+            _rowVariant: "",
+            visible: true,
+            hide: false,
+          });
+          if (i == 0)
+            instructions[i]._rowVariant = 'success';
+        }
+        for (let i = 0; i < dumpdatainstructions.length; i++){
+          if (dumpdatainstructions[i][1] === ""){
+            const regex = new RegExp(`(${dumpdatainstructions[i][4]}):\\s*[\\n\\t ]*\\.(zero|space)\\s+(\\d+)`, 'g');
+            let match;
+            while ((match = regex.exec(code_assembly)) !== null) {
+                // console.log(`Label = ${match[1]}, Directiva = ${match[2]}, Número extraído = ${match[3]}`);
+                // console.log(creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2));
+                creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2);
+              
+              }
+
+          }else{
+            // console.log("Address:  ", parseInt(dumpdatainstructions[i][0], 16));
+            // console.log("valor:    ", dumpdatainstructions[i][1]);
+            // console.log("tamaño:   ", 4);
+            // console.log("Label:    ", dumpdatainstructions[i][4]);
+            // console.log("DefValue: ", parseInt(dumpdatainstructions[i][1], 16) >> 0);
+            // console.log("Tipo:     ", "word");
+            // console.log(creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",));
+            creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",);
+          
+          }
+        }
+        
+        creator_memory_prereset();
+        creator_memory_reset();
+        show_notification("Compilation completed successfully","success");
+      }); 
+
+
+
+    }); 
+    // waitForFunction().then(() => {
+      
+    //   // console.log("Ahora ejecuto el desensamblado!");
+    //   dissamble_binary().then(() => {
+    //     // console.log("Terminado el desensamblado");
+    //     scriptdump.parentNode.removeChild(scriptdump);
+    //     clean_environment();
+    //     align = 1;
+    //     for (let i = 0; i < dumptextinstructions.length; i++){
+    //       console.log(creator_insert_instruction(parseInt(dumptextinstructions[i][0], 16), dumptextinstructions[i][2], dumptextinstructions[i][2], false, dumptextinstructions[i][1], "00", dumptextinstructions[i][4]));
+    //       instructions.push({
+    //         Break: null,
+    //         Address: "0x" + dumptextinstructions[i][0],
+    //         Label: dumptextinstructions[i][4],
+    //         loaded: dumptextinstructions[i][2],
+    //         user : list_user_instructions[i],
+    //         _rowVariant: "",
+    //         visible: true,
+    //         hide: false,
+    //       });
+    //       if (i == 0)
+    //         instructions[i]._rowVariant = 'success';
+    //     }
+    //     for (let i = 0; i < dumpdatainstructions.length; i++){
+    //       if (dumpdatainstructions[i][1] === ""){
+    //         const regex = new RegExp(`(${dumpdatainstructions[i][4]}):\\s*[\\n\\t ]*\\.(zero|space)\\s+(\\d+)`, 'g');
+    //         let match;
+    //         while ((match = regex.exec(code_assembly)) !== null) {
+    //             // console.log(`Label = ${match[1]}, Directiva = ${match[2]}, Número extraído = ${match[3]}`);
+    //             console.log(creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2));
+    //           }
+
+    //       }else{
+    //         // console.log("Address:  ", parseInt(dumpdatainstructions[i][0], 16));
+    //         // console.log("valor:    ", dumpdatainstructions[i][1]);
+    //         // console.log("tamaño:   ", 4);
+    //         // console.log("Label:    ", dumpdatainstructions[i][4]);
+    //         // console.log("DefValue: ", parseInt(dumpdatainstructions[i][1], 16) >> 0);
+    //         // console.log("Tipo:     ", "word");
+    //         console.log(creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",));
+    //       }
+    //     }
+        
+    //     creator_memory_prereset();
+    //     creator_memory_reset();
+    //     return ret;
+    //   });
+    // });
+    // console.log("He terminado!");
+    
+  }
+  else {
+    // reestablecemos al estado inicial para volver a compilar 
+    if(execution_mode_run !== -1 && !can_reset){
+      Module._reanudar_ejecucion(parseInt(5,10));
+      setTimeout(assembly_compiler, 100);
+    } else if (execution_mode_run !== -1 && can_reset)
+      setTimeout(assembly_compiler, 100);
+    else{
+      last_execution_mode_run = -1;
+      execution_mode_run = -1;
+      resetenvironment(2);
+      setTimeout(assembly_compiler, 200);
     }
   }
-  filenames.push("input.s");
-  for (let i = 0; i < filecontents.length; i++){
-    if(filecontents[i].match(regexfpd))
-    enablefpd = true;
-    if(filecontents[i].match(regexvec))
-    enablevec = true;
-  }
-  console.log("post comprobacion del flag", enablefpd, enablevec);
-  objectcontent = preprocess_run(filenames, filecontents, enablefpd, enablevec);
-  // console.log("salida ensamblador", objectcontent);
   
-  // console.log(window.location.href);
-  // scriptas = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/as-new.js"]');
-  scriptas = document.getElementById('as-new');
-  if(scriptas){
-  clean_environment();
-  scriptas.parentNode.removeChild(scriptas);
-  }
-
-  // Se carga el script ld.js para ejecutar el enlazador.
-  scriptld = document.createElement('script');
-  scriptld.src = window.location.href +'js/toolchain_compiler/ld-new.js';
-  scriptld.async = true;
-  scriptld.id = 'ld-new';
-  scriptld.type = 'text/javascript';
-  document.head.appendChild(scriptld);
-
-  waitForFunction().then(() => {
-    
-    console.log("Ahora ejecuto el desensamblado!");
-    dissamble_binary().then(() => {
-      console.log("Terminado el desensamblado");
-      scriptdump.parentNode.removeChild(scriptdump);
-      clean_environment();
-      align = 1;
-      for (let i = 0; i < dumptextinstructions.length; i++){
-        console.log(creator_insert_instruction(parseInt(dumptextinstructions[i][0], 16), dumptextinstructions[i][2], dumptextinstructions[i][2], false, dumptextinstructions[i][1], "00", dumptextinstructions[i][4]));
-        instructions.push({
-          Break: null,
-          Address: "0x" + dumptextinstructions[i][0],
-          Label: dumptextinstructions[i][4],
-          loaded: dumptextinstructions[i][2],
-          user : list_user_instructions[i],
-          _rowVariant: "",
-          visible: true,
-          hide: false,
-        });
-        if (i == 0)
-          instructions[i]._rowVariant = 'success';
-      }
-      for (let i = 0; i < dumpdatainstructions.length; i++){
-        if (dumpdatainstructions[i][1] === ""){
-          const regex = new RegExp(`(${dumpdatainstructions[i][4]}):\\s*[\\n\\t ]*\\.(zero|space)\\s+(\\d+)`, 'g');
-          let match;
-          while ((match = regex.exec(code_assembly)) !== null) {
-              console.log(`Label = ${match[1]}, Directiva = ${match[2]}, Número extraído = ${match[3]}`);
-              console.log(creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2));
-            }
-
-        }else{
-          console.log("Address:  ", parseInt(dumpdatainstructions[i][0], 16));
-          console.log("valor:    ", dumpdatainstructions[i][1]);
-          console.log("tamaño:   ", 4);
-          console.log("Label:    ", dumpdatainstructions[i][4]);
-          console.log("DefValue: ", parseInt(dumpdatainstructions[i][1], 16) >> 0);
-          console.log("Tipo:     ", "word");
-          console.log(creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",));
-        }
-      }
-      
-      creator_memory_prereset();
-      creator_memory_reset();
-      scriptsail = document.createElement('script');
-      scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
-      scriptsail.async = true;
-      scriptsail.id = 'riscv_sim_RV32';
-      scriptsail.type = 'text/javascript';
-      document.head.appendChild(scriptsail);
-      
-    });
-  });
-  console.log("He terminado!");
-  
-  return ret;
-  // // TODO: fill ret with the "thing" returned by SAIL, navy SAIL
-
-  // /* Enter the compilated instructions in the text segment */
-  // for (var i = 0; i < IMAGEN_MEMORIA_DE_sAIl.length; i++)
-  //   {
-  //     var hex = bin2hex(instructions_binary[i].loaded);
-  //     var auxAddr = parseInt(instructions_binary[i].Address, 16);
-  //     var label = instructions_binary[i].Label;
-  //     var binNum = 0;
-
-  //     if (update_binary.instructions_binary != null) {
-  //         binNum = update_binary.instructions_binary.length
-  //     }
-
-  //     auxAddr = creator_insert_instruction(auxAddr, instructions[i + binNum].loaded, instructions[i + binNum].loaded, false, hex, "00", label);
-  //   }
-
-  // if (typeof app != "undefined") {
-  //     app._data.instructions = instructions;
-  // }
-
-  // /* Initialize stack */
-  // writeMemory("00", parseInt(stack_address), "word") ;
-
-  // address = parseInt(architecture.memory_layout[0].value);
-  // data_address = parseInt(architecture.memory_layout[2].value);
-  // stack_address = parseInt(architecture.memory_layout[4].value);
-
-  // save current value as default values for reset()...
-  // creator_memory_prereset() ;
-  // Como se llama a  una funcion asíncrona  tenemos que esperar a que termine su ejecución para hacer el return;
-  
-  
+  return /*ret (mirar si puedo hacer el */ ;
 }
 
 function data_segment_compiler() {
@@ -6981,6 +7136,8 @@ function executeProgramOneShot(limit_n_instructions) {
 }
 function reset() {
   creator_ga("execute", "execute.reset");
+
+  
   execution_index = 0;
   execution_init = 1;
   run_program = 0;
@@ -7043,6 +7200,23 @@ function reset() {
   creator_memory_reset();
   creator_callstack_reset();
   track_stack_reset();
+  // En esta funcion se deben restablecer los registros,
+  // el mapa de memoria, y se debe eliminar el modulo js de riscv_sim_RV32.js
+  // y volverlo a cargar
+  if( execution_mode_run !== -1){
+    Module._reanudar_ejecucion(parseInt(5,10));
+    if (can_reset){
+      last_execution_mode_run = -1;
+      execution_mode_run = -1;
+      resetenvironment(1);
+    }else 
+      setTimeout(resetenvironment, 1e3, 1);
+    // scriptsail = document.createElement('script');
+    // scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
+    // scriptsail.async = true;
+    // scriptsail.type = 'text/javascript';
+    // document.head.appendChild(scriptsail);
+  }
   return true;
 }
 function creator_executor_exit(error) {
@@ -7222,21 +7396,31 @@ function display_print(info) {
 function kbd_read_char(keystroke, params) {
   var value = keystroke.charCodeAt(0);
   writeRegister(value, params.indexComp, params.indexElem);
+  Module._send_char_to_C(value);
+  execution_mode_run = last_execution_mode_run;
+  last_execution_mode_run = -1;
   return value;
 }
 function kbd_read_int(keystroke, params) {
   var value = parseInt(keystroke);
   writeRegister(value, params.indexComp, params.indexElem);
+  Module._send_int_to_C(value);
+  execution_mode_run = last_execution_mode_run;
+  last_execution_mode_run = -1;
   return value;
 }
 function kbd_read_float(keystroke, params) {
   var value = parseFloat(keystroke, 10);
   writeRegister(value, params.indexComp, params.indexElem, "SFP-Reg");
+  Module._send_float_to_C(value);
+  execution_mode_run = last_execution_mode_run;
+  last_execution_mode_run = -1;
   return value;
 }
 function kbd_read_double(keystroke, params) {
   var value = parseFloat(keystroke, 10);
   writeRegister(value, params.indexComp, params.indexElem, "DFP-Reg");
+  Module._send_double_to_C(value);
   return value;
 }
 function kbd_read_string(keystroke, params) {
@@ -7247,6 +7431,9 @@ function kbd_read_string(keystroke, params) {
   }
   var neltos = readRegister(params.indexComp, params.indexElem);
   writeMemory(value, parseInt(neltos), "string");
+  Module._send_string_to_C(value);
+  execution_mode_run = last_execution_mode_run;
+  last_execution_mode_run = -1;
   return value;
 }
 function keyboard_read(fn_post_read, fn_post_params) {
@@ -7266,7 +7453,7 @@ function keyboard_read(fn_post_read, fn_post_params) {
     return packExecute(false, "The data has been uploaded", "danger", null);
   }
   app._data.enter = false;
-  if (3 === run_program) {
+  if (2 === execution_mode_run) {
     setTimeout(keyboard_read, 1e3, fn_post_read, fn_post_params);
     return;
   }
@@ -7275,10 +7462,10 @@ function keyboard_read(fn_post_read, fn_post_params) {
   app._data.enter = null;
   show_notification("The data has been uploaded", "info");
   if (execution_index >= instructions.length) {
-    for (var i = 0; i < instructions.length; i++) {
-      draw.space.push(i);
-    }
-    execution_index = -2;
+  //   for (var i = 0; i < instructions.length; i++) {
+  //     draw.space.push(i);
+  //   }
+  //   execution_index = -2;
     return packExecute(
       true,
       "The execution of the program has finished",
@@ -7286,9 +7473,9 @@ function keyboard_read(fn_post_read, fn_post_params) {
       null,
     );
   }
-  if (run_program === 1) {
-    $("#playExecution").trigger("click");
-  }
+  // if (run_program === 1) {
+  //   $("#playExecution").trigger("click");
+  // }
 }
 function get_register_binary(type, bin) {
   for (var i = 0; i < architecture.components.length; i++) {
@@ -7563,23 +7750,25 @@ var uielto_toolbar_btngroup = {
             localStorage.setItem("backup_date", auxDate);
           }
           this_compiling.compiling = false;
-          switch (ret.type) {
-            case "error":
-              uielto_toolbar_btngroup.methods.compile_error(
-                ret.msg,
-                ret.token,
-                ret.line,
-              );
-              break;
-            case "warning":
-              show_notification(ret.token, ret.bgcolor);
-              break;
-            default:
-              show_notification(
-                "Compilation completed successfully",
-                "success",
-              );
-              break;
+          if (ret !== undefined){
+            switch (ret.type) {
+              case "error":
+                uielto_toolbar_btngroup.methods.compile_error(
+                  ret.msg,
+                  ret.token,
+                  ret.line,
+                );
+                break;
+              case "warning":
+                show_notification(ret.token, ret.bgcolor);
+                break;
+              default:
+                show_notification(
+                  "Compilation completed successfully",
+                  "success",
+                );
+                break;
+            }
           }
           resolve("0");
         }, 25);
@@ -7696,33 +7885,13 @@ var uielto_toolbar_btngroup = {
       creator_ga("execute", "execute.instruction", "execute.instruction");
       if (execution_mode_run === -1){
         execution_mode_run = 1;
-        // execution_mode = 0;
-        console.log("Vamos paso a paso");
         loadSailFunction(enablefpd, enablevec);
-        // var ret = execute_instruction();
-        // if (typeof ret === "undefined") {
-        //   console.log("Something weird happened :-S");
-        // }
-        // if (ret.msg != null) {
-        //   show_notification(ret.msg, ret.type);
-        // }
-        // if (ret.draw != null) {
-        //   this.execution_UI_update(ret);
-        // }
       }
-      else if(execution_mode_run !== -1){
+      else if(execution_mode_run !== -1 && execution_mode_run !== 2){
         variablechula = 1;
         execution_mode_run = 1;
-        // interrupted_execution = true;
-        // hacemos el resume de la pausa
-        console.log("Continuas paso a paso");
-        // Module["onRuntimeInitialized"]();
-        // Module.ccall('reanudar_ejecucion', null, ['number'], [variablechula]); // Llama con valor 1
+        // console.log("Continuas paso a paso");
         Module._reanudar_ejecucion(parseInt(1,10));
-        // Module.ccall('reanudar_ejecucion',
-        //               null,
-        //               ['number'],
-        //               [variablechula]);
       }
 
       
@@ -7735,11 +7904,11 @@ var uielto_toolbar_btngroup = {
         execution_mode_run = 0;
         loadSailFunction(enablefpd, enablevec);
         // console.log("Ejecutado!");
-      }else if (execution_mode_run !== -1){
+      }else if (execution_mode_run !== -1 && execution_mode_run !== 2){
         execution_mode_run = 0;
         variablechula = 0;
         // interrupted_execution = true;
-        console.log("Ahora ejecutas de seguido");
+        // console.log("Ahora ejecutas de seguido");
         //Hacemos el resume de la pausa
       //   Module.onRuntimeInitialized = function() {
       //     console.log("Runtime inicializado. Ahora puedes llamar a reanudar_ejecucion.");
@@ -13542,7 +13711,7 @@ var uielto_keyboard = {
     consoleEnter() {
       if (this.local_keyboard != "") {
         app._data.keyboard = this.local_keyboard;
-        run_program = execution_mode;
+        execution_mode_run = 4;
         this.local_keyboard = "";
       }
     },
@@ -13885,3 +14054,5 @@ try {
     location.reload(true);
   }, 3e3);
 }
+
+// window.instructions = instructions;

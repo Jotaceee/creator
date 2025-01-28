@@ -190,9 +190,9 @@ if (ENVIRONMENT_IS_NODE) {
  throw new Error("environment detection error");
 }
 
-const dumptextinstructions = [];
-const dumpdatainstructions = [];
-const dumplabels           = [];
+var dumptextinstructions = [];
+var dumpdatainstructions = [];
+var dumplabels           = [];
 var sectionasm = 0;
 Module['print'] = function (message) {
   // console.log(typeof message);
@@ -249,7 +249,7 @@ Module['print'] = function (message) {
     // }
   }
   else if(labelmatch && sectionasm != 0){
-    console.log("Identificado:", labelmatch);
+    // console.log("Identificado:", labelmatch);
     exaaa.push(labelmatch[1].trim());
     exaaa.push("");
     exaaa.push("");
@@ -264,7 +264,7 @@ Module['print'] = function (message) {
   }
 
   else {
-    console.log("objdump: 1", message);
+    // console.log("objdump: 1", message);
   }
 
   // identificacion de que seccion de codigo entramos.
@@ -5535,16 +5535,9 @@ if (Module["preInit"]) {
 var shouldRunNow = false;
 function preprocess_dissamble(elffile){
     inputdis = elffile;
-    console.log("Ejecuto");
+    // console.log("Ejecuto");
     run(["-D", "input.elf"]);
     console.log("instrucciones .text desensambladas: ", dumptextinstructions);
     console.log("instrucciones .data desensambladas: ", dumpdatainstructions);
-}
-
-
-
-console.log("He cargado el objdump");
-
-// if (Module["noInitialRun"]) shouldRunNow = false;
-
-// run();
+    return (dumpdatainstructions.length !== 0 || dumptextinstructions.length !== 0);
+    }

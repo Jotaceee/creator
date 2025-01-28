@@ -1,6 +1,7 @@
 var inputelffile, outputlogfile;
 var is_breakpoint = instructions[0].Break;
 var pc_sail = crex_findReg_bytag("program_counter");
+var last_execution_mode_run = -1;
 var Module = typeof Module != "undefined" ? Module : {};
 var moduleOverrides = Object.assign({}, Module);
 var arguments_ = [];
@@ -131,29 +132,79 @@ if (ENVIRONMENT_IS_SHELL) {
 }
 
 // const instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+) ([^,]+), ([^,]+)(?:, (.+))?/;
-const instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+)(?: ([^,]+), ([^,]+)(?:, (.+))?)?/;
-const registerExp = /(x\d+) (<-|->) 0x([0-9A-Fa-f]+)/;
-const memoryExp = /mem\[0x([0-9A-Fa-f]+)\]\s*(<-|->)\s*0x([0-9A-Fa-f]+)/;
-                  
+var instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+)(?: ([^,]+), ([^,]+)(?:, (.+))?)?/;
+var registerExp = /(x\d+) (<-) 0x([0-9A-Fa-f]+)/; // /(x\d+) (<-|->) 0x([0-9A-Fa-f]+)/;
+var memoryExp = /mem\[0x([0-9A-Fa-f]+)\]\s*(<-|->)\s*0x([0-9A-Fa-f]+)/;
+// var displayExp = /^[A-Za-z\s]+:\s*(.*)$/;
+var displayExp = /^([\w\s]+):\s*(.*)$/;       
 var userMode = false;
 var instoper = "";
+var syscall_print_code = -1;
 Module['print'] = function (message) {
-  
+  console.log("Que imprimo");
   let instMatch = message.match(instructionExp);
   let regiMatch = message.match(registerExp);
   let memoMatch = message.match(memoryExp);
+  let printMatch = message.match(displayExp);
+  
+  // console.log("Ins:",message);
   if (instMatch && instMatch[2] === 'U'){
 
     //Actualizamos el pc
     writeRegister(parseInt(instMatch[3], 16), pc_sail.indexComp, pc_sail.indexElem);
-    console.log("PC actual:",pc_sail);
+    // console.log("PC actual:",pc_sail);
 
     userMode = true;
-    console.log("Se viene un breakpoint? ",is_breakpoint);
+    // console.log("Se viene un breakpoint? ",is_breakpoint);
     console.log("Instruccion: ", instMatch);
-    console.log(instMatch[3].toLowerCase());
+    // console.log("Mensaje entero: ", message);
+    // console.log(instMatch[3].toLowerCase());
     const current_ins = instructions.findIndex(insn => insn.Address === ("0x"+instMatch[3].toLowerCase()));
-    console.log("Execution_mode_run: ", execution_mode_run);
+    if (instMatch[5] === "ecall"){
+      let argument_register = crex_findReg("a7"); // obtenemos el registro para ver que llamada al sistema es
+      let syscall_code = readRegister(argument_register.indexComp, argument_register.indexElem); // Lectura del registro para obtener el valor
+
+      switch(syscall_code){
+        case 5:
+          // last_execution_mode_run = execution_mode_run;
+          // execution_mode_run = 2;
+          // Manejo para enteros
+          capi_read_int('a0');
+          break;
+        case 6:
+          // last_execution_mode_run = execution_mode_run;
+          // execution_mode_run = 2;
+          // Manejo para floats
+          capi_read_float('fa0');
+          break;
+        case 7:
+          
+          // Manejo para double
+          capi_read_double('fa0')
+          break;
+        case 8:
+          // last_execution_mode_run = execution_mode_run;
+          // execution_mode_run = 2;
+          // Manejo para strings
+          capi_read_string('a0','a1');
+          break;
+
+        case 12:
+          // last_execution_mode_run = execution_mode_run;
+          // execution_mode_run = 2;
+          // Manejo para char
+          capi_read_char('a0');
+          break;
+        default:
+          // console.log("No hago nada.");
+          syscall_print_code = syscall_code;
+          break;
+      }
+
+
+    }
+
+    // console.log("Execution_mode_run: ", execution_mode_run);
     // Primero caso de paso a paso
     if (execution_mode_run === 1){
       instructions[current_ins]._rowVariant = 'info';
@@ -189,18 +240,20 @@ Module['print'] = function (message) {
 
 
     instoper = instMatch[5];
-    console.log("En un futuro será un breakpoint: ",is_breakpoint);
+
+    // console.log("En un futuro será un breakpoint: ",is_breakpoint);
   }
   else if (instMatch && instMatch[2] !== 'U')
     userMode = false;
 
-  if (regiMatch && userMode === true) {
+  if (regiMatch /*&& userMode === true*/) {
     // En caso de ser escritura '<-' pintamos el valor en el registro que corresponde
-    console.log(regiMatch);
+    // console.log(regiMatch);
     if (regiMatch[2] === '<-'){
       let regtowrite = crex_findReg(regiMatch[1]);
       console.log("Registro identificado: ", regtowrite);
-      writeRegister(parseInt(regiMatch[3], 16), regtowrite.indexComp, regtowrite.indexElem);
+      if (regiMatch[1] !== 'x2')
+        writeRegister(parseInt(regiMatch[3], 16), regtowrite.indexComp, regtowrite.indexElem);
     }
     
   }
@@ -208,7 +261,7 @@ Module['print'] = function (message) {
   if (memoMatch && userMode === true) {
     // En caso de ser escritura '<-' pintamos el valor en la posicion de memoria
     if (memoMatch[2] === '<-'){
-      console.log("Operador: ", instoper);
+      // console.log("Operador: ", instoper);
       switch(instoper){
         case 'sh': // Para almacenar un half
         writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'half');
@@ -229,11 +282,54 @@ Module['print'] = function (message) {
           break;
       }
 
-      
+      instoper = "";
     }
   
   }
 
+  if(printMatch && syscall_print_code !== -1){
+
+    let value_2_print = printMatch[2].trim();
+    console.log("Estoy dentro de ecall a imprimir");
+    console.log(message);
+    console.log("Valor a imprimir: ", value_2_print); 
+    switch(syscall_print_code){
+
+      case 1: // Print int
+        display_print(full_print(parseInt(value_2_print), null, false));
+        syscall_print_code = -1;
+        break;
+      case 2: // Print float
+        display_print(full_print(parseFloat(value_2_print), 0, true));
+        syscall_print_code = -1;
+        break;
+
+      case 3: // Print double
+        display_print(full_print(parseFloat(value_2_print), 0, true));
+        syscall_print_code = -1;
+        break;
+
+      case 4: // Print String 
+        display_print(value_2_print);
+        syscall_print_code = -1;
+        break;
+
+      case 11: // Print char
+        display_print(value_2_print);
+        syscall_print_code = -1;
+        break;
+
+      default: // Rest of syscall codes not able to print
+      syscall_print_code = -1;
+        break;
+
+    }
+
+  }
+
+
+
+  
   console.log(message);
 
 }
@@ -1113,7 +1209,7 @@ function getWasmTableEntry(funcPtr) {
   return func;
 }
 function handleException(e) {
-  if (e instanceof ExitStatus || e == "unwind") {
+  if (e instanceof ExitStatus || e == "unwind" || e.message === "Force exit by user") {
     return EXITSTATUS;
   }
   quit_(1, e);
@@ -4722,6 +4818,14 @@ var Browser = {
     }
   },
 };
+function _emscripten_force_exit(status) {
+  warnOnce(
+    "emscripten_force_exit cannot actually shut down the runtime, as the build does not have EXIT_RUNTIME set",
+  );
+  noExitRuntime = false;
+  runtimeKeepaliveCounter = 0;
+  exit(status);
+}
 function _emscripten_memcpy_big(dest, src, num) {
   HEAPU8.copyWithin(dest, src, src + num);
 }
@@ -5326,6 +5430,7 @@ var asmLibraryArg = {
   _mmap_js: __mmap_js,
   _munmap_js: __munmap_js,
   abort: _abort,
+  emscripten_force_exit: _emscripten_force_exit,
   emscripten_memcpy_big: _emscripten_memcpy_big,
   emscripten_resize_heap: _emscripten_resize_heap,
   emscripten_run_script_int: _emscripten_run_script_int,
@@ -5344,6 +5449,16 @@ var ___wasm_call_ctors = (Module["___wasm_call_ctors"] =
   createExportWrapper("__wasm_call_ctors"));
 var _malloc = (Module["_malloc"] = createExportWrapper("malloc"));
 var _free = (Module["_free"] = createExportWrapper("free"));
+var _send_int_to_C = (Module["_send_int_to_C"] =
+  createExportWrapper("send_int_to_C"));
+var _send_float_to_C = (Module["_send_float_to_C"] =
+  createExportWrapper("send_float_to_C"));
+var _send_double_to_C = (Module["_send_double_to_C"] =
+  createExportWrapper("send_double_to_C"));
+var _send_char_to_C = (Module["_send_char_to_C"] =
+  createExportWrapper("send_char_to_C"));
+var _send_string_to_C = (Module["_send_string_to_C"] =
+  createExportWrapper("send_string_to_C"));
 var _reanudar_ejecucion = (Module["_reanudar_ejecucion"] =
   createExportWrapper("reanudar_ejecucion"));
 var ___errno_location = (Module["___errno_location"] =
@@ -6726,6 +6841,7 @@ function exit(status, implicit) {
         status +
         "), but EXIT_RUNTIME is not set, so halting execution but not exiting the runtime or preventing further async execution (build with EXIT_RUNTIME=1, if you want a true shutdown)";
       err(msg);
+      can_reset = true;
     }
   } else {
     exitRuntime();
@@ -6752,13 +6868,14 @@ var shouldRunNow = false;
 function preprocess_sail(elffile, enablefpd, enablevec){
   inputelffile = elffile;
   // run(["--config-flags", "4"]);
-
+  // enablefpd = true;
   if(enablefpd)
     run(["--config-flags", "8", "-p", "output.elf"]);
   if(enablevec)
     run(["--config-flags", "4", "-p", "output.elf"]);
   if(!enablefpd && !enablevec)
     run(["--config-flags", "0", "-p", "output.elf"]);
+
 
 }
 

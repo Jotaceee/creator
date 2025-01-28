@@ -14,8 +14,8 @@
 // before the code. Then that object will be used in the code, and you
 // can continue to use Module afterwards as well.
 var Module = typeof Module != 'undefined' ? Module : {};
-const asmfile = [];
-const asmcontent = [];
+var asmfile = [];
+var asmcontent = [];
 var ofile;
 var asarguments = [];
 
@@ -285,9 +285,27 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
 {
   throw new Error('environment detection error');
 }
+var ErrExp = /^[^:]+:(\d+):.*`([^`]+)'$/;
+var ErrCreator;
+var err_comp = false;
 
 var out = Module['print'] || console.log.bind(console);
-var err = Module['printErr'] || console.warn.bind(console);
+Module['printErr'] = function(message) {
+
+  //Tipo de mensaje:
+  /*
+  input.s: Assembler messages:
+  input.s:36: Error: illegal operands `add t4,t3,t1sdfs'
+  */
+ var ErrMatch = message.match(ErrExp);
+  if (ErrMatch && !err_comp){
+    console.log("Error instruccion: ", ErrMatch);
+    ErrCreator = ErrMatch;
+    err_comp = true;
+  }
+  else console.warn.bind(message);
+}
+var err = Module['printErr'] /*|| console.warn.bind(console)*/;
 
 // Merge back in the overrides
 Object.assign(Module, moduleOverrides);
@@ -1812,6 +1830,10 @@ var ASM_CONSTS = {
       // 2. "unwind", which is thrown by emscripten_unwind_to_js_event_loop() and others
       //    that wish to return to JS event loop.
       if (e instanceof ExitStatus || e == 'unwind') {
+        if (e.status === 1)
+          assembled = false;
+        else 
+          assembled = true;
         return EXITSTATUS;
       }
       quit_(1, e);
@@ -5705,9 +5727,11 @@ function run(args) {
     if (Module['onRuntimeInitialized']) Module['onRuntimeInitialized']();
 
     if (shouldRunNow) callMain(args);
-
-
-    ofile = FS.readFile('./input.o');
+    ofile = undefined;
+    console.log("ofile previo:", ofile);
+    if (assembled){
+      ofile = FS.readFile('./input.o');
+    }
     // console.log(ofile);
 
     postRun();
@@ -5769,7 +5793,7 @@ if (Module['preInit']) {
 // shouldRunNow refers to calling main(), not run().
 var shouldRunNow = false;
 
-function preprocess_run(file_p, content_p, enablefpd, enablevec) {
+function preprocess_as(file_p, content_p, enablefpd, enablevec) {
 
   // Comprobacion de que el contenido no generará conflicto a futuro con la ejecucion del simulador
   asarguments = ["-o", "input.o"];
@@ -5790,20 +5814,11 @@ function preprocess_run(file_p, content_p, enablefpd, enablevec) {
   // console.log("argumentos", asarguments);
   run(asarguments);
   // para la version de 64bits run(["-march=rv64g", "-mabi=lp64d", "-o", "my_code_v2.o", "integer_code.s"]);
-  
+  if (!assembled)
+    return ErrCreator;
+  // assembled = true;
   return ofile;
-  // const outputfile = FS.readFile('./my_code_v2.o');
-  // const blob = new Blob([outputfile], { type: "application/octet-stream"});
 
-  // const url = URL.createObjectURL(blob);
-  // const a = document.createElement("a");
-
-  // a.href = url;
-  // a.download = "my_code_v2.o";
-  // document.body.appendChild(a);
-  // a.click();
-  // document.body.removeChild(a);
-  // URL.revokeObjectURL(url);
 
 }
 
