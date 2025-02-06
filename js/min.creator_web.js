@@ -1,10 +1,13 @@
 var execution_mode_run = -1; // -1: not running, 0: stepbystep, 1: run without stop, 2: pending of input
 var variablechula = -1;
 var can_reset = false;
+var finished = false;
 var assembled = false;
 var linked = false;
 var dissambled = false;
 var comp_after_run = false;
+var insn_number;
+var entry_elf;
 
 // FP Extension:
 const fpdextension = ["fadd.s", "fadd.d", "fsub.s", "fsub.d", "fmul.s", "fmul.d", "fdiv.s", "fdiv.d", "fsqrt.s", "fsqrt.d", "fmadd.s", 
@@ -92,6 +95,7 @@ function resetenvironment (value){
       calledRun = false;
       err_comp = false;
       runtimeInitialized = false;
+      entry_elf = undefined;
       scriptas = document.createElement('script');
       scriptas.src = window.location.href +'js/toolchain_compiler/as-new.js';
       scriptas.async = true;
@@ -110,6 +114,7 @@ function resetenvironment (value){
       scriptsail.type = 'text/javascript';
       document.head.appendChild(scriptsail);
       can_reset = false;
+      finished = false;
     } else if (value === 2){
       if(can_reset){
         last_execution_mode_run = -1;
@@ -118,6 +123,7 @@ function resetenvironment (value){
         linked = false;
         dissambled = false;
         can_reset = false;
+        finished = false;
       }else if (execution_mode_run === -1 || can_reset) {
         // En caso de que no este ejecutando el motor o 
         // que si que estuviese ejecutando y quieres parar 
@@ -126,6 +132,7 @@ function resetenvironment (value){
         calledMain = false;
         calledRun = false;
         err_comp = false;
+        entry_elf = undefined;
         runtimeInitialized = false;
         enablefpd = false;
         enablevec = false;
@@ -160,7 +167,8 @@ function resetenvironment (value){
 // Funcion asíncrona para lanzar el motor de sail
 function loadSailFunction(maxAttemps = 50){
   console.log("Preprocesamos sail");
-  preprocess_sail(elffile, enablefpd, enablevec);
+  preprocess_sail(elffile, enablefpd, enablevec, entry_elf);
+  // show notification cuando termine
 }
 
 async function dissamble_binary(maxAttemps = 50) {
@@ -169,7 +177,6 @@ async function dissamble_binary(maxAttemps = 50) {
   while ((typeof preprocess_dissamble !== "function" || typeof preprocess_ld === "function" ) && attempsdis < maxAttemps ) {
     await new Promise(resolve => setTimeout(resolve, 200)); // Espera 100 ms antes de volver a verificar
     attempsdis++;
-    console.log("Esperando");
   }
   if (!preprocess_dissamble(elffile)){
     scriptdump.parentNode.removeChild(scriptdump);
@@ -1973,7 +1980,7 @@ function main_memory_read_bydatatype(addr, type) {
       ch = main_memory_read_value(addr);
       ret = String.fromCharCode(parseInt(ch, 16));
       break;
-    case "asciiz":
+    case "asciz":
     case "string":
     case "ascii_null_end":
       ret = create_memory_read_string(addr);
@@ -1982,6 +1989,7 @@ function main_memory_read_bydatatype(addr, type) {
     case "ascii_not_null_end":
       break;
     case "space":
+    case "zero":
       break;
   }
   return ret;
@@ -2058,7 +2066,7 @@ function main_memory_write_bydatatype(addr, value, type, value_human) {
       break;
     case "string":
     case "ascii_null_end":
-    case "asciiz":
+    case "asciz":
     case "ascii_not_null_end":
     case "ascii":
       var ch = 0;
@@ -2082,6 +2090,7 @@ function main_memory_write_bydatatype(addr, value, type, value_human) {
       }
       break;
     case "space":
+    case "zero":
       for (var i = 0; i < parseInt(value); i++) {
         main_memory_write_nbytes(addr + i, "00", 1, type);
         size++;
@@ -2297,7 +2306,7 @@ function creator_memory_updaterow(addr) {
       continue;
     }
     elto.size = elto.size + main_memory_datatypes[addr_base + i].size;
-    if (main_memory_datatypes[addr_base + i].type != "space") {
+    if (main_memory_datatypes[addr_base + i].type != "space" && main_memory_datatypes[addr_base + i].type != "zero") {
       if (elto.value != "") elto.value += ", ";
       elto.value += main_memory_datatypes[addr_base + i].value;
     } else {
@@ -3343,12 +3352,18 @@ function assembly_compiler() {
 }
 */
 var list_user_instructions = [];
+var list_data_instructions = [];
 function identify_pseudo(instruction_assembly){
   // Identificamos las pseudo instrucciones
   if(instruction_assembly.search("li") != -1){
+    // console.log("li:", instruction_assembly);
     list_user_instructions.push(instruction_assembly);
     let parts = instruction_assembly.split(',');
-    if(!(-2048 >= parseInt(parts[1]?.trim(), 10) <= 2047))  
+    // console.log("Parts li: ", parseInt(parts[1]?.trim(), 16), parseInt(parts[1]?.trim(), 10));
+    
+    if (!(-2048 >= parseInt(parts[1]?.trim(), 16)) && !(parseInt(parts[1]?.trim(), 16) <= 2047)){
+      list_user_instructions.push("");
+    }else if(!(-2048 >= parseInt(parts[1]?.trim(), 10)) && !(parseInt(parts[1]?.trim(), 10) <= 2047))  
       list_user_instructions.push("");
   }
   else if (instruction_assembly.search("la") != -1)
@@ -3368,9 +3383,10 @@ function identify_pseudo(instruction_assembly){
       list_user_instructions.push(instruction_assembly);
       let parts = instruction_assembly.split(',');
       // console.log("PArtes del lw: ",parts);
-      if( isNaN(parts[1]?.trim()) ){
+      if( isNaN(parts[1]?.trim()) && !(parts[1]?.trim()).includes("(") ){
+
         list_user_instructions.push("");
-        // console.log("vuelvo");
+        console.log("vuelvo");
         return;
       }
     } 
@@ -3379,12 +3395,59 @@ function identify_pseudo(instruction_assembly){
 
 }
 
-function assembly_compiler()
-{
+function process_data_to_store_memory(){
+  for (let i = 0; i < list_data_instructions.length; i++) {
+    const dump_ins = dumpdatainstructions.findIndex(insn => insn[4] === list_data_instructions[i].label)
+    dumpdatainstructions[dump_ins].push(list_data_instructions[i].align);
+    dumpdatainstructions[dump_ins].push(list_data_instructions[i].type);
 
+    if(list_data_instructions[i].type === "asciz" || list_data_instructions[i].type === "ascii"){
+      if (dumpdatainstructions[dump_ins][1].length % 2 !== 0) {
+        throw new Error("La longitud del string hexadecimal debe ser par.");
+    }
+
+    // Dividir en bytes de 2 caracteres
+    let bytes = dumpdatainstructions[dump_ins][1].match(/.{1,2}/g);
+
+    // Invertir el orden
+    let reversedBytes = bytes.reverse().join('');
+
+    // Unir de nuevo en una cadena
+    // dumpdatainstructions[dump_ins][1] = reversedBytes.join('');
+
+    if (reversedBytes.endsWith("00") && list_data_instructions[i].type === "ascii")
+      reversedBytes = reversedBytes.slice(0, -2);
+
+    dumpdatainstructions[dump_ins][1] = reversedBytes.match(/.{1,2}/g)
+        .map(byte => String.fromCharCode(parseInt(byte, 16)))
+        .join('');
+
+    console.log("nuevo string: ", dumpdatainstructions[dump_ins][1]);
+    }
+    else if (list_data_instructions[i].type === "space" || list_data_instructions[i].type === "zero"){
+      dumpdatainstructions[dump_ins][1] = parseInt(list_data_instructions[i].value,10);
+    }
+    // if(list_data_instructions[i].type === "byte" )
+    // dumpdatainstructions[dump_ins][1] = list_data_instructions[i].value;
+  }
+}
+
+function assembly_compiler()
+{ 
+  var explabel = /^(\w+):/;
+  var expvalue = /^\.(\w+)\s+(.+)/;
+  var expalign = /^\.align\s+(\d+)/;
+  var data_alignment = 0;
   if(!assembled && !linked && !dissambled){
     var is_text = false;
+    var is_data = false;
     var labeltext = "";
+    var data_to_store = {
+      align: 0,
+      value: 0,
+      label: "",
+      type: ""
+    }
     var ret = {
             errorcode: "",
             token: "",
@@ -3400,14 +3463,97 @@ function assembly_compiler()
     // console.log("Tipo de code_assembly: ", typeof code_assembly);
     var code_assembly_array = code_assembly.split('\n').map(line => line.split('#')[0].trim()).filter(line => line !== '');
     for (var i = 0; i < code_assembly_array.length; i++){
-      if (code_assembly_array[i].search(".text") != -1)
+      if (code_assembly_array[i].search(".text") != -1){
+        is_data = false;
         is_text = true;
+      }
+      else if(code_assembly_array[i].search(".data") != -1){
+        is_data = true;
+        is_text = false;
+      }
+
+      if (is_data){
+        let matchlabel = code_assembly_array[i].match(explabel);
+        let matchalign = code_assembly_array[i].match(expalign);
+        let matchvalue = code_assembly_array[i].match(expvalue);
+        if (matchlabel){
+          
+          // console.log("matchlabel: ", matchlabel);
+          data_to_store.label = matchlabel[1];
+        }
+        if (matchalign){
+
+          data_to_store.align = parseInt(matchalign[1], 10);
+          console.log("matchalign: ", parseInt(matchalign[1], 10));
+          console.log(data_to_store.align);
+        }
+        if (matchvalue && !(code_assembly_array[i].includes(".align") || code_assembly_array[i].includes("section") || code_assembly_array[i].includes("data") )){
+          console.log("matchvalue: ", matchvalue);
+          data_to_store.type = matchvalue[1];
+          switch(data_to_store.type){
+            case "half":
+              data_to_store.value = matchvalue[2];
+              break;
+            case "byte":
+              data_to_store.value = parseInt(matchvalue[2]).toString(16);
+              break;
+            case "word":
+            case "integer":
+              data_to_store.value = parseInt(matchvalue[2]).toString(16);
+              break;
+
+            case "float":
+              console.log("primero: ", parseFloat(matchvalue[2]));
+              data_to_store.value = parseFloat(matchvalue[2]);
+              console.log("Segundo: ", data_to_store.value);
+              break;
+            case "double":
+              data_to_store.value = parseFloat(matchvalue[2]).toString(16);
+              break;
+            // case "char":
+            //   data_to_store.value = matchvalue[2];
+            //   break;
+
+            case "asciz":
+              data_to_store.value = matchvalue[2];
+              break;
+
+            case "ascii":
+              data_to_store.value = matchvalue[2];
+              break;
+
+            case "space":
+            case "zero":
+              data_to_store.value = matchvalue[2];
+              break;
+          }
+          list_data_instructions.push(data_to_store);
+          // console.log(data_to_store);
+          data_to_store = Object.assign({}, {
+            align: 0,
+            value: 0,
+            label: "",
+            type: ""
+          });
+        }
+      }
+
+      // if(is_data && code_assembly_array[i].startsWith('.align')){
+      //   // Store the align to de data
+      //   data_to_store.align = parseInt((code_assembly_array[i].split(".align "))[1], 10);
+      // }
+      // if(is_data && code_assembly_array[i].endsWith(':')){
+      //   data_to_store.label = (code_assembly_array[i].split(':'))[0];
+      // }
+      // if(is_data && code_assembly_array[i])
+        
       if (is_text && code_assembly_array[i].endsWith(':'))
         labeltext = code_assembly_array[i].slice(0, -1);
       else if (is_text && labeltext !== ""){
         identify_pseudo(code_assembly_array[i]);
       }
     }
+    console.log(list_data_instructions);
     filenames.push("input.s");
     for (let i = 0; i < filecontents.length; i++){
       if(filecontents[i].match(regexfpd))
@@ -3464,21 +3610,96 @@ function assembly_compiler()
             visible: true,
             hide: false,
           });
-          if (i == 0)
+          if (dumptextinstructions[i][0] === entry_elf)
             instructions[i]._rowVariant = 'success';
         }
-        for (let i = 0; i < dumpdatainstructions.length; i++){
-          if (dumpdatainstructions[i][1] === ""){
-            const regex = new RegExp(`(${dumpdatainstructions[i][4]}):\\s*[\\n\\t ]*\\.(zero|space)\\s+(\\d+)`, 'g');
-            let match;
-            while ((match = regex.exec(code_assembly)) !== null) {
-                // console.log(`Label = ${match[1]}, Directiva = ${match[2]}, Número extraído = ${match[3]}`);
-                // console.log(creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2));
-                creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2);
-              
-              }
 
-          }else{
+
+        process_data_to_store_memory();
+
+        console.log("Nuevo dumpdata: ", dumpdatainstructions);
+        for (let i = 0; i < dumpdatainstructions.length; i++){
+          console.log(dumpdatainstructions);
+
+          switch(dumpdatainstructions[i][6]){
+            case "half":
+              creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+              break;
+            case "byte":
+              console.log("Byte o char");
+              creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), parseInt(dumpdatainstructions[i][1], 16), 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+              
+              break;
+            case "word":
+            case "integer":
+              creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+              
+              break;
+
+            case "float":
+              let buffer = new ArrayBuffer(4); // 4 bytes para float
+              let view = new DataView(buffer);
+
+              // Convertir hexadecimal a entero
+              let intVal = parseInt(dumpdatainstructions[i][1], 16);
+
+              // Escribir el entero en el buffer como float
+              view.setUint32(0, intVal, false); // false = Big Endian
+
+              // Leer como float de 32 bits
+              // return view.getFloat32(0, false);
+            creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4],view.getFloat32(0, false), dumpdatainstructions[i][6],);
+              break;
+            case "double":
+              let bufferd = new ArrayBuffer(8); // 8 bytes para double
+              let viewd = new DataView(bufferd);
+
+              // Convertir hexadecimal a entero
+              let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
+              let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
+
+              // Escribir los valores en el buffer
+              viewd.setUint32(0, high, false); // Parte alta
+              viewd.setUint32(4, low, false);  // Parte baja
+
+              // Leer como double de 64 bits
+              // return viewd.getFloat64(0, false);
+            creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+              break;
+            // case "char":
+              
+            // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+            //   break;
+
+            case "asciz":
+              // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+              creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
+              break;
+
+            case "ascii":
+              creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
+              break;
+
+            case "space":
+            case "zero":
+              creator_memory_storestring(dumpdatainstructions[i][1], dumpdatainstructions[i][1], parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
+              break;
+          }
+          // creator_memory_data_compiler(dumpdatainstructions[i][0], dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], dumpdatainstructions[i][4], dumpdatainstructions[i][5],   )
+          // creator_memory_data_compiler(data_address, auxTokenString, parseInt(architecture.directives[j].size), label, (parseInt(auxTokenString, 16) >> 0), "byte") ;
+          
+          // if (dumpdatainstructions[i][1] === ""){
+          //   const regex = new RegExp(`(${dumpdatainstructions[i][4]}):\\s*[\\n\\t ]*\\.(zero|space)\\s+(\\d+)`, 'g');
+          //   let match;
+          //   while ((match = regex.exec(code_assembly)) !== null) { // Para cuando son zeros o un space
+          //       // console.log(`Label = ${match[1]}, Directiva = ${match[2]}, Número extraído = ${match[3]}`);
+          //       // console.log(creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2));
+          //       creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2);
+          //     }
+
+          // }
+          // // Identificar el tipo de dato que es
+          // else{
             // console.log("Address:  ", parseInt(dumpdatainstructions[i][0], 16));
             // console.log("valor:    ", dumpdatainstructions[i][1]);
             // console.log("tamaño:   ", 4);
@@ -3486,9 +3707,10 @@ function assembly_compiler()
             // console.log("DefValue: ", parseInt(dumpdatainstructions[i][1], 16) >> 0);
             // console.log("Tipo:     ", "word");
             // console.log(creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",));
-            creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",);
-          
-          }
+          //   creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",);
+          //   //Plantilla para almacenar los datos
+          //   // creator_memory_data_compiler(data_address, auxTokenString, parseInt(architecture.directives[j].size), label, (parseInt(auxTokenString, 16) >> 0), "byte") ;
+          // }
         }
         
         creator_memory_prereset();
@@ -4349,7 +4571,7 @@ function data_segment_compiler() {
                   string.length,
                   data_address,
                   label,
-                  "asciiz",
+                  "asciz",
                   align,
                 ) + 1;
               console_log("ascii_null_end Terminado");
@@ -4373,6 +4595,7 @@ function data_segment_compiler() {
             j = 0;
             break;
           case "space":
+          case "zero":
             console_log("space");
             var string = "";
             next_token();
@@ -4398,7 +4621,7 @@ function data_segment_compiler() {
               size,
               data_address,
               label,
-              "space",
+              architecture.directives[j].action,
               align,
             );
             next_token();
@@ -7431,7 +7654,25 @@ function kbd_read_string(keystroke, params) {
   }
   var neltos = readRegister(params.indexComp, params.indexElem);
   writeMemory(value, parseInt(neltos), "string");
-  Module._send_string_to_C(value);
+  console.log("String a guardar: ", value);
+  console.log("Tipo de dato: ", typeof value);
+  console.log("Longitud del value: ", value.length);
+  // Obtener tamaño de la cadena incluyendo el null terminator
+  var lengthBytes = lengthBytesUTF8(value) + 1;
+    
+  // Asignar memoria en el heap de WebAssembly
+  var buffer = Module._malloc(lengthBytes);
+  
+  // Copiar el string en el heap en formato UTF-8
+  stringToUTF8(value, buffer, lengthBytes);
+  
+  // Llamar a la función en C con el puntero a la cadena
+  Module._send_string_to_C(buffer);
+  
+  // No liberar la memoria si necesitas que el string se conserve
+  // Si ya no lo necesitas después, puedes hacer: Module._free(buffer);
+  // Module._send_string_to_C(value);
+  Module._free(buffer);
   execution_mode_run = last_execution_mode_run;
   last_execution_mode_run = -1;
   return value;
@@ -7450,6 +7691,12 @@ function keyboard_read(fn_post_read, fn_post_params) {
     var keystroke = readlineSync.question(" > ");
     var value = fn_post_read(keystroke, fn_post_params);
     keyboard = keyboard + " " + value;
+    if(last_execution_mode_run === 0){
+      instructions[insn_number]._rowVariant = '';
+      if(insn_number < instructions.length - 1)
+        instructions[insn_number]._rowVariant = '';
+      insn_number = undefined;
+    }
     return packExecute(false, "The data has been uploaded", "danger", null);
   }
   app._data.enter = false;
@@ -7460,6 +7707,12 @@ function keyboard_read(fn_post_read, fn_post_params) {
   fn_post_read(app._data.keyboard, fn_post_params);
   app._data.keyboard = "";
   app._data.enter = null;
+  if(last_execution_mode_run === 0){
+    instructions[insn_number]._rowVariant = '';
+    if(insn_number < instructions.length - 1)
+      instructions[insn_number]._rowVariant = '';
+    insn_number = undefined;
+  }
   show_notification("The data has been uploaded", "info");
   if (execution_index >= instructions.length) {
   //   for (var i = 0; i < instructions.length; i++) {
@@ -7872,7 +8125,7 @@ var uielto_toolbar_btngroup = {
       draw.success = [];
       draw.info = [];
       for (var i = 0; i < instructions.length; i++) {
-        if (instructions[i].Label == "main") {
+        if (instructions[i].Label == "_main") {
           draw.success.push(i);
         }
       }
@@ -7886,11 +8139,18 @@ var uielto_toolbar_btngroup = {
       if (execution_mode_run === -1){
         execution_mode_run = 1;
         loadSailFunction(enablefpd, enablevec);
+        return packExecute(
+          true,
+          "The execution of the program has finished",
+          "success",
+          null,
+        );
+      } else if(finished){
+        show_notification('The program has finished', 'warning');
       }
       else if(execution_mode_run !== -1 && execution_mode_run !== 2){
         variablechula = 1;
         execution_mode_run = 1;
-        // console.log("Continuas paso a paso");
         Module._reanudar_ejecucion(parseInt(1,10));
       }
 
@@ -7900,50 +8160,17 @@ var uielto_toolbar_btngroup = {
       var ret;
       creator_ga("execute", "execute.run", "execute.run");
       if(execution_mode_run === -1){
-        // console.log("vamos de seguido");
         execution_mode_run = 0;
         loadSailFunction(enablefpd, enablevec);
-        // console.log("Ejecutado!");
-      }else if (execution_mode_run !== -1 && execution_mode_run !== 2){
+        
+      } else if(finished){
+        show_notification('The program has finished', 'warning');
+      }
+      else if (execution_mode_run !== -1 && execution_mode_run !== 2){
         execution_mode_run = 0;
         variablechula = 0;
-        // interrupted_execution = true;
-        // console.log("Ahora ejecutas de seguido");
-        //Hacemos el resume de la pausa
-      //   Module.onRuntimeInitialized = function() {
-      //     console.log("Runtime inicializado. Ahora puedes llamar a reanudar_ejecucion.");
-      //     Module.ccall('reanudar_ejecucion', null, ['number'], [variablechula]); // Llama con valor 1
-      // };
         Module._reanudar_ejecucion(parseInt(0,10));
-        // Module.ccall('reanudar_ejecucion',
-        //   null,
-        //   ['number'],
-        //   [variablechula]);
       }
-      // if (run_program == 0) {
-      //   run_program = 1;
-      // }
-      // if (instructions.length === 0) {
-      //   show_notification("No instructions in memory", "danger");
-      //   run_program = 0;
-      //   return;
-      // }
-      // if (execution_index < -1) {
-      //   show_notification("The program has finished", "warning");
-      //   run_program = 0;
-      //   return;
-      // }
-      // if (execution_index == -1) {
-      //   show_notification("The program has finished with errors", "danger");
-      //   run_program = 0;
-      //   return;
-      // }
-      // this.reset_disable = true;
-      // this.instruction_disable = true;
-      // this.run_disable = true;
-      // this.stop_disable = false;
-      // app._data.main_memory_busy = true;
-      // uielto_toolbar_btngroup.methods.execute_program_packed(ret, this);
     },
     execute_program_packed(ret, local_this) {
       for (var i = 0; i < instructions_packed && execution_index >= 0; i++) {

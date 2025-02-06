@@ -5821,5 +5821,3 @@ function preprocess_as(file_p, content_p, enablefpd, enablevec) {
 
 
 }
-
-console.log("He cargado el as-new");

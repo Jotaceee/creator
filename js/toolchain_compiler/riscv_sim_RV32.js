@@ -6,6 +6,7 @@ var Module = typeof Module != "undefined" ? Module : {};
 var moduleOverrides = Object.assign({}, Module);
 var arguments_ = [];
 var thisProgram = "./this.program";
+
 var quit_ = (status, toThrow) => {
   throw toThrow;
 };
@@ -140,14 +141,14 @@ var displayExp = /^([\w\s]+):\s*(.*)$/;
 var userMode = false;
 var instoper = "";
 var syscall_print_code = -1;
+var prev_add_to_jump;
 Module['print'] = function (message) {
-  console.log("Que imprimo");
+  var next_add_to_jump;
   let instMatch = message.match(instructionExp);
   let regiMatch = message.match(registerExp);
   let memoMatch = message.match(memoryExp);
   let printMatch = message.match(displayExp);
-  
-  // console.log("Ins:",message);
+   
   if (instMatch && instMatch[2] === 'U'){
 
     //Actualizamos el pc
@@ -155,41 +156,140 @@ Module['print'] = function (message) {
     // console.log("PC actual:",pc_sail);
 
     userMode = true;
-    // console.log("Se viene un breakpoint? ",is_breakpoint);
     console.log("Instruccion: ", instMatch);
-    // console.log("Mensaje entero: ", message);
-    // console.log(instMatch[3].toLowerCase());
     const current_ins = instructions.findIndex(insn => insn.Address === ("0x"+instMatch[3].toLowerCase()));
+    if(prev_add_to_jump !== undefined){
+      instructions[prev_add_to_jump]._rowVariant = "";
+      prev_add_to_jump = undefined;
+    }
+
+    if (instructions[current_ins].loaded.includes("jalr")){
+      var next_add = instructions[current_ins].loaded.split("\t");
+      const match = next_add[1].match(/(-?\d+)\((\w+)\)/);
+      var aux_reg = crex_findReg(match[2]);
+      var aux_val = readRegister(aux_reg.indexComp, aux_reg.indexElem);
+      
+      next_add_to_jump = (aux_val + parseInt(match[1], 10)).toString(16);
+      next_add_to_jump = instructions.findIndex(insn => insn.Address === ("0x"+next_add_to_jump.toLowerCase()));
+      prev_add_to_jump = current_ins;
+
+
+
+      console.log("Siguiente direccion del jalr: ", next_add);
+    }else if (instructions[current_ins].loaded.includes("jal")){
+      var next_add = instructions[current_ins].loaded.split("\t");
+      console.log("Siguiente direccion del jal: ", next_add);
+
+    }else if (instructions[current_ins].loaded.includes("ret")){
+      // Mirar el ra
+      var aux_reg = crex_findReg("ra");
+      next_add_to_jump = readRegister(aux_reg.indexComp, aux_reg.indexElem).toString(16);
+      next_add_to_jump = instructions.findIndex(insn => insn.Address === ("0x"+next_add_to_jump.toLowerCase()));
+      prev_add_to_jump = current_ins;
+    }
+
+
+    // Primero caso de paso a paso
+    if (execution_mode_run === 1){
+      instructions[current_ins]._rowVariant = 'info';
+      if (current_ins < instructions.length - 1 || next_add_to_jump !== undefined){
+        instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)]._rowVariant = 'success';
+        is_breakpoint = instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)].Break;
+      }
+      if (current_ins > 0 || prev_add_to_jump !== undefined)
+        instructions[(prev_add_to_jump !== undefined && prev_add_to_jump !== current_ins) ? prev_add_to_jump : (current_ins -1)]._rowVariant = '';
+    }
+    // Para el caso de run without stop y la siguiente instruccion es un breakpoint
+    else if (execution_mode_run === 0){
+      if (current_ins < instructions.length - 1 || next_add_to_jump !== undefined) {
+        is_breakpoint = instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)].Break;
+      }
+      if(is_breakpoint){
+        instructions[current_ins]._rowVariant = 'info';
+        if (current_ins < instructions.length - 1  || next_add_to_jump !== undefined) {
+          instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)]._rowVariant = 'success';
+        }
+      }else {
+        instructions[current_ins]._rowVariant = '';
+      }
+      if (current_ins > 0  || prev_add_to_jump !== undefined)
+        instructions[(prev_add_to_jump !== undefined && prev_add_to_jump !== current_ins) ? prev_add_to_jump : (current_ins -1)]._rowVariant = '';
+
+    }
+    else
+      instructions[current_ins]._rowVariant = '';
+    
     if (instMatch[5] === "ecall"){
+      // if(execution_mode_run = 0){
+      //   instructions[current_ins]._rowVariant = "info";
+      //   if (current_ins < instructions.length -1)
+      //     instructions[current_ins +1]._rowVariant = "success";
+      // }
       let argument_register = crex_findReg("a7"); // obtenemos el registro para ver que llamada al sistema es
       let syscall_code = readRegister(argument_register.indexComp, argument_register.indexElem); // Lectura del registro para obtener el valor
-
+  
       switch(syscall_code){
         case 5:
+          if(execution_mode_run === 0){
+            insn_number = current_ins;
+            instructions[current_ins]._rowVariant = "info";
+            if (current_ins < instructions.length -1  || next_add_to_jump !== undefined)
+              instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)]._rowVariant = 'success';
+              // instructions[current_ins +1]._rowVariant = "success";
+          }
           // last_execution_mode_run = execution_mode_run;
           // execution_mode_run = 2;
           // Manejo para enteros
           capi_read_int('a0');
           break;
         case 6:
+          if(execution_mode_run === 0){
+            insn_number = current_ins;
+            instructions[current_ins]._rowVariant = "info";
+            if (current_ins < instructions.length -1 || next_add_to_jump !== undefined)
+              instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)]._rowVariant = 'success';
+        
+              // instructions[current_ins +1]._rowVariant = "success";
+          }
           // last_execution_mode_run = execution_mode_run;
           // execution_mode_run = 2;
           // Manejo para floats
           capi_read_float('fa0');
           break;
         case 7:
-          
+          if(execution_mode_run === 0){
+            insn_number = current_ins;
+            instructions[current_ins]._rowVariant = "info";
+            if (current_ins < instructions.length -1 || next_add_to_jump !== undefined)
+              instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)]._rowVariant = 'success';
+        
+              // instructions[current_ins +1]._rowVariant = "success";
+          }
           // Manejo para double
-          capi_read_double('fa0')
+          capi_read_double('fa0');
           break;
         case 8:
+          if(execution_mode_run === 0){
+            insn_number = current_ins;
+            instructions[current_ins]._rowVariant = "info";
+            if (current_ins < instructions.length -1 || next_add_to_jump !== undefined)
+              instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)]._rowVariant = 'success';
+        
+              // instructions[current_ins +1]._rowVariant = "success";
+          }
           // last_execution_mode_run = execution_mode_run;
           // execution_mode_run = 2;
           // Manejo para strings
           capi_read_string('a0','a1');
           break;
-
+  
         case 12:
+          if(execution_mode_run === 0){
+            instructions[current_ins]._rowVariant = "info";
+            if (current_ins < instructions.length -1 || next_add_to_jump !== undefined)
+              instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)]._rowVariant = 'success';
+              // instructions[current_ins +1]._rowVariant = "success";
+          }
           // last_execution_mode_run = execution_mode_run;
           // execution_mode_run = 2;
           // Manejo para char
@@ -200,58 +300,23 @@ Module['print'] = function (message) {
           syscall_print_code = syscall_code;
           break;
       }
-
-
+  
+      next_add_to_jump = undefined;
     }
-
-    // console.log("Execution_mode_run: ", execution_mode_run);
-    // Primero caso de paso a paso
-    if (execution_mode_run === 1){
-      instructions[current_ins]._rowVariant = 'info';
-      if (current_ins < instructions.length - 1){
-        instructions[current_ins + 1]._rowVariant = 'success';
-        is_breakpoint = instructions[current_ins + 1].Break;
-      }
-      if (current_ins > 0 /*&& execution_mode_run === 1*/)
-        instructions[current_ins - 1]._rowVariant = '';
-    }
-    // Para el caso de run without stop y la siguiente instruccion es un breakpoint
-    else if (execution_mode_run === 0){
-      if (current_ins < instructions.length - 1) {
-        is_breakpoint = instructions[current_ins + 1].Break;
-      }
-      if(is_breakpoint){
-        instructions[current_ins]._rowVariant = 'info';
-        if (current_ins < instructions.length - 1) {
-          instructions[current_ins + 1]._rowVariant = 'success';
-        }
-      }else {
-        instructions[current_ins]._rowVariant = '';
-      }
-      if (current_ins > 0)
-        instructions[current_ins - 1]._rowVariant = '';
-
-    }
-
-    else
-      instructions[current_ins]._rowVariant = '';
-    
 
 
 
     instoper = instMatch[5];
 
-    // console.log("En un futuro será un breakpoint: ",is_breakpoint);
   }
   else if (instMatch && instMatch[2] !== 'U')
     userMode = false;
 
   if (regiMatch /*&& userMode === true*/) {
     // En caso de ser escritura '<-' pintamos el valor en el registro que corresponde
-    // console.log(regiMatch);
     if (regiMatch[2] === '<-'){
       let regtowrite = crex_findReg(regiMatch[1]);
-      console.log("Registro identificado: ", regtowrite);
+      // console.log("Registro identificado: ", regtowrite);
       if (regiMatch[1] !== 'x2')
         writeRegister(parseInt(regiMatch[3], 16), regtowrite.indexComp, regtowrite.indexElem);
     }
@@ -286,6 +351,8 @@ Module['print'] = function (message) {
     }
   
   }
+
+  
 
   if(printMatch && syscall_print_code !== -1){
 
@@ -4004,6 +4071,8 @@ function _exit(status) {
   for (let i = 0; i < instructions.length; i++){
     instructions[i]._rowVariant = '';
   }
+  if (status === 1)
+    instructions[0]._rowVariant = 'success';
   exit(status);
 }
 function maybeExit() {
@@ -6840,7 +6909,11 @@ function exit(status, implicit) {
         "program exited (with status: " +
         status +
         "), but EXIT_RUNTIME is not set, so halting execution but not exiting the runtime or preventing further async execution (build with EXIT_RUNTIME=1, if you want a true shutdown)";
-      err(msg);
+      if (status === 0){
+        show_notification('The execution of the program has finished', 'success') ;
+        finished = true;
+      }
+        err(msg);
       can_reset = true;
     }
   } else {
@@ -6865,16 +6938,17 @@ if (Module["preInit"]) {
 }
 var shouldRunNow = false;
 
-function preprocess_sail(elffile, enablefpd, enablevec){
+function preprocess_sail(elffile, enablefpd, enablevec, entry_add){
   inputelffile = elffile;
   // run(["--config-flags", "4"]);
   // enablefpd = true;
+  console.log("FPD y VEC: ", enablefpd, enablevec);
   if(enablefpd)
-    run(["--config-flags", "8", "-p", "output.elf"]);
+    run(["--entry-address", entry_add, "--config-flags", "8", "-p", "output.elf"]);
   if(enablevec)
-    run(["--config-flags", "4", "-p", "output.elf"]);
+    run(["--entry-address", entry_add, "--config-flags", "4", "-p", "output.elf"]);
   if(!enablefpd && !enablevec)
-    run(["--config-flags", "0", "-p", "output.elf"]);
+    run(["--entry-address", entry_add, "--config-flags", "0", "-p", "output.elf"]);
 
 
 }
