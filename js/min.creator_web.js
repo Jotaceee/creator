@@ -2502,6 +2502,7 @@ var architecture = {
 var architecture_json = "";
 var textarea_assembly_editor;
 var codemirrorHistory = null;
+var assembly_files = []; // En cada entrada habra un objeto: {filename (string), assembly_code (string), to_compile (bool)}
 var code_assembly = "";
 var tokenIndex = 0;
 var nEnters = 0;
@@ -7933,6 +7934,8 @@ var uielto_toolbar_btngroup = {
         app._data.creator_mode = e;
         if (e == "assembly") {
           setTimeout(function () {
+
+            //Aqui insertar los distintos ficheros editables
             assembly_codemirror_start();
             if (codemirrorHistory != null) {
               textarea_assembly_editor.setHistory(codemirrorHistory);
@@ -14281,5 +14284,272 @@ try {
     location.reload(true);
   }, 3e3);
 }
+
+function toCompile(_checkbox, filename){
+  for (let i = 0; i < assembly_files.length; i++){
+    if(assembly_files[i].filename === filename){
+      if(_checkbox.checked)
+        assembly_files[i].to_compile = true;
+      else
+        assembly_files[i].to_compile = false;
+    }
+  }
+  console.log("Esta checkeado? ", _checkbox.checked);
+  console.log("Assembly_files:", assembly_files);
+}
+
+function newFile(){
+  console_log("Creando fichero");
+
+  /* GENERACION DEL NUEVO FICHERO */
+
+  let filename_prompt = prompt("Nombre del nuevo fichero");
+  if(filename_prompt === null || filename_prompt === "") //Checkeamos que hay un nombre
+    return;
+  filename_prompt = filename_prompt.replaceAll(" ", "");
+  if(!filename_prompt.endsWith(".s"))
+    filename_prompt = filename_prompt + ".s";
+  
+  let myFileTable = document.getElementById("files").getElementsByTagName('tbody')[0];
+  let newRow = document.createElement('tr');
+  newRow.setAttribute("id", "row-" + filename_prompt.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
+  newRow.setAttribute("oncontextmenu", `showContextMenu(event, '${myFileTable}')`);
+  let cellName = document.createElement("td");
+  cellName.textContent = filename_prompt;
+  let cellCompile = document.createElement("td");
+  cellCompile.classList.add("checkbox-container");
+
+  let checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.classList.add("compile-checkbox");
+  checkbox.onchange = function() {
+    toCompile(this, filename_prompt);
+  };
+
+  cellCompile.appendChild(checkbox);
+
+  newRow.appendChild(cellName);
+  newRow.appendChild(cellCompile);
+
+  myFileTable.appendChild(newRow);
+
+  /* ACTUALIZACION DEL TOOLBAR DE FICHEROS */
+  let editorcont = document.getElementById("editor-container");
+
+  let divFile = document.createElement("div");
+  
+  divFile.classList.add(filename_prompt.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''), "btn", "btn-outline-secondary", "menuGroup", "btn-sm","simulator_btn", "btn_arch", "btn-secondary");
+  divFile.setAttribute("onclick", `showFile('${filename_prompt}')`);
+
+  let FilenameText = document.createElement("b");
+  FilenameText.textContent = filename_prompt;
+
+  let closeButton = document.createElement("button");
+  closeButton.classList.add("btn", "btn", "btn-outline-secondary", "menuGroup", "btn-sm", "simulator_btn", "btn_arch", "h-100", "btn-secondary");
+  // closeButton.setAttribute("onclick", "closeFile()");
+  closeButton.textContent = "X";
+
+  closeButton.onclick = function(event) {
+    event.stopPropagation();
+    closeFile(filename_prompt);
+  }
+
+  divFile.appendChild(FilenameText);
+  divFile.appendChild(closeButton);
+
+  editorcont.prepend(divFile);
+
+  var newAssemblyFile =  {
+    filename: filename_prompt,
+    code: "",
+    to_compile: false,
+    editing_now: false
+  }
+  assembly_files.push(newAssemblyFile);
+
+  showFile(filename_prompt);
+}
+
+function closeFile(filename){
+  for(let i = 0; i < assembly_files.length; i++){
+    if (assembly_files[i].filename === filename){
+      assembly_files[i].code = textarea_assembly_editor.getValue();
+      assembly_files[i].editing_now = false;
+      textarea_assembly_editor.setValue("");
+    }
+  }
+  
+  let cierre = document.getElementsByClassName(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''))[0];
+  cierre.parentNode.removeChild(cierre);
+  console.log("Cerrando fichero", cierre);
+}
+
+function renameFile(){
+  let old_filename = selectedFile;
+  let new_filename = prompt("Inserte nuevo nombre de fichero:");
+  if(new_filename === null || new_filename === "") //Checkeamos que hay un nombre
+    return;
+    new_filename = new_filename.replaceAll(" ", "");
+  if(!new_filename.endsWith(".s"))
+    new_filename = new_filename + ".s";
+
+  let ren_toolbar = document.getElementsByClassName(old_filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''))[0];
+  if(ren_toolbar !== undefined){
+    ren_toolbar.classList.remove(old_filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
+    ren_toolbar.classList.add(new_filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
+    ren_toolbar.onclick = function () {showFile(new_filename);};
+
+    ren_toolbar.childNodes[0].textContent = new_filename; // Rename of toolbar name
+    ren_toolbar.childNodes[1].onclick = function(event) {
+      event.stopPropagation();
+      closeFile(new_filename);
+    }
+  }
+
+  let ren_file = document.getElementById("row-" + old_filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
+  if(ren_file !== undefined){
+    ren_file.id = "row-" + new_filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, '');
+    ren_file.childNodes[0].textContent = new_filename;
+  }
+
+  // console.log("toolbar sons:", ren_toolbar.childNodes);
+  // console.log("file sons:", ren_file.childNodes);
+  for(let i = 0; i <assembly_files.length; i++){
+    if (assembly_files[i].filename === old_filename){
+      assembly_files[i].filename = new_filename;
+    }
+  }
+
+
+
+
+}
+
+function deleteFile(){
+  let filename = selectedFile;
+  for(let i = 0; i <assembly_files.length; i++){
+    if (assembly_files[i].filename === filename){
+      assembly_files.splice(i,1);
+      textarea_assembly_editor.setValue("");
+    }
+  }
+
+  // Ahora eliminamos del menu de ficheros y de la barra de navegacion
+  let del_toolbar = document.getElementsByClassName(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''))[0];
+  let del_file = document.getElementById("row-" + filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
+  if(del_toolbar !== undefined){
+    del_toolbar.parentNode.removeChild(del_toolbar);
+  }
+  if(del_file !== undefined){
+    del_file.parentNode.removeChild(del_file);
+  }
+
+  console.log("Borrar fichero");
+}
+
+function openFile(){
+  let filename = selectedFile;
+  let checkit = document.getElementsByClassName(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
+  if(checkit[0] === undefined){
+
+    let editorcont = document.getElementById("editor-container");
+
+    let divFile = document.createElement("div");
+    
+    divFile.classList.add(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''), "btn", "btn-outline-secondary", "menuGroup", "btn-sm","simulator_btn", "btn_arch", "btn-secondary");
+    divFile.setAttribute("onclick", `showFile('${selectedFile}')`);
+
+    let FilenameText = document.createElement("b");
+    FilenameText.textContent = filename;
+
+    let closeButton = document.createElement("button");
+    closeButton.classList.add("btn", "btn", "btn-outline-secondary", "menuGroup", "btn-sm", "simulator_btn", "btn_arch", "h-100", "btn-secondary");
+    // closeButton.setAttribute("onclick", "closeFile()");
+    closeButton.textContent = "X";
+
+    closeButton.onclick = function(event) {
+      event.stopPropagation();
+      closeFile(filename);
+    }
+
+    divFile.appendChild(FilenameText);
+    divFile.appendChild(closeButton);
+
+    editorcont.prepend(divFile);
+  }
+
+
+
+  console.log("Abrimos fichero: ", selectedFile);
+  showFile(filename);
+
+}
+
+function showFile(filename){
+  console.log("Abrimos el fichero: ", filename);
+  //Primero guardamos el fichero que se estaba editando
+  for(let i = 0; i < assembly_files.length; i++){
+    if(assembly_files[i].editing_now){
+      assembly_files[i].code = textarea_assembly_editor.getValue();
+      assembly_files[i].editing_now = false;
+    }
+  }
+  for(let i  = 0;i < assembly_files.length; i++){
+    if(assembly_files[i].filename === filename){
+      textarea_assembly_editor.setValue(assembly_files[i].code);
+      assembly_files[i].editing_now = true;
+    }
+  }
+  
+  
+
+
+  console.log(assembly_files);
+  
+}
+var selectedFile = null;
+function showContextMenu(event, filename){
+  event.preventDefault();
+  selectedFile = event.target.textContent;
+  // console.log(event.target.textContent);
+
+  let menu = document.getElementById("contextMenu");
+
+  let x = event.pageX;
+  let y = event.pageY;
+  let menuWidth = menu.offsetWidth;
+  let menuHeight = menu.offsetHeight;
+  let windowWidth = window.innerWidth;
+  let windowHeight = window.innerHeight;
+
+  if (x + menuWidth > windowWidth) x = windowWidth - menuWidth - 5;
+  if (y + menuHeight > windowHeight) y = windowHeight - menuHeight - 5;
+
+
+  menu.style.left = x + "px";
+  menu.style.top = y + "px";
+  menu.style.display = "block";
+}
+
+function hideContextMenu(){
+  document.getElementById("contextMenu").style.display = "none";
+  selectedFile = null;
+}
+
+function toggleFileMenu()
+{
+  let fileMenu = document.getElementById("fileMenu");
+  let button = document.querySelector(".toggle-button");
+
+  if (fileMenu.style.display === "none") {
+    fileMenu.style.display = "block";
+    // button.textContent = "Ocultar Archivos";
+  } else {
+    fileMenu.style.display = "none";
+    // button.textContent = "Mostrar Archivos";
+  }
+
+}
+document.addEventListener("click", hideContextMenu);
 
 // window.instructions = instructions;

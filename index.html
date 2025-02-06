@@ -3,7 +3,101 @@
 
   <!-- Head -->
   <head>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; background-color: #f5f5f5; }
 
+      .container { display: flex; height: 100vh; }
+
+      /* Estilo de la Tabla de Archivos */
+      .files-container { /*flex: 1;*/ padding: 10px; width: 10%; background: #fff; overflow-y: auto; display: block; transition: width 0.3s ease-in-out; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 12px; border: 1px solid #ccc; text-align: left; cursor: pointer; }
+      th { background: #ddd; text-align: center; }
+      tr:hover { background: #e0e0e0; }
+      .checkbox-container { display: flex; justify-content: center; }
+
+      #editor-container {
+        flex: 2;
+        padding: 10px;
+        /* border-right: 2px solid rgb(108, 117, 125); */
+        background: white;
+      }
+
+      #editor {
+        height: calc(100% - 40px);
+        /* border: 1px solid rgb(108, 117, 125); */
+        width: 100%;
+      }
+
+      .toggle-button {
+            position: block;
+            margin-top: 0.55%;
+            top: 10px;
+            height: 7.5%;
+            /* right: 10px; */
+            padding: 8px 12px;
+            background: #ffffff;
+            
+            /* color: white; */
+            border: gray 1px solid;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1001;
+        }
+        .toggle-button img{
+            width: 1.2em;
+            height: auto;
+        }
+        .toggle-button:hover {
+            position: block;
+            margin-top: 0.55%;
+            height: 7.5%;
+            top: 10px;
+            /* right: 10px; */
+            padding: 8px 12px;
+            background: #a7aaad;
+            /* color: white; */
+            border: gray 1px solid;
+            
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+      /* ==== MENÚ CONTEXTUAL ==== */
+      .context-menu {
+          position: absolute;
+          background: #2b2b2b;
+          border-radius: 8px;
+          box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+          display: none;
+          z-index: 1000;
+          min-width: 200px;
+          padding: 8px 0;
+          font-size: 14px;
+      }
+
+      .context-menu ul {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+      }
+
+      .context-menu ul li {
+          padding: 12px 16px;
+          color: white;
+          cursor: pointer;
+          transition: background 0.2s ease-in-out;
+      }
+
+      .context-menu ul li:hover {
+          background: rgba(255, 255, 255, 0.1);
+      }
+
+      .context-menu ul li span {
+          margin-right: 10px;
+      }
+    </style>
     <!-- Global site tag (gtag.js) - Google Analytics -->
     <!-- Google tag (gtag.js) - GA4 -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-X30SC9SWE2"></script>
@@ -378,12 +472,60 @@
 
               <b-container fluid align-h="center" class="mx-0 px-0">
                 <b-row cols="2">
-                  <b-col cols="12" id="divAssembly">
+                  <b-col cols="12" id="divAssembly" class="container">
+                  <button class="toggle-button" onclick="toggleFileMenu()">
+                    <img src="documento.png" alt="file" width="70%">
+                  </button>
+                    
+                    
+                    <!-- Aqui se pondrá un menu con los ficheros disponibles y creados para su uso-->
+                    <div id="fileMenu" class="files-container"> <!-- Menu de ficheros creados-->
+                      <h2>Files</h2>
+                      <table id="files">
+                        <thead>
+                          <tr>
+                              <th>Name</th>
+                              <th>To Compile</th>
+                          </tr>
+                        </thead>
+                        <tbody id="fileList">
+                          <!-- <tr oncontextmenu="showContextMenu(event, 'file1')">
+                            <td>File1</td>
+                            <td class="checkbox-container"><input type="checkbox" class="compile-checkbox"></td>
+                          </tr> -->
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    <!-- Poner el nuevo editor de texto -->
+                    <div id="editor-container"> <!-- Esto por cada fichero creado/existente-->
+                      <!-- Esto va por cada fichero y dentro va un TextEditor de ensamblador-->
+                      <!-- <div class="btn btn-outline-secondary menuGroup btn-sm simulator_btn btn_arch btn-secondary" onclick="showFile()">
+                        <b>FileName</b>
+                        <button class="btn btn btn-outline-secondary menuGroup btn-sm simulator_btn btn_arch h-100 btn-secondary" onclick="closeFile()">X</button> 
+                      </div> -->
+                        <button class="btn btn btn-outline-secondary menuGroup btn-sm simulator_btn btn_arch h-8 btn-secondary" onclick="newFile()">+</button>
+                        <textarea-assembly :browser="browser" id="editor"></textarea-assembly>
+                    
+                    
+                    </div>
 
+                    <!-- <button onclick="loadFile()">Load</button> -->
+                    <!-- <div id="FileTabs"></div> -->
                     <!-- Assembly textarea-->
-                    <textarea-assembly :browser="browser"></textarea-assembly>
+                    <!-- <textarea-assembly :browser="browser"></textarea-assembly> -->
+                    
+                    
 
                   </b-col>
+
+                  <div id="contextMenu" class="context-menu">
+                    <ul>
+                      <li onclick="openFile()">Abrir Fichero</li>
+                      <li onclick="renameFile()">Renombrar Fichero</li>
+                      <li onclick="deleteFile()">Eliminar Fichero</li>
+                    </ul>
+                  </div>
 
                   <b-col cols="0" id="divTags" class="d-none">
 
