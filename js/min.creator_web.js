@@ -3391,7 +3391,7 @@ function identify_pseudo(instruction_assembly){
         return;
       }
     } 
-  else 
+  else if(!(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
     list_user_instructions.push(instruction_assembly);
 
 }
@@ -3399,37 +3399,39 @@ function identify_pseudo(instruction_assembly){
 function process_data_to_store_memory(){
   for (let i = 0; i < list_data_instructions.length; i++) {
     const dump_ins = dumpdatainstructions.findIndex(insn => insn[4] === list_data_instructions[i].label)
-    dumpdatainstructions[dump_ins].push(list_data_instructions[i].align);
-    dumpdatainstructions[dump_ins].push(list_data_instructions[i].type);
+    if (dumpdatainstructions[dump_ins] !== undefined){
+      dumpdatainstructions[dump_ins].push(list_data_instructions[i].align);
+      dumpdatainstructions[dump_ins].push(list_data_instructions[i].type);
 
-    if(list_data_instructions[i].type === "asciz" || list_data_instructions[i].type === "ascii"){
-      if (dumpdatainstructions[dump_ins][1].length % 2 !== 0) {
-        throw new Error("La longitud del string hexadecimal debe ser par.");
+      if(list_data_instructions[i].type === "asciz" || list_data_instructions[i].type === "ascii"){
+        if (dumpdatainstructions[dump_ins][1].length % 2 !== 0) {
+          throw new Error("La longitud del string hexadecimal debe ser par.");
+      }
+
+      // Dividir en bytes de 2 caracteres
+      let bytes = dumpdatainstructions[dump_ins][1].match(/.{1,2}/g);
+
+      // Invertir el orden
+      let reversedBytes = bytes.reverse().join('');
+
+      // Unir de nuevo en una cadena
+      // dumpdatainstructions[dump_ins][1] = reversedBytes.join('');
+
+      if (reversedBytes.endsWith("00") && list_data_instructions[i].type === "ascii")
+        reversedBytes = reversedBytes.slice(0, -2);
+
+      dumpdatainstructions[dump_ins][1] = reversedBytes.match(/.{1,2}/g)
+          .map(byte => String.fromCharCode(parseInt(byte, 16)))
+          .join('');
+
+      console.log("nuevo string: ", dumpdatainstructions[dump_ins][1]);
+      }
+      else if (list_data_instructions[i].type === "space" || list_data_instructions[i].type === "zero"){
+        dumpdatainstructions[dump_ins][1] = parseInt(list_data_instructions[i].value,10);
+      }
+      // if(list_data_instructions[i].type === "byte" )
+      // dumpdatainstructions[dump_ins][1] = list_data_instructions[i].value;
     }
-
-    // Dividir en bytes de 2 caracteres
-    let bytes = dumpdatainstructions[dump_ins][1].match(/.{1,2}/g);
-
-    // Invertir el orden
-    let reversedBytes = bytes.reverse().join('');
-
-    // Unir de nuevo en una cadena
-    // dumpdatainstructions[dump_ins][1] = reversedBytes.join('');
-
-    if (reversedBytes.endsWith("00") && list_data_instructions[i].type === "ascii")
-      reversedBytes = reversedBytes.slice(0, -2);
-
-    dumpdatainstructions[dump_ins][1] = reversedBytes.match(/.{1,2}/g)
-        .map(byte => String.fromCharCode(parseInt(byte, 16)))
-        .join('');
-
-    console.log("nuevo string: ", dumpdatainstructions[dump_ins][1]);
-    }
-    else if (list_data_instructions[i].type === "space" || list_data_instructions[i].type === "zero"){
-      dumpdatainstructions[dump_ins][1] = parseInt(list_data_instructions[i].value,10);
-    }
-    // if(list_data_instructions[i].type === "byte" )
-    // dumpdatainstructions[dump_ins][1] = list_data_instructions[i].value;
   }
 }
 
@@ -3459,103 +3461,110 @@ function assembly_compiler()
 
           /* Google Analytics */
           creator_ga('compile', 'compile.assembly');
-    filecontents.push(code_assembly);
-    // console.log("Codigo en bruto: ", code_assembly);
-    // console.log("Tipo de code_assembly: ", typeof code_assembly);
-    var code_assembly_array = code_assembly.split('\n').map(line => line.split('#')[0].trim()).filter(line => line !== '');
-    for (var i = 0; i < code_assembly_array.length; i++){
-      if (code_assembly_array[i].search(".text") != -1){
-        is_data = false;
-        is_text = true;
-      }
-      else if(code_assembly_array[i].search(".data") != -1){
-        is_data = true;
-        is_text = false;
-      }
-
-      if (is_data){
-        let matchlabel = code_assembly_array[i].match(explabel);
-        let matchalign = code_assembly_array[i].match(expalign);
-        let matchvalue = code_assembly_array[i].match(expvalue);
-        if (matchlabel){
-          
-          // console.log("matchlabel: ", matchlabel);
-          data_to_store.label = matchlabel[1];
-        }
-        if (matchalign){
-
-          data_to_store.align = parseInt(matchalign[1], 10);
-          console.log("matchalign: ", parseInt(matchalign[1], 10));
-          console.log(data_to_store.align);
-        }
-        if (matchvalue && !(code_assembly_array[i].includes(".align") || code_assembly_array[i].includes("section") || code_assembly_array[i].includes("data") )){
-          console.log("matchvalue: ", matchvalue);
-          data_to_store.type = matchvalue[1];
-          switch(data_to_store.type){
-            case "half":
-              data_to_store.value = matchvalue[2];
-              break;
-            case "byte":
-              data_to_store.value = parseInt(matchvalue[2]).toString(16);
-              break;
-            case "word":
-            case "integer":
-              data_to_store.value = parseInt(matchvalue[2]).toString(16);
-              break;
-
-            case "float":
-              console.log("primero: ", parseFloat(matchvalue[2]));
-              data_to_store.value = parseFloat(matchvalue[2]);
-              console.log("Segundo: ", data_to_store.value);
-              break;
-            case "double":
-              data_to_store.value = parseFloat(matchvalue[2]).toString(16);
-              break;
-            // case "char":
-            //   data_to_store.value = matchvalue[2];
-            //   break;
-
-            case "asciz":
-              data_to_store.value = matchvalue[2];
-              break;
-
-            case "ascii":
-              data_to_store.value = matchvalue[2];
-              break;
-
-            case "space":
-            case "zero":
-              data_to_store.value = matchvalue[2];
-              break;
+    for(let j = 0; j < assembly_files.length; j++){
+      if(assembly_files[j].to_compile){
+        filecontents.push(assembly_files[j].code);
+        // console.log("Codigo en bruto: ", code_assembly);
+        // console.log("Tipo de code_assembly: ", typeof code_assembly);
+        var code_assembly_array = assembly_files[j].code.split('\n').map(line => line.split('#')[0].trim()).filter(line => line !== '');
+        for (let i = 0; i < code_assembly_array.length; i++){
+          if (code_assembly_array[i].search(".text") != -1){
+            is_data = false;
+            is_text = true;
           }
-          list_data_instructions.push(data_to_store);
-          // console.log(data_to_store);
-          data_to_store = Object.assign({}, {
-            align: 0,
-            value: 0,
-            label: "",
-            type: ""
-          });
-        }
-      }
+          else if(code_assembly_array[i].search(".data") != -1){
+            is_data = true;
+            is_text = false;
+          }
 
-      // if(is_data && code_assembly_array[i].startsWith('.align')){
-      //   // Store the align to de data
-      //   data_to_store.align = parseInt((code_assembly_array[i].split(".align "))[1], 10);
-      // }
-      // if(is_data && code_assembly_array[i].endsWith(':')){
-      //   data_to_store.label = (code_assembly_array[i].split(':'))[0];
-      // }
-      // if(is_data && code_assembly_array[i])
-        
-      if (is_text && code_assembly_array[i].endsWith(':'))
-        labeltext = code_assembly_array[i].slice(0, -1);
-      else if (is_text && labeltext !== ""){
-        identify_pseudo(code_assembly_array[i]);
+          if (is_data){
+            let matchlabel = code_assembly_array[i].match(explabel);
+            let matchalign = code_assembly_array[i].match(expalign);
+            let matchvalue = code_assembly_array[i].match(expvalue);
+            if (matchlabel){
+              
+              // console.log("matchlabel: ", matchlabel);
+              data_to_store.label = matchlabel[1];
+            }
+            if (matchalign){
+
+              data_to_store.align = parseInt(matchalign[1], 10);
+              console.log("matchalign: ", parseInt(matchalign[1], 10));
+              console.log(data_to_store.align);
+            }
+            if (matchvalue && !(code_assembly_array[i].includes(".align") || code_assembly_array[i].includes("section") || code_assembly_array[i].includes("data") )){
+              console.log("matchvalue: ", matchvalue);
+              data_to_store.type = matchvalue[1];
+              switch(data_to_store.type){
+                case "half":
+                  data_to_store.value = matchvalue[2];
+                  break;
+                case "byte":
+                  data_to_store.value = parseInt(matchvalue[2]).toString(16);
+                  break;
+                case "word":
+                case "integer":
+                  data_to_store.value = parseInt(matchvalue[2]).toString(16);
+                  break;
+
+                case "float":
+                  console.log("primero: ", parseFloat(matchvalue[2]));
+                  data_to_store.value = parseFloat(matchvalue[2]);
+                  console.log("Segundo: ", data_to_store.value);
+                  break;
+                case "double":
+                  data_to_store.value = parseFloat(matchvalue[2]).toString(16);
+                  break;
+                // case "char":
+                //   data_to_store.value = matchvalue[2];
+                //   break;
+
+                case "asciz":
+                  data_to_store.value = matchvalue[2];
+                  break;
+
+                case "ascii":
+                  data_to_store.value = matchvalue[2];
+                  break;
+
+                case "space":
+                case "zero":
+                  data_to_store.value = matchvalue[2];
+                  break;
+              }
+              list_data_instructions.push(data_to_store);
+              // console.log(data_to_store);
+              data_to_store = Object.assign({}, {
+                align: 0,
+                value: 0,
+                label: "",
+                type: ""
+              });
+            }
+          }
+
+          // if(is_data && code_assembly_array[i].startsWith('.align')){
+          //   // Store the align to de data
+          //   data_to_store.align = parseInt((code_assembly_array[i].split(".align "))[1], 10);
+          // }
+          // if(is_data && code_assembly_array[i].endsWith(':')){
+          //   data_to_store.label = (code_assembly_array[i].split(':'))[0];
+          // }
+          // if(is_data && code_assembly_array[i])
+            
+          if (is_text && code_assembly_array[i].endsWith(':'))
+            labeltext = code_assembly_array[i].slice(0, -1);
+          else if (is_text && labeltext !== ""){
+            identify_pseudo(code_assembly_array[i]);
+          }
+        }
+        console.log(list_data_instructions);
+        filenames.push(assembly_files[j].filename);
       }
+      is_data = false;
+      is_text = false;
     }
-    console.log(list_data_instructions);
-    filenames.push("input.s");
+    
     for (let i = 0; i < filecontents.length; i++){
       if(filecontents[i].match(regexfpd))
       enablefpd = true;
@@ -7936,10 +7945,15 @@ var uielto_toolbar_btngroup = {
           setTimeout(function () {
 
             //Aqui insertar los distintos ficheros editables
+            displayAssemblyFiles(assembly_files);
             assembly_codemirror_start();
             if (codemirrorHistory != null) {
+              // console.log("Previo al history:", textarea_assembly_editor);
+              // console.log("codeMirror previo: ", codemirrorHistory);
               textarea_assembly_editor.setHistory(codemirrorHistory);
               textarea_assembly_editor.undo();
+              // console.log("Despues del undo history:", textarea_assembly_editor);
+              // console.log("El codemirror despues:", codemirrorHistory);
             }
             textarea_assembly_editor.setValue(code_assembly);
             if (update_binary != "") {
@@ -7950,9 +7964,11 @@ var uielto_toolbar_btngroup = {
           }, 50);
         }
         if (textarea_assembly_editor != null && e != "assembly") {
+          // console.log("Cambio a: ", e);
           app._data.assembly_code = textarea_assembly_editor.getValue();
           code_assembly = textarea_assembly_editor.getValue();
           codemirrorHistory = textarea_assembly_editor.getHistory();
+          // console.log("CodeMirrorHistory:", codemirrorHistory);
           textarea_assembly_editor.toTextArea();
         }
         app.$bvToast.hide();
@@ -7974,6 +7990,12 @@ var uielto_toolbar_btngroup = {
             code_assembly = code;
           } else {
             code_assembly = textarea_assembly_editor.getValue();
+            // se cambia a el ultimo fichero editado y se guarda su estado
+
+            for (let i = 0; i < assembly_files.length; i++){
+              if(assembly_files[i].editing_now)
+                assembly_files[i].code = textarea_assembly_editor.getValue();
+            }
           }
           var ret = assembly_compiler();
           app._data.totalStats = 0;
@@ -14298,6 +14320,39 @@ function toCompile(_checkbox, filename){
   console.log("Assembly_files:", assembly_files);
 }
 
+function displayAssemblyFiles(asmfiles){
+  for(let i = 0; i < asmfiles.length; i++){
+    let myFileTable = document.getElementById("files").getElementsByTagName('tbody')[0];
+    let newRow = document.createElement('tr');
+    newRow.setAttribute("id", "row-" + asmfiles[i].filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
+    newRow.setAttribute("oncontextmenu", `showContextMenu(event, '${myFileTable}')`);
+    let cellName = document.createElement("td");
+    cellName.textContent = asmfiles[i].filename;
+    let cellCompile = document.createElement("td");
+    cellCompile.classList.add("checkbox-container");
+
+    let checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.classList.add("compile-checkbox");
+    checkbox.onchange = function() {
+      toCompile(this, asmfiles[i].filename);
+    };
+    if(asmfiles[i].to_compile)
+      checkbox.checked = true;
+
+    cellCompile.appendChild(checkbox);
+
+    newRow.appendChild(cellName);
+    newRow.appendChild(cellCompile);
+
+    myFileTable.appendChild(newRow);
+
+    if(asmfiles[i].editing_now){
+      openFile(asmfiles[i].filename);
+    }
+  }
+}
+
 function newFile(){
   console_log("Creando fichero");
 
@@ -14447,8 +14502,13 @@ function deleteFile(){
   console.log("Borrar fichero");
 }
 
-function openFile(){
-  let filename = selectedFile;
+function openFile(name = ""){
+  let filename;
+  if (name === "")
+    filename = selectedFile;
+  else 
+    filename = name;
+  
   let checkit = document.getElementsByClassName(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
   if(checkit[0] === undefined){
 
@@ -14500,10 +14560,6 @@ function showFile(filename){
       assembly_files[i].editing_now = true;
     }
   }
-  
-  
-
-
   console.log(assembly_files);
   
 }

@@ -514,18 +514,17 @@
                     <!-- <div id="FileTabs"></div> -->
                     <!-- Assembly textarea-->
                     <!-- <textarea-assembly :browser="browser"></textarea-assembly> -->
+                    <div id="contextMenu" class="context-menu">
+                      <ul>
+                        <li onclick="openFile()">Abrir Fichero</li>
+                        <li onclick="renameFile()">Renombrar Fichero</li>
+                        <li onclick="deleteFile()">Eliminar Fichero</li>
+                      </ul>
+                    </div>
                     
-                    
-
                   </b-col>
 
-                  <div id="contextMenu" class="context-menu">
-                    <ul>
-                      <li onclick="openFile()">Abrir Fichero</li>
-                      <li onclick="renameFile()">Renombrar Fichero</li>
-                      <li onclick="deleteFile()">Eliminar Fichero</li>
-                    </ul>
-                  </div>
+                  
 
                   <b-col cols="0" id="divTags" class="d-none">
 
