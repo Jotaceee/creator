@@ -1,0 +1,1031 @@
+{
+  "arch_conf": [
+    {
+      "name": "Name",
+      "value": "RISC-V (RV32IMFD)"
+    },
+    {
+      "name": "Bits",
+      "value": "64"
+    },
+    {
+      "name": "Description",
+      "value": "RISC-V is an instruction set architecture (ISA) based on the RISC type and its hardware is free. This architecture was created in 2010 at the University of California, Berkeley."
+    },
+    {
+      "name": "Data Format",
+      "value": "big_endian"
+    },
+    {
+      "name": "Memory Alignment",
+      "value": "1"
+    },
+    {
+      "name": "Main Function",
+      "value": "_main"
+    },
+    {
+      "name": "Passing Convention",
+      "value": "1"
+    },
+    {
+      "name": "Sensitive Register Name",
+      "value": "1"
+    }
+  ],
+  "components": [
+    {
+      "name": "Control registers",
+      "type": "ctrl_registers",
+      "double_precision": false,
+      "elements": [
+        {
+          "name": [
+            "PC"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "program_counter"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Integer registers",
+      "type": "int_registers",
+      "double_precision": false,
+      "elements": [
+        {
+          "name": [
+            "x0",
+            "zero"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "ignore_write"
+          ]
+        },
+        {
+          "name": [
+            "x1",
+            "ra"
+          ],
+          "nbits": "64",
+          "value": 4294967295,
+          "default_value": 4294967295,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x2",
+            "sp"
+          ],
+          "nbits": "64",
+          "value": 268435452,
+          "default_value": 268435452,
+          "properties": [
+            "read",
+            "write",
+            "stack_pointer"
+          ]
+        },
+        {
+          "name": [
+            "x3",
+            "gp"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "global_pointer"
+          ]
+        },
+        {
+          "name": [
+            "x4",
+            "tp"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x5",
+            "t0"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x6",
+            "t1"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x7",
+            "t2"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x8",
+            "fp",
+            "s0"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "frame_pointer",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "x9",
+            "s1"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "x10",
+            "a0"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x11",
+            "a1"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x12",
+            "a2"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x13",
+            "a3"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x14",
+            "a4"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x15",
+            "a5"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x16",
+            "a6"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x17",
+            "a7"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x18",
+            "s2"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "x19",
+            "s3"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "x20",
+            "s4"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "x21",
+            "s5"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "x22",
+            "s6"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "x23",
+            "s7"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "x24",
+            "s8"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "x25",
+            "s9"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "x26",
+            "s10"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "x27",
+            "s11"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "x28",
+            "t3"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x29",
+            "t4"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x30",
+            "t5"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "x31",
+            "t6"
+          ],
+          "nbits": "64",
+          "value": 0,
+          "default_value": 0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Floating point registers",
+      "type": "fp_registers",
+      "double_precision": true,
+      "double_precision_type": "extended",
+      "elements": [
+        {
+          "name": [
+            "f0",
+            "ft0"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f1",
+            "ft1"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f2",
+            "ft2"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f3",
+            "ft3"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f4",
+            "ft4"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f5",
+            "ft5"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f6",
+            "ft6"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f7",
+            "ft7"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f8",
+            "fs0"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "f9",
+            "fs1"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "f10",
+            "fa0"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f11",
+            "fa1"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f12",
+            "fa2"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f13",
+            "fa3"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f14",
+            "fa4"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f15",
+            "fa5"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f16",
+            "fa6"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f17",
+            "fa7"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f18",
+            "fs2"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "f19",
+            "fs3"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "f20",
+            "fs4"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "f21",
+            "fs5"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "f22",
+            "fs6"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "f23",
+            "fs7"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "f24",
+            "fs8"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "f25",
+            "fs9"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "f26",
+            "fs10"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "f27",
+            "fs11"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write",
+            "saved"
+          ]
+        },
+        {
+          "name": [
+            "f28",
+            "ft8"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f29",
+            "ft9"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f30",
+            "ft10"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        },
+        {
+          "name": [
+            "f31",
+            "ft11"
+          ],
+          "nbits": "64",
+          "value": 0.0,
+          "default_value": 0.0,
+          "properties": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    }
+  ],
+  "directives": [
+    {
+      "name": ".data",
+      "action": "data_segment",
+      "size": null
+    },
+    {
+      "name": ".text",
+      "action": "code_segment",
+      "size": null
+    },
+    {
+      "name": ".bss",
+      "action": "global_symbol",
+      "size": null
+    },
+    {
+      "name": ".zero",
+      "action": "space",
+      "size": "1"
+    },
+    {
+      "name": ".align",
+      "action": "align",
+      "size": null
+    },
+    {
+      "name": ".balign",
+      "action": "balign",
+      "size": null
+    },
+    {
+      "name": ".globl",
+      "action": "global_symbol",
+      "size": null
+    },
+    {
+      "name": ".string",
+      "action": "ascii_null_end",
+      "size": null
+    },
+    {
+      "name": ".byte",
+      "action": "byte",
+      "size": "1"
+    },
+    {
+      "name": ".half",
+      "action": "half_word",
+      "size": "2"
+    },
+    {
+      "name": ".word",
+      "action": "word",
+      "size": "4"
+    },
+    {
+      "name": ".dword",
+      "action": "double_word",
+      "size": "8"
+    },
+    {
+      "name": ".float",
+      "action": "float",
+      "size": "4"
+    },
+    {
+      "name": ".double",
+      "action": "double",
+      "size": "8"
+    }
+  ],
+  "memory_layout": [
+    {
+      "name": "text start",
+      "value": "0x0000000000000000"
+    },
+    {
+      "name": "text end",
+      "value": "0x000000000001FFFF"
+    },
+    {
+      "name": "data start",
+      "value": "0x0000000000020000"
+    },
+    {
+      "name": "data end",
+      "value": "0x00003FFFFFFFFFFF"
+    },
+    {
+      "name": "stack start",
+      "value": "0x0000400000000000"
+    },
+    {
+      "name": "stack end",
+      "value": "0x00005FFFFFFFFFFF"
+    }
+  ]
+}

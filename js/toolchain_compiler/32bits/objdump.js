@@ -221,7 +221,7 @@ Module['print'] = function (message) {
       exaaa.push("");
       if(exaaa[3] === 0){
         console.log("Exaa que se va a insertar en un dumpdata anterior: ", exaaa);
-        if(exaaa[1].includes("madd")){
+        if(exaaa[1].includes("madd.s")){
           //buscamos la palabra completa almacenada por el list_data_instructions
           var auxda = list_data_instructions.findIndex(data => data.label === dumpdatainstructions[dumpdatainstructions.length -1][4]);
           if (list_data_instructions[auxda].value.length % 2 !== 0){
@@ -292,7 +292,7 @@ Module['print'] = function (message) {
   console.log(message);
 }
 
-var out = Module["print"] /*|| console.log.bind(console)*/;
+var out = Module["print"] || console.log.bind(console);
 
 var err = Module["printErr"] || console.warn.bind(console);
 

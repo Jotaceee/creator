@@ -14,7 +14,8 @@
 // before the code. Then that object will be used in the code, and you
 // can continue to use Module afterwards as well.
 var Module = typeof Module != 'undefined' ? Module : {};
-var objfile, linkfile, outpufile;
+var objfile, linkfile, outputfile, libfile;
+var errld = -1;
 
 // See https://caniuse.com/mdn-javascript_builtins_object_assign
 
@@ -284,7 +285,25 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
 }
 
 var out = Module['print'] || console.log.bind(console);
-var err = Module['printErr'] || console.warn.bind(console);
+var errorlink = 
+{
+  ref: "",
+  from: ""
+};
+Module['printErr'] = function (message) {
+  var regex1 = /([^:]+\.o): .*in function `([^']+)/;
+  var regex2 = /undefined reference to `([^']+)/;
+  let match1 = message.match(regex1);
+  let match2 = message.match(regex2);
+  if (match1)
+    errorlink.from = match1[2];
+  else if (match2)
+    errorlink.ref = match2[1];
+  else
+    console.warn(message);
+}
+
+var err = Module['printErr'] /*|| console.warn.bind(console)*/;
 
 // Merge back in the overrides
 Object.assign(Module, moduleOverrides);
@@ -4915,6 +4934,10 @@ var ASM_CONSTS = {
   function _exit(status) {
       // void _exit(int status);
       // http://pubs.opengroup.org/onlinepubs/000095399/functions/exit.html
+      if(status === 1){
+        outputfile = errorlink;
+        errld = 1;
+      }
       exit(status);
     }
 
@@ -5729,21 +5752,22 @@ function run(args) {
     calledRun = true;
     Module['calledRun'] = true;
 
-    shouldRunNow = true;
-
     if (ABORT) return;
 
     initRuntime();
     
     FS.writeFile('input.o' /*'output.o'*/, objfile);
     FS.writeFile('linker.ld', linkfile.toString());
-
+    if (libfile !== undefined)
+      FS.writeFile('lib.o', libfile);
+    console.log("Ficheros ld: ", FS.readdir("./"));
     preMain();
 
     if (Module['onRuntimeInitialized']) Module['onRuntimeInitialized']();
 
     if (shouldRunNow) callMain(args);
-    outpufile = FS.readFile('./output.elf');
+    if (errld === -1)
+      outputfile = FS.readFile('./output.elf');
 
     postRun();
   }
@@ -5805,15 +5829,20 @@ if (Module['preInit']) {
 // shouldRunNow refers to calling main(), not run().
 var shouldRunNow = false;
 
-function preprocess_ld(objectfile, linkerfile){
+function preprocess_ld(objectfile, linkerfile, lib_file = undefined){
+  
   console.log("Antes");
-  outpufile = undefined;
+  outputfile = undefined;
   objfile = objectfile;
   linkfile = linkerfile;
-
-  run(["-T", "linker.ld", "-o", "output.elf", "input.o"]);
-  console.log("Despues");
-  return outpufile;
+  if(lib_file !== undefined){
+    libfile = lib_file;
+    run(["-T", "linker.ld", "-o", "output.elf", "input.o", "lib.o"]);
+  }
+  else 
+    run(["-T", "linker.ld", "-o", "output.elf", "input.o"]);
+  console.log("Despues", outputfile);
+  return outputfile;
 
   // Para descargar el fichero generado
   // const outputfile = FS.readFile('./output.elf');

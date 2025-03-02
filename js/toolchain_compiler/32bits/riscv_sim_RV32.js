@@ -4071,8 +4071,11 @@ function _exit(status) {
   for (let i = 0; i < instructions.length; i++){
     instructions[i]._rowVariant = '';
   }
-  if (status === 1)
-    instructions[0]._rowVariant = 'success';
+  if (status === 1){
+    let init_index = instructions.findIndex(insn => insn.Address === "0x" + entry_elf);
+    if(init_index !== undefined)
+      instructions[init_index]._rowVariant = 'success';
+  }
   exit(status);
 }
 function maybeExit() {
@@ -6942,7 +6945,7 @@ function preprocess_sail(elffile, enablefpd, enablevec, entry_add){
   inputelffile = elffile;
   // run(["--config-flags", "4"]);
   // enablefpd = true;
-  console.log("FPD y VEC: ", enablefpd, enablevec);
+  // console.log("FPD y VEC: ", enablefpd, enablevec);
   if(enablefpd)
     run(["--entry-address", entry_add, "--config-flags", "8", "-p", "output.elf"]);
   if(enablevec)

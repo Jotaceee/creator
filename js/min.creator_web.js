@@ -6,6 +6,7 @@ var assembled = false;
 var linked = false;
 var dissambled = false;
 var comp_after_run = false;
+var is_32b_arch = false;
 var insn_number;
 var entry_elf;
 
@@ -33,12 +34,32 @@ const filenames = [];
 const filecontents = [];
 
 // Cargado del script de enlace para generar el binario (Falta diferencia para el caso de 32 o 64 bits)
-fetch(window.location.href+'js/toolchain_compiler/linker.ld')
-.then(response => {
-return response.text();})
-.then(data => {
-linkercontent = data;
-});
+
+
+// fetch(window.location.href+'js/toolchain_compiler/wasm64_riscv_sim_RV32.wasm')
+//   .then(response => response.arrayBuffer())
+//   .then(bytes => WebAssembly.compile(bytes))
+//   .then(module => console.log("para wasm64",WebAssembly.Module.imports(module)));
+
+// fetch(window.location.href+'js/toolchain_compiler/riscv_sim_RV32.wasm')
+//   .then(response => response.arrayBuffer())
+//   .then(bytes => WebAssembly.compile(bytes))
+//   .then(module => console.log("para wasm32",WebAssembly.Module.imports(module)));
+
+
+// fetch(window.location.href+'js/toolchain_compiler/output.elf')
+// .then(response => response.arrayBuffer())
+//   .then(buffer => {
+//     elffile = new Uint8Array(buffer);
+//     console.log("elffile:", elffile);
+//   });
+
+// fetch(window.location.href+'js/toolchain_compiler/64bits/my_code_v4.elf')
+//   .then(response => response.arrayBuffer())
+//     .then(buffer => {
+//       elffile = new Uint8Array(buffer);
+//       console.log("elffile:", elffile);
+// });
 
 function clean_environment() {
   const moduleKeys = [
@@ -49,13 +70,23 @@ function clean_environment() {
     'memoryInitializerPrefixURL', 'monitorRunDependencies', 'noExitRuntime', 'noInitialRun', 
     'onAbort', 'onExit', 'onRuntimeInitialized', 'postRun', 'preInit', 'preRun', 'print', 
     'printErr', 'pthreadMainPrefixURL', 'quit', 'read', 'readAsync', 'readBinary', 'run', 
-    'setStatus', 'setWindowTitle', 'stderr', 'stdin', 'stdout', 'thisProgram', 'wasmBinary', 
-    'wasmMemory'
+    'setStatus', 'setWindowTitle', 'stderr', 'stdin', 'stdout', 'thisProgram', 'wasmBinary'
+    ,'createWasm', 'STACK_SIZE' ,'wasmMemory', 'preloadPlugins', 'safeSetTimeout', 'ccall', 'missingLibrarySymbol'
+    , 'hookGlobalSymbolAccess'
   ];
 
-  moduleKeys.forEach(key => {
-    delete Module[key];
-  });
+    moduleKeys.forEach(key => {
+      delete Module[key];
+    });
+    
+  
+  // console.log("Module.env", Module.env);
+  // Module.env = {};
+  delete window.missingLibrarySymbol;
+  delete window.ccall;
+  delete window.safeSetTimeout;
+  delete window.runAndAbortIfError;
+  wasmBinaryFile = undefined;
   if ( typeof preprocess_as === "function")
     preprocess_as = undefined;
   if (typeof preprocess_ld === "function")
@@ -64,8 +95,12 @@ function clean_environment() {
     preprocess_sail = undefined;
   if (typeof preprocess_dissamble === "function")
     preprocess_dissamble = undefined;
-  // Module = null;
-  delete window.Module;
+  if (typeof Module !== 'undefined'){
+    Module = null;
+    window.Module = undefined;
+  }
+  // delete window.Module;
+  // globalThis.Module = undefined;
   // delete window.Asyncify;
 }
 
@@ -74,16 +109,25 @@ function clean_environment() {
 function resetenvironment (value){
   if (can_reset || value === 2) {
       clean_environment();
-      scriptas = document.querySelector('script[src="toolchain_compiler/as-new.js"]');
-      scriptld = document.querySelector('script[src="toolchain_compiler/ld-new.js"]');
-      scriptsail = document.querySelector('script[src="toolchain_compiler/riscv_sim_RV32.js"]');
-      scriptdump = document.querySelector('script[src="toolchain_compiler/objdump.js"]')
+      if (is_32b_arch){
+        scriptas = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/32bits/as-new.js"]');
+        scriptld = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/32bits/ld-new.js"]');
+        scriptsail = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/32bits/riscv_sim_RV32.js"]');
+        scriptdump = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/32bits/objdump.js"]');
+      }
+      else {
+        scriptas = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/64bits/as-new.js"]');
+        scriptld = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/64bits/ld-new.js"]');
+        scriptsail = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/64bits/riscv_sim_RV64.js"]');
+        scriptdump = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/64bits/objdump.js"]');
+      }
+
       if(scriptas)
-      scriptas.parentNode.removeChild(scriptas);
+        scriptas.parentNode.removeChild(scriptas);
       if(scriptld)
-      scriptld.parentNode.removeChild(scriptld);
+        scriptld.parentNode.removeChild(scriptld);
       if(scriptsail)
-      scriptsail.parentNode.removeChild(scriptsail);
+        scriptsail.parentNode.removeChild(scriptsail);
       if(scriptdump)
         scriptdump.parentNode.removeChild(scriptdump);
     if (value === 0) {
@@ -96,11 +140,23 @@ function resetenvironment (value){
       err_comp = false;
       runtimeInitialized = false;
       entry_elf = undefined;
+      enablefpd = false;
+      enablevec = false;
+      instructions.length = 0;
+      dumpdatainstructions.length = 0;
+      dumptextinstructions.length = 0;
+      list_user_instructions.length = 0;
+      list_data_instructions.length = 0;
+      insn_number = undefined;
       scriptas = document.createElement('script');
-      scriptas.src = window.location.href +'js/toolchain_compiler/as-new.js';
+      if (is_32b_arch)
+        scriptas.src = window.location.href +'js/toolchain_compiler/32bits/as-new.js';
+      else
+        scriptas.src = window.location.href +'js/toolchain_compiler/64bits/as-new.js';
       scriptas.async = true;
       scriptas.type = 'text/javascript';
       document.head.appendChild(scriptas);
+      creator_memory_clearall();
     } else if (value === 1){
       last_execution_mode_run = -1;
       execution_mode_run = -1;
@@ -109,7 +165,10 @@ function resetenvironment (value){
       calledRun = false;
       runtimeInitialized = false;
       scriptsail = document.createElement('script');
-      scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
+      if (is_32b_arch)
+        scriptsail.src = window.location.href +'js/toolchain_compiler/32bits/riscv_sim_RV32.js';
+      else
+        scriptsail.src = window.location.href +'js/toolchain_compiler/64bits/riscv_sim_RV64.js';
       scriptsail.async = true;
       scriptsail.type = 'text/javascript';
       document.head.appendChild(scriptsail);
@@ -138,19 +197,25 @@ function resetenvironment (value){
         enablevec = false;
         objectcontent = undefined;
         elffile = undefined;
+        insn_number = undefined;
         instructions.length = 0;
         dumpdatainstructions.length = 0;
         dumptextinstructions.length = 0;
         list_user_instructions.length = 0;
+        list_data_instructions.length = 0;
         filenames.length = 0;
         filecontents.length = 0;
         scriptas = document.createElement('script');
         scriptas.id = 'as-new';
-        scriptas.src = window.location.href +'js/toolchain_compiler/as-new.js';
+        if (is_32b_arch)
+          scriptas.src = window.location.href +'js/toolchain_compiler/32bits/as-new.js';
+        else
+          scriptas.src = window.location.href +'js/toolchain_compiler/64bits/as-new.js';
         scriptas.async = true;
         scriptas.type = 'text/javascript';
         document.head.appendChild(scriptas);
         comp_after_run = true;
+        creator_memory_clearall();
         if(execution_mode_run === -1){
           assembled = false;
           linked = false;
@@ -167,6 +232,8 @@ function resetenvironment (value){
 // Funcion asíncrona para lanzar el motor de sail
 function loadSailFunction(maxAttemps = 50){
   console.log("Preprocesamos sail");
+  // entry_elf = "0x0000000000000000";
+  // entry_elf = "0x80000000";
   preprocess_sail(elffile, enablefpd, enablevec, entry_elf);
   // show notification cuando termine
 }
@@ -182,7 +249,10 @@ async function dissamble_binary(maxAttemps = 50) {
     scriptdump.parentNode.removeChild(scriptdump);
     clean_environment();
     scriptdump = document.createElement('script');
-    scriptdump.src = window.location.href +'js/toolchain_compiler/objdump.js';
+    if (is_32b_arch)
+      scriptdump.src = window.location.href +'js/toolchain_compiler/32bits/objdump.js';
+    else
+      scriptdump.src = window.location.href +'js/toolchain_compiler/64bits/objdump.js';
     scriptdump.async = true;
     scriptdump.id = 'objdump';
     scriptdump.type = 'text/javascript';
@@ -193,9 +263,16 @@ async function dissamble_binary(maxAttemps = 50) {
     scriptdump.parentNode.removeChild(scriptdump);
     clean_environment();
     scriptsail = document.createElement('script');
-    scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
+    if (is_32b_arch)
+      scriptsail.src = window.location.href +'js/toolchain_compiler/32bits/riscv_sim_RV32.js';
+    else
+      scriptsail.src = window.location.href +'js/toolchain_compiler/64bits/riscv_sim_RV64.js';
     scriptsail.async = true;
-    scriptsail.id = 'riscv_sim_RV32';
+    if(is_32b_arch)
+      scriptsail.id = 'riscv_sim_RV32';
+    else 
+      scriptsail.id = 'riscv_sim_RV64';
+    
     scriptsail.type = 'text/javascript';
     document.head.appendChild(scriptsail);
     return new Promise(resolve => setTimeout(resolve(true), 200));
@@ -216,7 +293,10 @@ function preprocess_run(asfilen, ascode, fpd, vec){
   }
   // Se carga el script ld.js para ejecutar el enlazador.
   scriptld = document.createElement('script');
-  scriptld.src = window.location.href +'js/toolchain_compiler/ld-new.js';
+  if(is_32b_arch)
+    scriptld.src = window.location.href +'js/toolchain_compiler/32bits/ld-new.js';
+  else
+    scriptld.src = window.location.href +'js/toolchain_compiler/64bits/ld-new.js';
   scriptld.async = true;
   scriptld.id = 'ld-new';
   scriptld.type = 'text/javascript';
@@ -231,10 +311,13 @@ async function waitForFunction(maxAttemps = 50) {
     await new Promise(resolve => setTimeout(resolve, 200)); // Espera 100 ms antes de volver a verificar
     attemps++;
   }
-  
-  elffile = preprocess_ld(objectcontent, linkercontent); // Llamamos a runner_ld cuando preprocess_ld esté definida
-  
-  console.log("Terminé de ejecutar ld: ", elffile);
+  if(load_binary)
+    elffile = preprocess_ld(objectcontent, linkercontent, update_binary); // Llamamos a runner_ld cuando preprocess_ld esté definida
+  else 
+    elffile = preprocess_ld(objectcontent, linkercontent);
+
+
+  console.log("Tipo de dato de elffile: ", typeof elffile);
 
   scriptld.parentNode.removeChild(scriptld);
   clean_environment();
@@ -242,7 +325,10 @@ async function waitForFunction(maxAttemps = 50) {
   if(elffile === undefined){
     // retornas una promesa mala
     scriptld = document.createElement('script');
-    scriptld.src = window.location.href +'js/toolchain_compiler/ld-new.js';
+    if (is_32b_arch)
+      scriptld.src = window.location.href +'js/toolchain_compiler/32bits/ld-new.js';
+    else
+      scriptld.src = window.location.href +'js/toolchain_compiler/64bits/ld-new.js';
     scriptld.async = true;
     scriptld.id = 'ld-new';
     scriptld.type = 'text/javascript';
@@ -251,7 +337,10 @@ async function waitForFunction(maxAttemps = 50) {
   }
   else {
     scriptdump = document.createElement('script');
-    scriptdump.src = window.location.href +'js/toolchain_compiler/objdump.js';
+    if (is_32b_arch)
+      scriptdump.src = window.location.href +'js/toolchain_compiler/32bits/objdump.js';
+    else
+      scriptdump.src = window.location.href +'js/toolchain_compiler/64bits/objdump.js';
     scriptdump.async = true;
     scriptdump.id = 'objdump';
     scriptdump.type = 'text/javascript';
@@ -2607,12 +2696,14 @@ var tag_instructions = {};
 var instructions_binary = [];
 var data = [];
 var data_tag = [];
-var code_binary = "";
-var update_binary = "";
+var code_binary = undefined; // undefined
+var update_binary = undefined; //undefined
 var load_binary = false;
+
 function load_arch_select(cfg) {
   var ret = { errorcode: "", token: "", type: "", update: "", status: "ok" };
   var auxArchitecture = cfg;
+  
   architecture = register_value_deserialize(auxArchitecture);
   architecture_hash = [];
   for (var i = 0; i < architecture.components.length; i++) {
@@ -2778,580 +2869,7 @@ function next_token() {
   }
   tokenIndex = index;
 }
-/*
-function assembly_compiler() {
-    console.log("Soy min fallo");
-  
-  var ret = { errorcode: "", token: "", type: "", update: "", status: "ok" };
-  creator_ga("compile", "compile.assembly");
-  instructions = [];
-  instructions_tag = [];
-  tag_instructions = {};
-  pending_instructions = [];
-  pending_tags = [];
-  data_tag = [];
-  instructions_binary = [];
-  creator_memory_clear();
-  extern = [];
-  data = [];
-  execution_init = 1;
-  pc = 4;
-  nEnters = 0;
-  if (update_binary.instructions_binary != null) {
-    for (var i = 0; i < update_binary.instructions_binary.length; i++) {
-      pc = pc + architecture.instructions[i].nwords * 4;
-      instructions.push(update_binary.instructions_binary[i]);
-      if (i === 0) {
-        instructions[instructions.length - 1].hide = false;
-        if (update_binary.instructions_binary[i].globl === false) {
-          instructions[instructions.length - 1].Label = "";
-        }
-      } else if (update_binary.instructions_binary[i].globl === false) {
-        instructions[instructions.length - 1].Label = "";
-        instructions[instructions.length - 1].hide = true;
-      } else if (update_binary.instructions_binary[i].globl == null) {
-        instructions[instructions.length - 1].hide = true;
-      } else {
-        instructions[instructions.length - 1].hide = false;
-      }
-      address = parseInt(instructions[instructions.length - 1].Address, 16) + 4;
-    }
-  } else {
-    address = parseInt(architecture.memory_layout[0].value);
-  }
-  var numBinaries = instructions.length;
-  architecture.memory_layout[4].value = backup_stack_address;
-  architecture.memory_layout[3].value = backup_data_address;
-  data_address = parseInt(architecture.memory_layout[2].value);
-  stack_address = parseInt(architecture.memory_layout[4].value);
-  for (var i = 0; i < architecture.components.length; i++) {
-    for (var j = 0; j < architecture.components[i].elements.length; j++) {
-      if (
-        architecture.components[i].elements[j].properties.includes(
-          "program_counter",
-        )
-      ) {
-        architecture.components[i].elements[j].value = bi_intToBigInt(
-          address,
-          10,
-        );
-        architecture.components[i].elements[j].default_value = bi_intToBigInt(
-          address,
-          10,
-        );
-      }
-      if (
-        architecture.components[i].elements[j].properties.includes(
-          "stack_pointer",
-        )
-      ) {
-        architecture.components[i].elements[j].value = bi_intToBigInt(
-          stack_address,
-          10,
-        );
-        architecture.components[i].elements[j].default_value = bi_intToBigInt(
-          stack_address,
-          10,
-        );
-      }
-    }
-  }
-  totalStats = 0;
-  for (var i = 0; i < stats.length; i++) {
-    stats[i].percentage = 0;
-    stats[i].number_instructions = 0;
-    stats_value[i] = 0;
-  }
-  align = 1;
-  var empty = false;
-  first_token();
-  if (get_token() == null) {
-    return packCompileError(
-      "m0",
-      "Please enter the assembly code before compiling",
-      "warning",
-      "danger",
-    );
-  }
-  token = get_token();
-  console_log(token);
-  while (!empty) {
-    token = get_token();
-    console_log(token);
-    if (token == null) {
-      empty = true;
-      break;
-    }
-    var change = false;
-    for (var i = 0; i < architecture.directives.length; i++) {
-      if (token == architecture.directives[i].name) {
-        switch (architecture.directives[i].action) {
-          case "data_segment":
-            console_log("data_segment");
-            ret = data_segment_compiler();
-            if (ret.status == "ok") {
-              change = true;
-            }
-            if (ret.status != "ok") {
-              instructions = [];
-              pending_instructions = [];
-              pending_tags = [];
-              data_tag = [];
-              instructions_binary = [];
-              data = [];
-              extern = [];
-              creator_memory_clear();
-              return ret;
-            }
-            break;
-          case "code_segment":
-            console_log("code_segment");
-            ret = code_segment_compiler();
-            if (ret.status == "ok") {
-              change = true;
-            }
-            if (ret.status != "ok") {
-              instructions = [];
-              pending_instructions = [];
-              pending_tags = [];
-              data_tag = [];
-              instructions_binary = [];
-              extern = [];
-              data = [];
-              creator_memory_clear();
-              return ret;
-            }
-            break;
-          case "global_symbol":
-            var isGlobl = true;
-            next_token();
-            while (isGlobl) {
-              token = get_token();
-              re = new RegExp(",", "g");
-              token = token.replace(re, "");
-              console_log("token: " + token);
-              extern.push(token);
-              change = true;
-              next_token();
-              token = get_token();
-              console_log("token: " + token);
-              for (var z = 0; z < architecture.directives.length; z++) {
-                if (
-                  token == architecture.directives[z].name ||
-                  token == null ||
-                  token.search(/\:$/) != -1
-                ) {
-                  isGlobl = false;
-                }
-              }
-            }
-            break;
-          default:
-            console_log("default");
-            empty = true;
-            break;
-        }
-      } else if (
-        i == architecture.directives.length - 1 &&
-        token != architecture.directives[i].name &&
-        change === false &&
-        token != null
-      ) {
-        empty = true;
-        return packCompileError("m14", token, "error", "danger");
-      }
-    }
-  }
-  var found = false;
-  if (update_binary.instructions_binary != null) {
-    for (var j = 0; j < instructions.length; j++) {
-      if (instructions[j].Label != "") {
-        for (var i = 0; i < update_binary.instructions_tag.length; i++) {
-          if (instructions[j].Label == update_binary.instructions_tag[i].tag) {
-            update_binary.instructions_tag[i].addr = instructions[j].Address;
-          }
-        }
-      }
-    }
-  }
-  for (var i = 0; i < pending_instructions.length; i++) {
-    var exit = 0;
-    var signatureParts = pending_instructions[i].signature;
-    var signatureRawParts = pending_instructions[i].signatureRaw;
-    var instructionParts = pending_instructions[i].instruction.split(" ");
-    console_log(instructionParts);
-    for (var j = 0; j < signatureParts.length && exit === 0; j++) {
-      if (
-        signatureParts[j] == "inm-signed" ||
-        signatureParts[j] == "inm-unsigned" ||
-        signatureParts[j] == "address"
-      ) {
-        for (var z = 0; z < instructions.length && exit === 0; z++) {
-          if (instructions[z].Label == instructionParts[j]) {
-            var addr = instructions[z].Address;
-            var bin = parseInt(addr, 16).toString(2);
-            var startbit = pending_instructions[i].startBit;
-            var stopbit = pending_instructions[i].stopBit;
-            var fieldsLength = startbit - stopbit + 1;
-            if (bin.length > fieldsLength) {
-              nEnters = pending_instructions[i].line;
-              return packCompileError(
-                "m8",
-                signatureRawParts[j],
-                "error",
-                "danger",
-              );
-            }
-            instructionParts[j] = addr;
-            var newInstruction = "";
-            for (var w = 0; w < instructionParts.length; w++) {
-              newInstruction = newInstruction + instructionParts[w];
-              if (w != instructionParts.length - 1) {
-                newInstruction = newInstruction + " ";
-              }
-            }
-            for (var w = 0; w < instructions.length && exit === 0; w++) {
-              var aux = "0x" + pending_instructions[i].address.toString(16);
-              if (aux == instructions[w].Address) {
-                instructions[w].loaded = newInstruction;
-              }
-            }
-            for (var w = 0; w < instructions.length && exit === 0; w++) {
-              var aux = "0x" + pending_instructions[i].address.toString(16);
-              if (aux == instructions[w].Address) {
-                instructions[w].loaded = newInstruction;
-                console_log(w);
-                console_log(numBinaries);
-                console_log(w - numBinaries);
-                var iload = instructions_binary[w - numBinaries].loaded;
-                instructions_binary[w - numBinaries].loaded =
-                  iload.substring(0, iload.length - (startbit + 1)) +
-                  bin.padStart(fieldsLength, "0") +
-                  iload.substring(iload.length - stopbit, iload.length);
-                exit = 1;
-              }
-            }
-          }
-        }
-        var ret1 = creator_memory_findaddress_bytag(instructionParts[j]);
-        if (ret1.exit === 1) {
-          var addr = ret1.value;
-          var bin = parseInt(addr, 16).toString(2);
-          var startbit = pending_instructions[i].startBit;
-          var stopbit = pending_instructions[i].stopBit;
-          var fieldsLength = startbit - stopbit + 1;
-          if (bin.length > fieldsLength) {
-            nEnters = pending_instructions[i].line;
-            return packCompileError(
-              "m8",
-              instructionParts[j],
-              "error",
-              "danger",
-            );
-          }
-          instructionParts[j] = "0x" + addr.toString(16);
-          var newInstruction = "";
-          for (var w = 0; w < instructionParts.length; w++) {
-            newInstruction = newInstruction + instructionParts[w];
-            if (w != instructionParts.length - 1) {
-              newInstruction = newInstruction + " ";
-            }
-          }
-          for (var w = 0; w < instructions.length; w++) {
-            var aux = "0x" + pending_instructions[i].address.toString(16);
-            if (aux == instructions[w].Address) {
-              instructions[w].loaded = newInstruction;
-            }
-          }
-          for (var w = 0; w < instructions.length && exit === 0; w++) {
-            var aux = "0x" + pending_instructions[i].address.toString(16);
-            if (aux == instructions[w].Address) {
-              instructions[w].loaded = newInstruction;
-              var fieldsLength = startbit - stopbit + 1;
-              var iload = instructions_binary[w - numBinaries].loaded;
-              instructions_binary[w - numBinaries].loaded =
-                iload.substring(0, iload.length - (startbit + 1)) +
-                bin.padStart(fieldsLength, "0") +
-                iload.substring(iload.length - stopbit, iload.length);
-              exit = 1;
-            }
-          }
-        }
-        if (exit === 0 && isNaN(instructionParts[j]) === true) {
-          nEnters = pending_instructions[i].line;
-          instructions = [];
-          pending_instructions = [];
-          pending_tags = [];
-          data_tag = [];
-          instructions_binary = [];
-          creator_memory_clear();
-          data = [];
-          extern = [];
-          return packCompileError("m7", instructionParts[j], "error", "danger");
-        }
-      }
-      if (signatureParts[j] == "offset_words") {
-        for (var z = 0; z < instructions.length && exit === 0; z++) {
-          if (instructions[z].Label == instructionParts[j]) {
-            var addr = instructions[z].Address;
-            var startbit = pending_instructions[i].startBit;
-            var stopbit = pending_instructions[i].stopBit;
-            addr = (addr - pending_instructions[i].address) / 4 - 1;
-            if (startbit.length > 1 && stopbit.length) {
-              var fieldsLength = 0;
-              for (var s = 0; s < startbit.length; s++) {
-                fieldsLength = fieldsLength + startbit[s] - stopbit[s] + 1;
-              }
-              var bin = bi_intToBigInt(addr, 10).toString(2);
-              bin = bin.padStart(fieldsLength, "0");
-              bin = bin.slice(bin.length - fieldsLength, bin.length);
-              var last_segment = 0;
-              for (var s = 0; s < startbit.length; s++) {
-                var starbit_aux = 31 - startbit[s];
-                var stopbit_aux = 32 - stopbit[s];
-                var fieldsLength2 = stopbit_aux - starbit_aux;
-                var bin_aux = bin.substring(
-                  last_segment,
-                  fieldsLength2 + last_segment,
-                );
-                last_segment = last_segment + fieldsLength2;
-                for (var w = 0; w < instructions.length && exit === 0; w++) {
-                  var aux = "0x" + pending_instructions[i].address.toString(16);
-                  if (aux == instructions[w].Address) {
-                    instructions_binary[w - numBinaries].loaded =
-                      instructions_binary[w - numBinaries].loaded.substring(
-                        0,
-                        instructions_binary[w - numBinaries].loaded.length -
-                          (startbit[s] + 1),
-                      ) +
-                      bin_aux +
-                      instructions_binary[w - numBinaries].loaded.substring(
-                        instructions_binary[w - numBinaries].loaded.length -
-                          stopbit[s],
-                        instructions_binary[w - numBinaries].loaded.length,
-                      );
-                  }
-                }
-              }
-            } else {
-              var fieldsLength = startbit - stopbit + 1;
-              console_log(fieldsLength);
-              var bin = bi_intToBigInt(addr, 10).toString(2);
-              bin = bin.padStart(fieldsLength, "0");
-              for (var w = 0; w < instructions.length && exit === 0; w++) {
-                var aux = "0x" + pending_instructions[i].address.toString(16);
-                if (aux == instructions[w].Address) {
-                  instructions_binary[w - numBinaries].loaded =
-                    instructions_binary[w - numBinaries].loaded.substring(
-                      0,
-                      instructions_binary[w - numBinaries].loaded.length -
-                        (startbit + 1),
-                    ) +
-                    bin.padStart(fieldsLength, "0") +
-                    instructions_binary[w - numBinaries].loaded.substring(
-                      instructions_binary[w - numBinaries].loaded.length -
-                        stopbit,
-                      instructions_binary[w - numBinaries].loaded.length,
-                    );
-                }
-              }
-            }
-            instructionParts[j] = addr;
-            var newInstruction = "";
-            for (var w = 0; w < instructionParts.length; w++) {
-              if (w == instructionParts.length - 1) {
-                newInstruction = newInstruction + instructionParts[w];
-              } else {
-                newInstruction = newInstruction + instructionParts[w] + " ";
-              }
-            }
-            for (var w = 0; w < instructions.length && exit === 0; w++) {
-              var aux = "0x" + pending_instructions[i].address.toString(16);
-              if (aux == instructions[w].Address) {
-                instructions[w].loaded = newInstruction;
-                exit = 1;
-              }
-            }
-          }
-        }
-        if (exit === 0) {
-          nEnters = pending_instructions[i].line;
-          instructions = [];
-          pending_instructions = [];
-          pending_tags = [];
-          data_tag = [];
-          instructions_binary = [];
-          creator_memory_clear();
-          data = [];
-          extern = [];
-          return packCompileError("m7", instructionParts[j], "error", "danger");
-        }
-      }
-      if (signatureParts[j] == "offset_bytes") {
-        for (var z = 0; z < instructions.length && exit === 0; z++) {
-          if (instructions[z].Label == instructionParts[j]) {
-            var addr = instructions[z].Address;
-            var startbit = pending_instructions[i].startBit;
-            var stopbit = pending_instructions[i].stopBit;
-            var fieldsLength = startbit - stopbit + 1;
-            var bin = bi_intToBigInt(addr, 10).toString(2);
-            bin = bin.padStart(fieldsLength, "0");
-            instructionParts[j] = addr;
-            var newInstruction = "";
-            for (var w = 0; w < instructionParts.length; w++) {
-              if (w == instructionParts.length - 1) {
-                newInstruction = newInstruction + instructionParts[w];
-              } else {
-                newInstruction = newInstruction + instructionParts[w] + " ";
-              }
-            }
-            for (var w = 0; w < instructions.length && exit == 0; w++) {
-              var aux = "0x" + pending_instructions[i].address.toString(16);
-              if (aux == instructions[w].Address) {
-                instructions[w].loaded = newInstruction;
-              }
-            }
-            for (var w = 0; w < instructions.length && exit == 0; w++) {
-              var aux = "0x" + pending_instructions[i].address.toString(16);
-              if (aux == instructions[w].Address) {
-                instructions[w].loaded = newInstruction;
-                var fieldsLength = startbit - stopbit + 1;
-                console_log(w);
-                console_log(numBinaries);
-                console_log(w - numBinaries);
-                instructions_binary[w - numBinaries].loaded =
-                  instructions_binary[w - numBinaries].loaded.substring(
-                    0,
-                    instructions_binary[w - numBinaries].loaded.length -
-                      (startbit + 1),
-                  ) +
-                  bin.padStart(fieldsLength, "0") +
-                  instructions_binary[w - numBinaries].loaded.substring(
-                    instructions_binary[w - numBinaries].loaded.length -
-                      stopbit,
-                    instructions_binary[w - numBinaries].loaded.length,
-                  );
-                exit = 1;
-              }
-            }
-          }
-        }
-        if (exit == 0) {
-          nEnters = pending_instructions[i].line;
-          instructions = [];
-          pending_instructions = [];
-          pending_tags = [];
-          data_tag = [];
-          instructions_binary = [];
-          creator_memory_clear();
-          data = [];
-          extern = [];
-          return packCompileError("m7", instructionParts[j], "error", "danger");
-        }
-      }
-    }
-  }
-  if (update_binary.instructions_binary != null) {
-    for (var i = 0; i < update_binary.instructions_binary.length; i++) {
-      var hex = bin2hex(update_binary.instructions_binary[i].loaded);
-      var auxAddr = parseInt(update_binary.instructions_binary[i].Address, 16);
-      var label = update_binary.instructions_binary[i].Label;
-      var hide = false;
-      if (i == 0) {
-        hide = false;
-        if (update_binary.instructions_binary[i].globl === false) {
-          label = "";
-        }
-      } else if (update_binary.instructions_binary[i].globl === false) {
-        hide = true;
-        label = "";
-      } else if (update_binary.instructions_binary[i].globl == null) {
-        hide = true;
-      } else {
-        hide = false;
-      }
-      auxAddr = creator_insert_instruction(
-        auxAddr,
-        "********",
-        "********",
-        hide,
-        hex,
-        "**",
-        label,
-      );
-    }
-  }
-  for (var i = 0; i < instructions_binary.length; i++) {
-    var hex = bin2hex(instructions_binary[i].loaded);
-    var auxAddr = parseInt(instructions_binary[i].Address, 16);
-    var label = instructions_binary[i].Label;
-    var binNum = 0;
-    if (update_binary.instructions_binary != null) {
-      binNum = update_binary.instructions_binary.length;
-    }
-    auxAddr = creator_insert_instruction(
-      auxAddr,
-      instructions[i + binNum].loaded,
-      instructions[i + binNum].loaded,
-      false,
-      hex,
-      "00",
-      label,
-    );
-  }
-  for (var i = 0; i < instructions_binary.length; i++) {
-    if (extern.length === 0 && instructions_binary[i].Label != "") {
-      instructions_binary[i].Label = instructions_binary[i].Label + "_symbol";
-      instructions_binary[i].globl = false;
-    } else {
-      for (var j = 0; j < extern.length; j++) {
-        if (
-          instructions_binary[i].Label != extern[j] &&
-          j == extern.length - 1 &&
-          instructions_binary[i].Label != ""
-        ) {
-          instructions_binary[i].Label =
-            instructions_binary[i].Label + "_symbol";
-          instructions_binary[i].globl = false;
-          break;
-        } else if (instructions_binary[i].Label == extern[j]) {
-          instructions_binary[i].globl = true;
-          break;
-        }
-      }
-    }
-  }
-  for (var i = 0; i < instructions_tag.length; i++) {
-    if (extern.length === 0 && instructions_tag[i].tag != "") {
-      instructions_tag[i].tag = instructions_tag[i].tag + "_symbol";
-      instructions_tag[i].globl = false;
-      break;
-    } else {
-      for (var j = 0; j < extern.length; j++) {
-        if (
-          instructions_tag[i].tag != extern[j] &&
-          j == extern.length - 1 &&
-          instructions_tag[i].tag != ""
-        ) {
-          instructions_tag[i].tag = instructions_tag[i].tag + "_symbol";
-          instructions_tag[i].globl = false;
-          break;
-        } else if (instructions_tag[i].tag == extern[j]) {
-          instructions_tag[i].globl = true;
-          break;
-        }
-      }
-    }
-  }
-  if (typeof app != "undefined") app._data.instructions = instructions;
-  writeMemory("00", parseInt(stack_address), "word");
-  address = parseInt(architecture.memory_layout[0].value);
-  data_address = parseInt(architecture.memory_layout[2].value);
-  stack_address = parseInt(architecture.memory_layout[4].value);
-  creator_memory_prereset();
-  return ret;
-}
-*/
+
 var list_user_instructions = [];
 var list_data_instructions = [];
 function identify_pseudo(instruction_assembly){
@@ -3405,7 +2923,8 @@ function process_data_to_store_memory(){
 
       if(list_data_instructions[i].type === "asciz" || list_data_instructions[i].type === "ascii"){
         if (dumpdatainstructions[dump_ins][1].length % 2 !== 0) {
-          throw new Error("La longitud del string hexadecimal debe ser par.");
+          console.log("dumpdatains[dumpins]:", dumpdatainstructions[dump_ins][1]);
+          console.warn("Dealineamiento de memoria en string.");
       }
 
       // Dividir en bytes de 2 caracteres
@@ -3441,7 +2960,7 @@ function assembly_compiler()
   var expvalue = /^\.(\w+)\s+(.+)/;
   var expalign = /^\.align\s+(\d+)/;
   var data_alignment = 0;
-  if(!assembled && !linked && !dissambled){
+  if(!assembled && !linked && !dissambled && execution_mode_run === -1){
     var is_text = false;
     var is_data = false;
     var labeltext = "";
@@ -3542,15 +3061,6 @@ function assembly_compiler()
               });
             }
           }
-
-          // if(is_data && code_assembly_array[i].startsWith('.align')){
-          //   // Store the align to de data
-          //   data_to_store.align = parseInt((code_assembly_array[i].split(".align "))[1], 10);
-          // }
-          // if(is_data && code_assembly_array[i].endsWith(':')){
-          //   data_to_store.label = (code_assembly_array[i].split(':'))[0];
-          // }
-          // if(is_data && code_assembly_array[i])
             
           if (is_text && code_assembly_array[i].endsWith(':'))
             labeltext = code_assembly_array[i].slice(0, -1);
@@ -3564,16 +3074,17 @@ function assembly_compiler()
       is_data = false;
       is_text = false;
     }
-    
-    for (let i = 0; i < filecontents.length; i++){
-      if(filecontents[i].match(regexfpd))
-      enablefpd = true;
-      if(filecontents[i].match(regexvec))
-      enablevec = true;
+    if(filecontents.length !== 0){
+      for (let i = 0; i < filecontents.length; i++){
+        if(filecontents[i].match(regexfpd))
+        enablefpd = true;
+        if(filecontents[i].match(regexvec))
+        enablevec = true;
+      }
+    } else {
+      return packCompileError('m0', 'Please enter the assembly code or select files before compiling', 'warning', 'danger') ;
     }
-    // console.log("post comprobacion del flag", enablefpd, enablevec);
-    // objectcontent = preprocess_run(filenames, filecontents, enablefpd, enablevec);
-    // console.log("Mal?");
+
     if(!preprocess_run(filenames, filecontents, enablefpd, enablevec)){
       console.log("Malardo");
       nEnters = parseInt(objectcontent[1], 10)-1;
@@ -3601,185 +3112,155 @@ function assembly_compiler()
         linked = await waitForFunction();
       } while (elffile === undefined && !linked);
     })().then(() => {
-
-      (async function loop() {
-        do {
-          dissambled = await dissamble_binary();
-        } while ((dumptextinstructions.length === 0 && dumpdatainstructions.length === 0) && !dissambled);
-      })().then(() => {
-        align = 1;
-        for (let i = 0; i < dumptextinstructions.length; i++){
-          /*console.log(*/creator_insert_instruction(parseInt(dumptextinstructions[i][0], 16), dumptextinstructions[i][2], dumptextinstructions[i][2], false, dumptextinstructions[i][1], "00", dumptextinstructions[i][4])/*)*/;
-          instructions.push({
-            Break: null,
-            Address: "0x" + dumptextinstructions[i][0],
-            Label: dumptextinstructions[i][4],
-            loaded: dumptextinstructions[i][2],
-            user : list_user_instructions[i],
-            _rowVariant: "",
-            visible: true,
-            hide: false,
-          });
-          if (dumptextinstructions[i][0] === entry_elf)
-            instructions[i]._rowVariant = 'success';
-        }
-
-
-        process_data_to_store_memory();
-
-        console.log("Nuevo dumpdata: ", dumpdatainstructions);
-        for (let i = 0; i < dumpdatainstructions.length; i++){
-          console.log(dumpdatainstructions);
-
-          switch(dumpdatainstructions[i][6]){
-            case "half":
-              creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
-              break;
-            case "byte":
-              console.log("Byte o char");
-              creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), parseInt(dumpdatainstructions[i][1], 16), 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
-              
-              break;
-            case "word":
-            case "integer":
-              creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
-              
-              break;
-
-            case "float":
-              let buffer = new ArrayBuffer(4); // 4 bytes para float
-              let view = new DataView(buffer);
-
-              // Convertir hexadecimal a entero
-              let intVal = parseInt(dumpdatainstructions[i][1], 16);
-
-              // Escribir el entero en el buffer como float
-              view.setUint32(0, intVal, false); // false = Big Endian
-
-              // Leer como float de 32 bits
-              // return view.getFloat32(0, false);
-            creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4],view.getFloat32(0, false), dumpdatainstructions[i][6],);
-              break;
-            case "double":
-              let bufferd = new ArrayBuffer(8); // 8 bytes para double
-              let viewd = new DataView(bufferd);
-
-              // Convertir hexadecimal a entero
-              let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
-              let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
-
-              // Escribir los valores en el buffer
-              viewd.setUint32(0, high, false); // Parte alta
-              viewd.setUint32(4, low, false);  // Parte baja
-
-              // Leer como double de 64 bits
-              // return viewd.getFloat64(0, false);
-            creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
-              break;
-            // case "char":
-              
-            // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
-            //   break;
-
-            case "asciz":
-              // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
-              creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
-              break;
-
-            case "ascii":
-              creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
-              break;
-
-            case "space":
-            case "zero":
-              creator_memory_storestring(dumpdatainstructions[i][1], dumpdatainstructions[i][1], parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
-              break;
+      if (elffile.from !== undefined){
+        show_notification(
+          "undefined reference to '"+elffile.ref+"' in function: "+elffile.from,
+          "danger"
+        );
+        resetenvironment(0);
+        return;
+      }
+      else {
+        (async function loop() {
+          do {
+            dissambled = await dissamble_binary();
+          } while ((dumptextinstructions.length === 0 && dumpdatainstructions.length === 0) && !dissambled);
+        })().then(() => {
+          align = 1;
+          for (let i = 0; i < dumptextinstructions.length; i++){
+            /*console.log(*/creator_insert_instruction(parseInt(dumptextinstructions[i][0], 16), dumptextinstructions[i][2], dumptextinstructions[i][2], false, dumptextinstructions[i][1], "00", dumptextinstructions[i][4])/*)*/;
+            instructions.push({
+              Break: null,
+              Address: "0x" + dumptextinstructions[i][0],
+              Label: dumptextinstructions[i][4],
+              loaded: dumptextinstructions[i][2],
+              user : list_user_instructions[i],
+              _rowVariant: "",
+              visible: true,
+              hide: false,
+            });
+            if(is_32b_arch){
+              if (dumptextinstructions[i][0] === entry_elf)
+                instructions[i]._rowVariant = 'success';
+            } else {
+              if ((dumptextinstructions[i][0].padStart(16, '0')) === entry_elf)
+                instructions[i]._rowVariant = 'success';
+            }
           }
-          // creator_memory_data_compiler(dumpdatainstructions[i][0], dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], dumpdatainstructions[i][4], dumpdatainstructions[i][5],   )
-          // creator_memory_data_compiler(data_address, auxTokenString, parseInt(architecture.directives[j].size), label, (parseInt(auxTokenString, 16) >> 0), "byte") ;
           
-          // if (dumpdatainstructions[i][1] === ""){
-          //   const regex = new RegExp(`(${dumpdatainstructions[i][4]}):\\s*[\\n\\t ]*\\.(zero|space)\\s+(\\d+)`, 'g');
-          //   let match;
-          //   while ((match = regex.exec(code_assembly)) !== null) { // Para cuando son zeros o un space
-          //       // console.log(`Label = ${match[1]}, Directiva = ${match[2]}, Número extraído = ${match[3]}`);
-          //       // console.log(creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2));
-          //       creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2);
-          //     }
+  
+  
+          process_data_to_store_memory();
+  
+          console.log("Nuevo dumpdata: ", dumpdatainstructions);
+          for (let i = 0; i < dumpdatainstructions.length; i++){
+            console.log(dumpdatainstructions);
+  
+            switch(dumpdatainstructions[i][6]){
+              case "half":
+                creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                break;
+              case "byte":
+                console.log("Byte o char");
+                creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), parseInt(dumpdatainstructions[i][1], 16), 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                
+                break;
+              case "word":
+              case "integer":
+                creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                
+                break;
+  
+              case "float":
+                let buffer = new ArrayBuffer(4); // 4 bytes para float
+                let view = new DataView(buffer);
+  
+                // Convertir hexadecimal a entero
+                let intVal = parseInt(dumpdatainstructions[i][1], 16);
+  
+                // Escribir el entero en el buffer como float
+                view.setUint32(0, intVal, false); // false = Big Endian
+  
+                // Leer como float de 32 bits
+                // return view.getFloat32(0, false);
+              creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4],view.getFloat32(0, false), dumpdatainstructions[i][6],);
+                break;
+              case "double":
+                let bufferd = new ArrayBuffer(8); // 8 bytes para double
+                let viewd = new DataView(bufferd);
+  
+                // Convertir hexadecimal a entero
+                let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
+                let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
+  
+                // Escribir los valores en el buffer
+                viewd.setUint32(0, high, false); // Parte alta
+                viewd.setUint32(4, low, false);  // Parte baja
+  
+                // Leer como double de 64 bits
+                // return viewd.getFloat64(0, false);
+              creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                break;
+              // case "char":
+                
+              // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+              //   break;
+  
+              case "asciz":
+                // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
+                break;
+  
+              case "ascii":
+                creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
+                break;
+  
+              case "space":
+              case "zero":
+                creator_memory_storestring(dumpdatainstructions[i][1], dumpdatainstructions[i][1], parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
+                break;
+            }
+            // creator_memory_data_compiler(dumpdatainstructions[i][0], dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], dumpdatainstructions[i][4], dumpdatainstructions[i][5],   )
+            // creator_memory_data_compiler(data_address, auxTokenString, parseInt(architecture.directives[j].size), label, (parseInt(auxTokenString, 16) >> 0), "byte") ;
+            
+            // if (dumpdatainstructions[i][1] === ""){
+            //   const regex = new RegExp(`(${dumpdatainstructions[i][4]}):\\s*[\\n\\t ]*\\.(zero|space)\\s+(\\d+)`, 'g');
+            //   let match;
+            //   while ((match = regex.exec(code_assembly)) !== null) { // Para cuando son zeros o un space
+            //       // console.log(`Label = ${match[1]}, Directiva = ${match[2]}, Número extraído = ${match[3]}`);
+            //       // console.log(creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2));
+            //       creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2);
+            //     }
+  
+            // }
+            // // Identificar el tipo de dato que es
+            // else{
+              // console.log("Address:  ", parseInt(dumpdatainstructions[i][0], 16));
+              // console.log("valor:    ", dumpdatainstructions[i][1]);
+              // console.log("tamaño:   ", 4);
+              // console.log("Label:    ", dumpdatainstructions[i][4]);
+              // console.log("DefValue: ", parseInt(dumpdatainstructions[i][1], 16) >> 0);
+              // console.log("Tipo:     ", "word");
+              // console.log(creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",));
+            //   creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",);
+            //   //Plantilla para almacenar los datos
+            //   // creator_memory_data_compiler(data_address, auxTokenString, parseInt(architecture.directives[j].size), label, (parseInt(auxTokenString, 16) >> 0), "byte") ;
+            // }
+          }
+          
+          creator_memory_prereset();
+          creator_memory_reset();
+          show_notification("Compilation completed successfully","success");
 
-          // }
-          // // Identificar el tipo de dato que es
-          // else{
-            // console.log("Address:  ", parseInt(dumpdatainstructions[i][0], 16));
-            // console.log("valor:    ", dumpdatainstructions[i][1]);
-            // console.log("tamaño:   ", 4);
-            // console.log("Label:    ", dumpdatainstructions[i][4]);
-            // console.log("DefValue: ", parseInt(dumpdatainstructions[i][1], 16) >> 0);
-            // console.log("Tipo:     ", "word");
-            // console.log(creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",));
-          //   creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",);
-          //   //Plantilla para almacenar los datos
-          //   // creator_memory_data_compiler(data_address, auxTokenString, parseInt(architecture.directives[j].size), label, (parseInt(auxTokenString, 16) >> 0), "byte") ;
-          // }
-        }
-        
-        creator_memory_prereset();
-        creator_memory_reset();
-        show_notification("Compilation completed successfully","success");
-      }); 
+
+
+        }); 
+      }
+      
 
 
 
     }); 
-    // waitForFunction().then(() => {
-      
-    //   // console.log("Ahora ejecuto el desensamblado!");
-    //   dissamble_binary().then(() => {
-    //     // console.log("Terminado el desensamblado");
-    //     scriptdump.parentNode.removeChild(scriptdump);
-    //     clean_environment();
-    //     align = 1;
-    //     for (let i = 0; i < dumptextinstructions.length; i++){
-    //       console.log(creator_insert_instruction(parseInt(dumptextinstructions[i][0], 16), dumptextinstructions[i][2], dumptextinstructions[i][2], false, dumptextinstructions[i][1], "00", dumptextinstructions[i][4]));
-    //       instructions.push({
-    //         Break: null,
-    //         Address: "0x" + dumptextinstructions[i][0],
-    //         Label: dumptextinstructions[i][4],
-    //         loaded: dumptextinstructions[i][2],
-    //         user : list_user_instructions[i],
-    //         _rowVariant: "",
-    //         visible: true,
-    //         hide: false,
-    //       });
-    //       if (i == 0)
-    //         instructions[i]._rowVariant = 'success';
-    //     }
-    //     for (let i = 0; i < dumpdatainstructions.length; i++){
-    //       if (dumpdatainstructions[i][1] === ""){
-    //         const regex = new RegExp(`(${dumpdatainstructions[i][4]}):\\s*[\\n\\t ]*\\.(zero|space)\\s+(\\d+)`, 'g');
-    //         let match;
-    //         while ((match = regex.exec(code_assembly)) !== null) {
-    //             // console.log(`Label = ${match[1]}, Directiva = ${match[2]}, Número extraído = ${match[3]}`);
-    //             console.log(creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2));
-    //           }
-
-    //       }else{
-    //         // console.log("Address:  ", parseInt(dumpdatainstructions[i][0], 16));
-    //         // console.log("valor:    ", dumpdatainstructions[i][1]);
-    //         // console.log("tamaño:   ", 4);
-    //         // console.log("Label:    ", dumpdatainstructions[i][4]);
-    //         // console.log("DefValue: ", parseInt(dumpdatainstructions[i][1], 16) >> 0);
-    //         // console.log("Tipo:     ", "word");
-    //         console.log(creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",));
-    //       }
-    //     }
-        
-    //     creator_memory_prereset();
-    //     creator_memory_reset();
-    //     return ret;
-    //   });
-    // });
-    // console.log("He terminado!");
     
   }
   else {
@@ -7434,7 +6915,7 @@ function reset() {
   creator_callstack_reset();
   track_stack_reset();
   // En esta funcion se deben restablecer los registros,
-  // el mapa de memoria, y se debe eliminar el modulo js de riscv_sim_RV32.js
+  // el mapa de memoria, y se debe eliminar el modulo js de wasm64_riscv_sim_RV32.js
   // y volverlo a cargar
   if( execution_mode_run !== -1){
     Module._reanudar_ejecucion(parseInt(5,10));
@@ -7445,7 +6926,7 @@ function reset() {
     }else 
       setTimeout(resetenvironment, 1e3, 1);
     // scriptsail = document.createElement('script');
-    // scriptsail.src = window.location.href +'js/toolchain_compiler/riscv_sim_RV32.js';
+    // scriptsail.src = window.location.href +'js/toolchain_compiler/wasm64_riscv_sim_RV32.js';
     // scriptsail.async = true;
     // scriptsail.type = 'text/javascript';
     // document.head.appendChild(scriptsail);
@@ -7948,15 +7429,15 @@ var uielto_toolbar_btngroup = {
             displayAssemblyFiles(assembly_files);
             assembly_codemirror_start();
             if (codemirrorHistory != null) {
-              // console.log("Previo al history:", textarea_assembly_editor);
-              // console.log("codeMirror previo: ", codemirrorHistory);
+              console.log("Previo al history:", textarea_assembly_editor);
+              console.log("codeMirror previo: ", codemirrorHistory);
               textarea_assembly_editor.setHistory(codemirrorHistory);
               textarea_assembly_editor.undo();
-              // console.log("Despues del undo history:", textarea_assembly_editor);
-              // console.log("El codemirror despues:", codemirrorHistory);
+              console.log("Despues del undo history:", textarea_assembly_editor);
+              console.log("El codemirror despues:", codemirrorHistory);
             }
             textarea_assembly_editor.setValue(code_assembly);
-            if (update_binary != "") {
+            if (update_binary !== undefined) {
               $("#divAssembly").attr("class", "col-lg-10 col-sm-12");
               $("#divTags").attr("class", "col-lg-2 col-sm-12");
               $("#divTags").show();
@@ -7964,11 +7445,11 @@ var uielto_toolbar_btngroup = {
           }, 50);
         }
         if (textarea_assembly_editor != null && e != "assembly") {
-          // console.log("Cambio a: ", e);
+          console.log("Cambio a: ", e);
           app._data.assembly_code = textarea_assembly_editor.getValue();
           code_assembly = textarea_assembly_editor.getValue();
           codemirrorHistory = textarea_assembly_editor.getHistory();
-          // console.log("CodeMirrorHistory:", codemirrorHistory);
+          console.log("CodeMirrorHistory:", codemirrorHistory);
           textarea_assembly_editor.toTextArea();
         }
         app.$bvToast.hide();
@@ -8076,7 +7557,8 @@ var uielto_toolbar_btngroup = {
       }, 75);
     },
     remove_library() {
-      update_binary = "";
+      update_binary = undefined; //undefined;
+      code_binary = undefined;
       load_binary = false;
       $("#divAssembly").attr("class", "col-lg-12 col-sm-12");
       $("#divTags").attr("class", "col-lg-0 col-sm-0");
@@ -9138,6 +8620,7 @@ var uielto_preload_architecture = {
       }
     },
     load_arch_select(e) {
+      console.log("Arquitectura que se carga:", e.alt);
       show_loading();
       if (e == null) {
         hide_loading();
@@ -9197,6 +8680,42 @@ var uielto_preload_architecture = {
       });
     },
     load_arch_select_aux(cfg, load_associated_examples, e) {
+      if (e.alt === "RISC-V32S"){
+        console.log("32bits");
+        scriptas = document.createElement('script');
+        scriptas.src = window.location.href + 'js/toolchain_compiler/32bits/as-new.js';
+        scriptas.async = true;
+        scriptas.type = 'text/javascript';
+        document.head.appendChild(scriptas);
+
+        fetch(window.location.href+'js/toolchain_compiler/32bits/linker32.ld')
+          .then(response => {
+          return response.text();})
+          .then(data => {
+          linkercontent = data;
+          });
+
+        is_32b_arch = true;
+      }
+      else if(e.alt === "RISC-V64S"){
+        console.log("64bits");
+        scriptas = document.createElement('script');
+        scriptas.src = window.location.href + 'js/toolchain_compiler/64bits/as-new.js';
+        scriptas.async = true;
+        scriptas.type = 'text/javascript';
+        document.head.appendChild(scriptas);
+        fetch(window.location.href+'js/toolchain_compiler/64bits/linker64.ld')
+          .then(response => {
+          return response.text();})
+          .then(data => {
+          linkercontent = data;
+          });
+
+        is_32b_arch = false;
+      }
+      else 
+        console.log(e.alt);
+
       var aux_architecture = cfg;
       architecture = register_value_deserialize(aux_architecture);
       architecture_json = e.file;
@@ -10765,8 +10284,8 @@ var uielto_load_library = {
   },
   methods: {
     library_update() {
-      if (code_binary.length !== 0) {
-        update_binary = JSON.parse(code_binary);
+      if (update_binary.length !== 0) {
+
         load_binary = true;
         $("#divAssembly").attr("class", "col-lg-10 col-sm-12");
         $("#divTags").attr("class", "col-lg-2 col-sm-12");
@@ -10783,15 +10302,22 @@ var uielto_load_library = {
       var file;
       var reader;
       var files = document.getElementById("binary_file").files;
+      
       for (var i = 0; i < files.length; i++) {
         file = files[i];
         reader = new FileReader();
-        reader.onloadend = onFileLoaded;
-        reader.readAsBinaryString(file);
+        reader.onload = function (ev) {
+          const arrayBuffer = ev.target.result;
+          update_binary = new Uint8Array(arrayBuffer);
+        };
+        // reader.onloadend = onFileLoaded;
+        reader.readAsArrayBuffer(file);
+        // update_binary = new Uint8Array(code_binary);
       }
-      function onFileLoaded(event) {
-        code_binary = event.currentTarget.result;
-      }
+      // function onFileLoaded(event) {
+      //   code_binary = event.target.result;
+
+      // }
     },
   },
   template:
@@ -10818,6 +10344,32 @@ var uielto_save_library = {
   },
   methods: {
     library_save() {
+      if (instructions.find(obj => obj.Label.includes("main")) !== undefined)
+        show_notification(
+          'You can not use the "main" tag in a library',
+          "danger",
+        );
+
+      else 
+        {
+          const blob = new Blob([objectcontent], {type: "application/octet-stream"});
+
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+
+          a.href = url;
+
+          if (this.name_binary_save == "")
+            a.download = "library.o";
+          else 
+            a.download = this.name_binary_save +".o";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          show_notification("Save binary", "success");
+        }
+      /*
       if (assembly_compiler() == -1) {
         return;
       }
@@ -10862,7 +10414,7 @@ var uielto_save_library = {
         downloadLink.click();
         this.name_binary_save = "";
         show_notification("Save binary", "success");
-      });
+      });*/
     },
     debounce: _.debounce(function (param, e) {
       console_log(param);
@@ -14092,6 +13644,8 @@ try {
   window.app = new Vue({
     el: "#app",
     data: {
+      tabs: [],
+      activeTabIndex : 0,
       render: 0,
       version: "",
       architecture_name: "",
@@ -14237,6 +13791,42 @@ try {
       get_target_port() {
         this.target_port = this.target_ports[this.os];
       },
+      addTab(filename) {
+        const newId = this.tabs.length + 1;
+        this.tabs.push({
+          id: newId,
+          title: filename,
+          content: `Contenido de la tab ${filename}`
+        });
+        if (this.activeTabIndex === -1) {
+          this.activeTabIndex = 0;  // Selecciona la primera pestaña
+        } else {
+          this.activeTabIndex = this.tabs.length - 1;  // Selecciona la nueva pestaña
+        }
+        // let newTab = this.tabs.findIndex(tab => tab.id === newId);
+        // console.log("Antes: ",this.activeTabIndex);
+        // if (newTab !== this.tabs.length - 1)
+        //   this.activeTabIndex = newTab;
+        // else 
+        //   this.activeTabIndex = this.tabs.length - 2;
+        // this.$nextTick(() => {
+          
+          
+        //   console.log("Despues:" ,this.activeTabIndex);
+        
+        // });
+        // console.log(this.activeTabIndex);
+        // this.$forceUpdate();
+      },
+      removeTab(index) {
+        this.tabs.splice(index, 1);
+        console.log("Tamaño: ",this.tabs.length);
+        if (this.tabs.length > 0)
+          this.activeTabIndex = this.tabs.length - 1;
+        else (this.tabs.length === 0)
+          this.activeTabIndex = -1;
+        
+      }
     },
   });
   Vue.config.errorHandler = function (err, vm, info) {
@@ -14389,6 +13979,7 @@ function newFile(){
   myFileTable.appendChild(newRow);
 
   /* ACTUALIZACION DEL TOOLBAR DE FICHEROS */
+  app.addTab(filename_prompt);
   let editorcont = document.getElementById("editor-container");
 
   let divFile = document.createElement("div");
@@ -14428,9 +14019,11 @@ function newFile(){
 function closeFile(filename){
   for(let i = 0; i < assembly_files.length; i++){
     if (assembly_files[i].filename === filename){
-      assembly_files[i].code = textarea_assembly_editor.getValue();
-      assembly_files[i].editing_now = false;
-      textarea_assembly_editor.setValue("");
+      if (assembly_files[i].editing_now){
+        assembly_files[i].code = textarea_assembly_editor.getValue();
+        assembly_files[i].editing_now = false;
+        textarea_assembly_editor.setValue("");
+      }
     }
   }
   
@@ -14509,34 +14102,48 @@ function openFile(name = ""){
   else 
     filename = name;
   
-  let checkit = document.getElementsByClassName(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
-  if(checkit[0] === undefined){
+  let tabIndex = app.tabs.findIndex(tab => tab.title === filename);
 
-    let editorcont = document.getElementById("editor-container");
-
-    let divFile = document.createElement("div");
-    
-    divFile.classList.add(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''), "btn", "btn-outline-secondary", "menuGroup", "btn-sm","simulator_btn", "btn_arch", "btn-secondary");
-    divFile.setAttribute("onclick", `showFile('${selectedFile}')`);
-
-    let FilenameText = document.createElement("b");
-    FilenameText.textContent = filename;
-
-    let closeButton = document.createElement("button");
-    closeButton.classList.add("btn", "btn", "btn-outline-secondary", "menuGroup", "btn-sm", "simulator_btn", "btn_arch", "h-100", "btn-secondary");
-    // closeButton.setAttribute("onclick", "closeFile()");
-    closeButton.textContent = "X";
-
-    closeButton.onclick = function(event) {
-      event.stopPropagation();
-      closeFile(filename);
-    }
-
-    divFile.appendChild(FilenameText);
-    divFile.appendChild(closeButton);
-
-    editorcont.prepend(divFile);
+  if (tabIndex !== -1){
+    return;
   }
+  else {
+    app.addTab(filename);
+  }
+
+
+  // let checkit = document.getElementsByClassName(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
+  // if(checkit[0] === undefined){
+
+  //   let editorcont = document.getElementById("openedFiles");
+
+  //   // let divFile = document.createElement("div");
+  //   let btabFile = document.createElement("b-tab");
+    
+  //   btabFile.classList.add(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''), "active");
+  //   btabFile.title = filename;
+  //   // btabFile.setAttribute('active',"");
+  //   // divFile.classList.add(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''), "btn", "btn-outline-secondary", "menuGroup", "btn-sm","simulator_btn", "btn_arch", "btn-secondary");
+  //   btabFile.setAttribute("onclick", `showFile('${selectedFile}')`);
+
+  //   // let FilenameText = document.createElement("b");
+  //   // FilenameText.textContent = filename;
+
+  //   // let closeButton = document.createElement("button");
+  //   // closeButton.classList.add("btn", "btn", "btn-outline-secondary", "menuGroup", "btn-sm", "simulator_btn", "btn_arch", "h-100", "btn-secondary");
+  //   // // closeButton.setAttribute("onclick", "closeFile()");
+  //   // closeButton.textContent = "X";
+
+  //   // closeButton.onclick = function(event) {
+  //   //   event.stopPropagation();
+  //   //   closeFile(filename);
+  //   // }
+
+  //   // divFile.appendChild(FilenameText);
+  //   // divFile.appendChild(closeButton);
+
+  //   editorcont.prepend(btabFile);
+  // }
 
 
 
@@ -14548,6 +14155,11 @@ function openFile(name = ""){
 function showFile(filename){
   console.log("Abrimos el fichero: ", filename);
   //Primero guardamos el fichero que se estaba editando
+
+  let indice_file = assembly_files.findIndex(insn => insn.filename === filename);
+    if(assembly_files[indice_file].editing_now)
+      return;
+
   for(let i = 0; i < assembly_files.length; i++){
     if(assembly_files[i].editing_now){
       assembly_files[i].code = textarea_assembly_editor.getValue();
