@@ -4852,9 +4852,9 @@ function preprocess_as(file_p, content_p, enablefpd, enablevec) {
   // Comprobacion de que el contenido no generará conflicto a futuro con la ejecucion del simulador
   asarguments = ["-o", "input.o"];
   if (enablefpd)
-    asarguments.unshift("-march=rv32imfd");
+    asarguments.unshift("-march=rv64imfd");
   if (enablevec){
-    asarguments.unshift("-march=rv32gcv", "-mabi=ilp32");
+    asarguments.unshift("-march=rv64gcv");
   }
   if (enablefpd && enablevec)
     throw new Error("You have enabled Floating point extension and Vectorial Extension");

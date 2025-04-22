@@ -9,6 +9,7 @@ var comp_after_run = false;
 var is_32b_arch = false;
 var insn_number;
 var entry_elf;
+var length_vext = 64;
 
 // FP Extension:
 const fpdextension = ["fadd.s", "fadd.d", "fsub.s", "fsub.d", "fmul.s", "fmul.d", "fdiv.s", "fdiv.d", "fsqrt.s", "fsqrt.d", "fmadd.s", 
@@ -383,10 +384,17 @@ function register_value_deserialize(architecture) {
   for (var i = 0; i < architecture.components.length; i++) {
     for (var j = 0; j < architecture.components[i].elements.length; j++) {
       if (architecture.components[i].type != "fp_registers") {
+        if (architecture.components[i].type === "v_registers"){
+          architecture.components[i].elements[j].value = 
+            architecture.components[i].elements[j].value;
+        }else {
         architecture.components[i].elements[j].value = bi_intToBigInt(
           architecture.components[i].elements[j].value,
           10,
         );
+
+        }
+        
       } else {
         architecture.components[i].elements[j].value = bi_floatToBigInt(
           architecture.components[i].elements[j].value,
@@ -394,10 +402,18 @@ function register_value_deserialize(architecture) {
       }
       if (architecture.components[i].double_precision !== true) {
         if (architecture.components[i].type != "fp_registers") {
-          architecture.components[i].elements[j].default_value = bi_intToBigInt(
-            architecture.components[i].elements[j].default_value,
-            10,
-          );
+          if (architecture.components[i].type === "v_registers"){
+            architecture.components[i].elements[j].default_value = 
+              architecture.components[i].elements[j].default_value;
+          }else {
+            architecture.components[i].elements[j].default_value = bi_intToBigInt(
+              architecture.components[i].elements[j].default_value,
+              10,
+            );
+          }
+          if (architecture.components[i].type === "v_registers"){
+            console.log("Defualt Value despues:", architecture.components[i].elements[j].default_value);
+          }
         } else {
           architecture.components[i].elements[j].default_value =
             bi_floatToBigInt(
@@ -1677,7 +1693,7 @@ function readRegister(indexComp, indexElem, register_type) {
     }
   }
 }
-function writeRegister(value, indexComp, indexElem, register_type) {
+function writeRegister(value, indexComp, indexElem, register_type, force=0) {
   var draw = { space: [], info: [], success: [], danger: [], flash: [] };
   if (value == null) {
     return;
@@ -1730,6 +1746,40 @@ function writeRegister(value, indexComp, indexElem, register_type) {
         "Int",
       );
     }
+  } else if (architecture.components[indexComp].type == "v_registers") {
+    if (
+      architecture.components[indexComp].elements[
+        indexElem
+      ].properties.includes("write") !== true
+    ) {
+      if (
+        architecture.components[indexComp].elements[
+          indexElem
+        ].properties.includes("ignore_write") !== false
+      ) {
+        return;
+      }
+      for (var i = 0; i < instructions.length; i++) {
+        draw.space.push(i);
+      }
+      draw.danger.push(execution_index);
+      throw packExecute(
+        true,
+        "The register " +
+          architecture.components[indexComp].elements[indexElem].name.join(
+            " | ",
+          ) +
+          " cannot be written",
+        "danger",
+        null,
+      );
+    }
+    if (architecture.components[indexComp].elements[indexElem].value !== value || force !== 0){
+      architecture.components[indexComp].elements[indexElem].value = value;
+      creator_callstack_writeRegister(indexComp, indexElem);
+    }
+
+
   } else if (architecture.components[indexComp].type == "fp_registers") {
     if (architecture.components[indexComp].double_precision === false) {
       if (
@@ -2703,7 +2753,6 @@ var load_binary = false;
 function load_arch_select(cfg) {
   var ret = { errorcode: "", token: "", type: "", update: "", status: "ok" };
   var auxArchitecture = cfg;
-  
   architecture = register_value_deserialize(auxArchitecture);
   architecture_hash = [];
   for (var i = 0; i < architecture.components.length; i++) {
@@ -2874,7 +2923,7 @@ var list_user_instructions = [];
 var list_data_instructions = [];
 function identify_pseudo(instruction_assembly){
   // Identificamos las pseudo instrucciones
-  if(instruction_assembly.search("li") != -1){
+  if(instruction_assembly.search("li") != -1 && instruction_assembly.search("vsetvli") === -1){
     // console.log("li:", instruction_assembly);
     list_user_instructions.push(instruction_assembly);
     let parts = instruction_assembly.split(',');
@@ -2895,13 +2944,13 @@ function identify_pseudo(instruction_assembly){
   else if (instruction_assembly.search("call") != -1)
   {
     list_user_instructions.push(instruction_assembly);
-    list_user_instructions.push("");
+    // list_user_instructions.push("");
   } 
   else if (instruction_assembly.search("lw") != -1)
     {
       list_user_instructions.push(instruction_assembly);
       let parts = instruction_assembly.split(',');
-      // console.log("PArtes del lw: ",parts);
+      console.log("PArtes del lw: ",parts);
       if( isNaN(parts[1]?.trim()) && !(parts[1]?.trim()).includes("(") ){
 
         list_user_instructions.push("");
@@ -6859,6 +6908,10 @@ function reset() {
   clk_cycles_reset();
   keyboard = "";
   display = "";
+  length_vext = 64;
+  architecture.components[3].total_elements = 8;
+  architecture.components[3].length_elem = length_vext;
+  architecture.components[3].elems_op = 0;
   for (var i = 0; i < architecture_hash.length; i++) {
     for (var j = 0; j < architecture.components[i].elements.length; j++) {
       if (
@@ -8680,77 +8733,92 @@ var uielto_preload_architecture = {
       });
     },
     load_arch_select_aux(cfg, load_associated_examples, e) {
-      if (e.alt === "RISC-V32S"){
-        console.log("32bits");
-        scriptas = document.createElement('script');
-        scriptas.src = window.location.href + 'js/toolchain_compiler/32bits/as-new.js';
-        scriptas.async = true;
-        scriptas.type = 'text/javascript';
-        document.head.appendChild(scriptas);
+      if(execution_mode_run !== -1 && !can_reset){ 
+        Module._reanudar_ejecucion(parseInt(5,10));
+        setTimeout(uielto_preload_architecture.methods.load_arch_select, 200, e);
+       } else if (can_reset && execution_mode_run !== -1){
+        last_execution_mode_run = -1;
+        execution_mode_run = -1;
+        scriptsail.parentNode.removeChild(scriptsail);
+        setTimeout(uielto_preload_architecture.methods.load_arch_select, 200, e);
+       }
+       else {
+        if (e.alt === "RISC-V32S"){
+          if(window.Module !== undefined)
+            clean_environment();
+          console.log("32bits");
+          scriptas = document.createElement('script');
+          scriptas.src = window.location.href + 'js/toolchain_compiler/32bits/as-new.js';
+          scriptas.async = true;
+          scriptas.type = 'text/javascript';
+          document.head.appendChild(scriptas);
+  
+          fetch(window.location.href+'js/toolchain_compiler/32bits/linker32.ld')
+            .then(response => {
+            return response.text();})
+            .then(data => {
+            linkercontent = data;
+            });
+  
+          is_32b_arch = true;
+        }
+        else if(e.alt === "RISC-V64S"){
 
-        fetch(window.location.href+'js/toolchain_compiler/32bits/linker32.ld')
-          .then(response => {
-          return response.text();})
-          .then(data => {
-          linkercontent = data;
+          if(window.Module !== undefined)
+            clean_environment();
+          
+          console.log("64bits");
+          scriptas = document.createElement('script');
+          scriptas.src = window.location.href + 'js/toolchain_compiler/64bits/as-new.js';
+          scriptas.async = true;
+          scriptas.type = 'text/javascript';
+          document.head.appendChild(scriptas);
+          fetch(window.location.href+'js/toolchain_compiler/64bits/linker64.ld')
+            .then(response => {
+            return response.text();})
+            .then(data => {
+            linkercontent = data;
+            });
+  
+          is_32b_arch = false;
+        }
+
+        var aux_architecture = cfg;
+        architecture = register_value_deserialize(aux_architecture);
+        architecture_json = e.file;
+        uielto_preload_architecture.data.architecture_name =
+          architecture.arch_conf[0].value;
+        app._data.architecture = architecture;
+        app._data.architecture_name = architecture.arch_conf[0].value;
+        app._data.architecture_guide = e.guide;
+        app._data.arch_code = JSON.stringify(
+          register_value_serialize(cfg),
+          null,
+          2,
+        );
+        architecture_hash = [];
+        for (i = 0; i < architecture.components.length; i++) {
+          architecture_hash.push({
+            name: architecture.components[i].name,
+            index: i,
           });
-
-        is_32b_arch = true;
-      }
-      else if(e.alt === "RISC-V64S"){
-        console.log("64bits");
-        scriptas = document.createElement('script');
-        scriptas.src = window.location.href + 'js/toolchain_compiler/64bits/as-new.js';
-        scriptas.async = true;
-        scriptas.type = 'text/javascript';
-        document.head.appendChild(scriptas);
-        fetch(window.location.href+'js/toolchain_compiler/64bits/linker64.ld')
-          .then(response => {
-          return response.text();})
-          .then(data => {
-          linkercontent = data;
-          });
-
-        is_32b_arch = false;
-      }
-      else 
-        console.log(e.alt);
-
-      var aux_architecture = cfg;
-      architecture = register_value_deserialize(aux_architecture);
-      architecture_json = e.file;
-      uielto_preload_architecture.data.architecture_name =
-        architecture.arch_conf[0].value;
-      app._data.architecture = architecture;
-      app._data.architecture_name = architecture.arch_conf[0].value;
-      app._data.architecture_guide = e.guide;
-      app._data.arch_code = JSON.stringify(
-        register_value_serialize(cfg),
-        null,
-        2,
-      );
-      architecture_hash = [];
-      for (i = 0; i < architecture.components.length; i++) {
-        architecture_hash.push({
-          name: architecture.components[i].name,
-          index: i,
-        });
-        app._data.architecture_hash = architecture_hash;
-      }
-      backup_stack_address = architecture.memory_layout[4].value;
-      backup_data_address = architecture.memory_layout[3].value;
-      if (load_associated_examples && typeof e.examples !== "undefined") {
-        uielto_preload_architecture.methods.load_examples_available();
-      }
-      instructions = [];
-      app._data.instructions = instructions;
-      creator_memory_clear();
-      uielto_toolbar_btngroup.methods.change_UI_mode("simulator");
-      uielto_data_view_selector.methods.change_data_view("int_registers");
-      app._data.render++;
-      var aux_object = jQuery.extend(true, {}, architecture);
-      var aux_architecture = register_value_serialize(aux_object);
-      var aux_arch = JSON.stringify(aux_architecture, null, 2);
+          app._data.architecture_hash = architecture_hash;
+        }
+        backup_stack_address = architecture.memory_layout[4].value;
+        backup_data_address = architecture.memory_layout[3].value;
+        if (load_associated_examples && typeof e.examples !== "undefined") {
+          uielto_preload_architecture.methods.load_examples_available();
+        }
+        instructions = [];
+        app._data.instructions = instructions;
+        creator_memory_clear();
+        uielto_toolbar_btngroup.methods.change_UI_mode("simulator");
+        uielto_data_view_selector.methods.change_data_view("int_registers");
+        app._data.render++;
+        var aux_object = jQuery.extend(true, {}, architecture);
+        var aux_architecture = register_value_serialize(aux_object);
+        var aux_arch = JSON.stringify(aux_architecture, null, 2);
+       }
     },
     load_examples_available(set_name) {
       example_set_available = [];
@@ -12050,6 +12118,7 @@ var uielto_data_view_selector = {
       reg_representation_options: [
         { text: "INT/Ctrl Registers", value: "int_registers" },
         { text: "FP Registers", value: "fp_registers" },
+        { text: "V Registers", value: "v_registers" }
       ],
     };
   },
@@ -12060,6 +12129,8 @@ var uielto_data_view_selector = {
         this.current_reg_type = "int_registers";
       } else if (e == "fp_registers") {
         this.current_reg_type = "fp_registers";
+      }else if (e == "v_registers"){
+        this.current_reg_type = "v_registers";
       }
       creator_ga(
         "send",
@@ -12073,7 +12144,8 @@ var uielto_data_view_selector = {
       if (button == "registers") {
         if (
           app._data.data_mode == "int_registers" ||
-          app._data.data_mode == "fp_registers"
+          app._data.data_mode == "fp_registers"  ||
+          app._data.data_mode == "v_registers"
         ) {
           return "secondary";
         } else {
@@ -12089,6 +12161,9 @@ var uielto_data_view_selector = {
       if (app._data.data_mode == "fp_registers") {
         current_reg_name = "FP Registers";
       }
+      if (app._data.data_mode == "v_registers"){
+        current_reg_name = "V Registers";
+      }
       return current_reg_name;
     },
   },
@@ -12100,7 +12175,7 @@ var uielto_data_view_selector = {
     '    <b-col class="px-1">' +
     '      <b-button-group class="w-100 pb-3">' +
     "" +
-    '        <b-button v-if="register_file_num <= 4"' +
+    '        <b-button v-if="register_file_num <= 5"' +
     '                  v-for="item in reg_representation_options"' +
     '                  :id="item.value"' +
     '                  size="sm"' +
@@ -12111,7 +12186,7 @@ var uielto_data_view_selector = {
     "        </b-button>" +
     "" +
     "        <b-dropdown split" +
-    '                    v-if="register_file_num > 4"' +
+    '                    v-if="register_file_num > 5"' +
     "                    right" +
     '                    :text="get_register_name()"' +
     '                    size="sm"' +
@@ -12119,7 +12194,16 @@ var uielto_data_view_selector = {
     '                    @click="change_data_view(current_reg_type)">' +
     "          <b-dropdown-item @click=\"change_data_view('int_registers')\">CPU-INT/Ctrl Registers</b-dropdown-item>" +
     "          <b-dropdown-item @click=\"change_data_view('fp_registers')\">CPU-FP Registers</b-dropdown-item>" +
+    "          <b-dropdown-item @click=\"change_data_view('v_registers')\">V Registers</b-dropdown-item>" +
     "        </b-dropdown>" +
+    "" +
+    '       <b-button id="csr_btn"' +
+    '                 size="sm"'+
+    "                 :pressed=\"get_pressed('csr')\""+
+    '                 variant="outline-secondary"'+
+    "                 @click=\"change_data_view('csr')\">" +
+    '         CSR Registers' +
+    '       </b-button>' +
     "" +
     '        <b-button id="memory_btn"' +
     '                  size="sm"' +
@@ -12130,6 +12214,16 @@ var uielto_data_view_selector = {
     "          Memory" +
     "        </b-button>" +
     "" +
+    "      </b-button-group>" +
+    "    </b-col>" +
+    "" +
+    "  </b-row>" +
+
+
+    '  <b-row cols="1" >' +
+    "" +
+    '    <b-col class="px-1">' +
+    '      <b-button-group class="w-100 pb-3">' +
     '        <b-button id="stats_btn"' +
     '                  size="sm"' +
     "                  :pressed=\"get_pressed('stats')\"" +
@@ -12158,7 +12252,7 @@ Vue.component("data-view-selector", uielto_data_view_selector);
 var uielto_register_file = {
   props: {
     render: { type: Number, required: true },
-    data_mode: { type: String, required: true },
+    data_mode: { type: String, required: true }
   },
   data: function () {
     return {
@@ -12192,7 +12286,15 @@ var uielto_register_file = {
           this.local_data_mode = this._props.data_mode;
         }
         return this.reg_representation_options_int;
-      } else {
+      } else if (this._props.data_mode == "v_registers"){
+        if (this._props.data_mode != this.local_data_mode) {
+          this.reg_representation = "signed";
+          this.local_data_mode = this._props.data_mode;
+        }
+        return this.reg_representation_options_int;
+      }
+      
+      else {
         if (this._props.data_mode != this.local_data_mode) {
           this.reg_representation = "ieee32";
           this.local_data_mode = this._props.data_mode;
@@ -12249,7 +12351,7 @@ var uielto_register_file = {
     '   <b-container fluid align-h="center" class="mx-0 px-3 my-2">' +
     '     <b-row align-h="center" cols="1">' +
     '       <b-col v-for="item in architecture_hash">' +
-    '         <b-container fluid align-h="center" class="px-0 mx-0 mb-2" v-if="(data_mode == architecture.components[item.index].type) || (data_mode == \'int_registers\' && architecture.components[item.index].type == \'ctrl_registers\')">' +
+    '         <b-container fluid align-h="center" class="px-0 mx-0 mb-2" v-if="((data_mode == architecture.components[item.index].type) || (data_mode == \'int_registers\' && architecture.components[item.index].type == \'ctrl_registers\')) && (data_mode !== \'v_registers\' || architecture.components[item.index].type !== \'v_registers\') ">' +
     '           <b-row align-h="start" cols-xl="4" cols-lg="4" cols-md="4" cols-sm="3" cols-xs="3" cols="3">' +
     '             <b-col class="p-1 mx-0" v-for="(item2, index) in architecture.components[item.index].elements">' +
     " " +
@@ -12263,6 +12365,21 @@ var uielto_register_file = {
     "            </b-col>" +
     "           </b-row>" +
     "         </b-container>" +
+    ''+
+    '         <b-container fluid align-h="center" class="px-0 mx-0 mb-2" v-if="(data_mode === architecture.components[item.index].type && data_mode === \'v_registers\') ">' +
+    '           <b-row align-h="start" cols-xl="4" cols-lg="4" cols-md="4" cols-sm="3" cols-xs="3" cols="3">' +
+    '             <b-col class="p-1 mx-0" v-for="(item2, index) in architecture.components[item.index].elements">' +
+    " " +
+    '               <register-vec :render="render"' +
+    '                         :component="item"' +
+    '                         :register="item2"' +
+    '                         :name_representation="reg_name_representation"' +
+    '                         :value_representation="reg_representation">' +
+    "               </register-vec>" +
+    " " +
+    "            </b-col>" +
+    "           </b-row>" +
+    "         </b-container>" +
     "       </b-col>" +
     "     </b-row>" +
     "   </b-container>" +
@@ -12270,6 +12387,151 @@ var uielto_register_file = {
 };
 Vue.component("register-file", uielto_register_file);
 var uielto_register = {
+
+  props:      {
+                render:                 { type: Number, required: true },
+                component:              { type: Object, required: true },
+                register:               { type: Object, required: true },
+                name_representation:    { type: String, required: true },
+                value_representation:   { type: String, required: true }
+              },
+  methods:    {
+              /*Popover functions*/
+              popover_id(name){
+                return 'popoverValueContent' + name[0];
+              },
+
+              show_value (register){
+                var ret = 0;
+
+                console.log(this.value_representation);
+                switch(this.value_representation){
+                  case "signed":
+                    if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
+                      if ((((register.value).toString(2)).padStart(register.nbits, '0')).charAt(0) == 1){
+                        ret = parseInt(register.value.toString(10))-0x100000000;
+                      }
+                      if ((((register.value).toString(2)).padStart(register.nbits, '0')).charAt(0) == 0){
+                        ret = (register.value).toString(10);
+                      }
+                    }
+                    else {
+                      // ret = parseInt(register.value.toString(), 10) >> 0;
+                      if (architecture.components[this._props.component.index].double_precision === false) {
+                        ret = float2int_v2 (bi_BigIntTofloat(register.value));
+                      }
+                      else{
+                        ret = double2int_v2 (bi_BigIntTodouble(register.value));
+                      }
+                    }
+                    break;
+
+                  case "unsigned":
+                    if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
+                      ret = parseInt(register.value.toString(10)) >>> 0;
+                    }
+                    else {
+                      //ret = parseInt(register.value.toString(), 10) >>> 0;
+                      if (architecture.components[this._props.component.index].double_precision === false) {
+                        ret = float2int_v2 (bi_BigIntTofloat(register.value)) >>> 0;
+                      }
+                      else{
+                        ret = double2int_v2 (bi_BigIntTodouble(register.value)) >>> 0;
+                      }
+                    }
+                    break;
+
+                  case "ieee32":
+                    if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
+                      ret = hex2float("0x"+(((register.value).toString(16)).padStart(8, "0")));
+                    }
+                    else {
+                      ret = bi_BigIntTofloat(register.value);
+                    }
+                    break;
+
+                  case "ieee64":
+                    if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
+                      ret = hex2double("0x"+(((register.value).toString(16)).padStart(16, "0")));
+                    }
+                    else {
+                      ret = bi_BigIntTodouble(register.value);
+                    }
+                    break;
+
+                  case "hex":
+                    if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
+                      ret = (((register.value).toString(16)).padStart(register.nbits/4, "0")).toUpperCase();
+                    }
+                    else {
+                      if (architecture.components[this._props.component.index].double_precision === false) {
+                        ret = bin2hex(float2bin(bi_BigIntTofloat(register.value)));
+                      }
+                      else {
+                        ret = bin2hex(double2bin(bi_BigIntTodouble(register.value)));
+                      }
+                    }         
+                    break;
+                }
+
+                if (this._props.component.double_precision_type == "linked")
+                {
+                  ret = ret.toString();
+
+                  if (ret.length > 10) {
+                    return ret.slice(0, 8) + "...";
+                  }
+                }
+
+                return ret
+                
+              },
+
+              show_value_truncate ( register ) {
+                var ret = this.show_value(register).toString();
+                if (ret.length > 8){
+                  ret = ret.slice(0,8) + "...";
+                }
+                return ret;
+              },
+
+              reg_name (register){
+                switch(this.name_representation){
+                  case "logical":
+                    return register.name[0];
+                  case "alias":
+                    if (typeof register.name[1] === "undefined"){
+                      return register.name[0];
+                    }
+
+                    return register.name.slice(1,register.name.length).join(' | ');
+                  case "all":
+                    return register.name.join(' | ');
+                }
+              }
+
+  },
+
+  template:   '<div>' +
+              ' <b-button class="btn btn-outline-secondary btn-sm registers w-100 h-100" ' +
+              '           :id="popover_id(register.name)" ' +
+              '           onclick="creator_ga(\'data\', \'data.view\', \'data.view.registers_details\');">' +
+              '   <span class="text-truncate">{{reg_name(register)}}</span> ' +
+              '   <b-badge class="regValue registerValue"> ' +
+              '     {{show_value_truncate(register)}}' +
+              '   </b-badge>' +
+              ' </b-button>' +
+              ' ' +
+              ' <popover-register :target="popover_id(register.name)" ' +
+              '                   :component="component"' +
+              '                   :register="register">' +
+              ' </popover-register>' +
+              '</div>'
+
+};
+Vue.component('register', uielto_register) ;
+
+var uielto_register_vec = {
   props: {
     render: { type: Number, required: true },
     component: { type: Object, required: true },
@@ -12279,129 +12541,55 @@ var uielto_register = {
   },
   methods: {
     popover_id(name) {
-      return "popoverValueContent" + name[0];
+      return "popoverValueContentvec" + name[0];
     },
-    show_value(register) {
-      var ret = 0;
+    show_value_vec(register) {
+      var ret;
       switch (this.value_representation) {
-        case "signed":
-          if (
-            architecture.components[this._props.component.index].type ==
-              "ctrl_registers" ||
-            architecture.components[this._props.component.index].type ==
-              "int_registers"
-          ) {
-            if (
-              register.value
-                .toString(2)
-                .padStart(register.nbits, "0")
-                .charAt(0) == 1
-            ) {
-              ret = parseInt(register.value.toString(10)) - 4294967296;
-            }
-            if (
-              register.value
-                .toString(2)
-                .padStart(register.nbits, "0")
-                .charAt(0) == 0
-            ) {
-              ret = register.value.toString(10);
-            }
-          } else {
-            if (
-              architecture.components[this._props.component.index]
-                .double_precision === false
-            ) {
-              ret = float2int_v2(bi_BigIntTofloat(register.value));
-            } else {
-              ret = double2int_v2(bi_BigIntTodouble(register.value));
-            }
-          }
+        case "hex":
+          var ret_val = (512 / length_vext) - 1;
+          ret = "0x" + register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
           break;
         case "unsigned":
-          if (
-            architecture.components[this._props.component.index].type ==
-              "ctrl_registers" ||
-            architecture.components[this._props.component.index].type ==
-              "int_registers"
-          ) {
-            ret = parseInt(register.value.toString(10)) >>> 0;
-          } else {
-            if (
-              architecture.components[this._props.component.index]
-                .double_precision === false
-            ) {
-              ret = float2int_v2(bi_BigIntTofloat(register.value)) >>> 0;
-            } else {
-              ret = double2int_v2(bi_BigIntTodouble(register.value)) >>> 0;
+          var ret_val = (512 / length_vext) - 1;
+          ret = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
+          ret = (parseInt(ret.toString(10) >>> 0));
+          break;
+        case "signed":    
+        default:
+          var ret_val = (512 / length_vext) - 1;
+            ret = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
+  
+            if (ret.charAt(0) === 1){
+              if (length_vext === 8){
+                ret = (parseInt(ret, 16) - 256);
+  
+              } else if (length_vext === 16){
+                ret = (parseInt(ret, 16) - 65536);
+  
+              } else if (length_vext === 32){
+                ret = (parseInt(ret, 16) - 4294967296);
+  
+              } else {
+                ret = (parseInt(ret, 16) - 18446744073709551616n);
+              }
             }
-          }
+            else
+              ret = (parseInt(ret, 16));  
           break;
-        case "ieee32":
-          if (
-            architecture.components[this._props.component.index].type ==
-              "ctrl_registers" ||
-            architecture.components[this._props.component.index].type ==
-              "int_registers"
-          ) {
-            ret = hex2float(
-              "0x" + register.value.toString(16).padStart(8, "0"),
-            );
-          } else {
-            ret = bi_BigIntTofloat(register.value);
-          }
-          break;
-        case "ieee64":
-          if (
-            architecture.components[this._props.component.index].type ==
-              "ctrl_registers" ||
-            architecture.components[this._props.component.index].type ==
-              "int_registers"
-          ) {
-            ret = hex2double(
-              "0x" + register.value.toString(16).padStart(16, "0"),
-            );
-          } else {
-            ret = bi_BigIntTodouble(register.value);
-          }
-          break;
-        case "hex":
-          if (
-            architecture.components[this._props.component.index].type ==
-              "ctrl_registers" ||
-            architecture.components[this._props.component.index].type ==
-              "int_registers"
-          ) {
-            ret = register.value
-              .toString(16)
-              .padStart(register.nbits / 4, "0")
-              .toUpperCase();
-          } else {
-            if (
-              architecture.components[this._props.component.index]
-                .double_precision === false
-            ) {
-              ret = bin2hex(float2bin(bi_BigIntTofloat(register.value)));
-            } else {
-              ret = bin2hex(double2bin(bi_BigIntTodouble(register.value)));
-            }
-          }
-          break;
-      }
-      if (this._props.component.double_precision_type == "linked") {
-        ret = ret.toString();
-        if (ret.length > 10) {
-          return ret.slice(0, 8) + "...";
-        }
       }
       return ret;
     },
-    show_value_truncate(register) {
-      var ret = this.show_value(register).toString();
+    show_value_truncate_vec(register) {
+      // return "1";
+        // console.log(this.show_value_vec(register));
+      var ret = this.show_value_vec(register).toString();
       if (ret.length > 8) {
-        ret = ret.slice(0, 8) + "...";
+        ret = ret.slice(0,8) + "...";
       }
+      // console.log("Ultima esperanza");
       return ret;
+
     },
     reg_name(register) {
       switch (this.name_representation) {
@@ -12424,278 +12612,418 @@ var uielto_register = {
     "           onclick=\"creator_ga('data', 'data.view', 'data.view.registers_details');\">" +
     '   <span class="text-truncate">{{reg_name(register)}}</span> ' +
     '   <b-badge class="regValue registerValue"> ' +
-    "     {{show_value_truncate(register)}}" +
+    "     {{show_value_truncate_vec(register)}}" +
     "   </b-badge>" +
     " </b-button>" +
     " " +
-    ' <popover-register :target="popover_id(register.name)" ' +
+    ' <popover-register-vec :target="popover_id(register.name)" ' +
     '                   :component="component"' +
     '                   :register="register">' +
-    " </popover-register>" +
+    " </popover-register-vec>" +
     "</div>",
 };
-Vue.component("register", uielto_register);
+Vue.component("register-vec", uielto_register_vec);
+
 var uielto_register_popover = {
+
+  props:      {
+                target:           { type: String, required: true },
+                component:        { type: Object, required: true },
+                register:         { type: Object, required: true }
+              },
+
+  data:       function () {
+                return {
+                  /*Register form*/
+                  newValue: '',
+                  precision: "true"
+                }
+              },
+
+  methods:    {
+                closePopover(){
+                  this.$root.$emit('bv::hide::popover')
+                },
+
+                //Write the register value in the specified format
+                show_value (register, view){
+                  var ret = 0;
+
+                  switch(view){
+                    case "hex":
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers"  || architecture.components[this._props.component.index].type == "int_registers") {
+                        ret = (((register.value).toString(16)).padStart(register.nbits/4, "0")).toUpperCase();
+                      }
+                      else {
+                        if (architecture.components[this._props.component.index].double_precision === false) {
+                          ret = bin2hex(float2bin(bi_BigIntTofloat(register.value)));
+                        }
+                        else {
+                          ret = bin2hex(double2bin(bi_BigIntTodouble(register.value)));
+                        }
+                      }         
+                      break;
+
+                    case "bin":
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers"  || architecture.components[this._props.component.index].type == "int_registers") {
+                        ret = (((register.value).toString(2)).padStart(register.nbits, "0"));
+                      }
+                      else {
+                        if (architecture.components[this._props.component.index].double_precision === false) {
+                          ret = float2bin(bi_BigIntTofloat(register.value));
+                        }
+                        else {
+                          ret = double2bin(bi_BigIntTodouble(register.value));
+                        }
+                      }         
+                      break;
+
+                    case "signed":
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers"  || architecture.components[this._props.component.index].type == "int_registers") {
+                        if ((((register.value).toString(2)).padStart(register.nbits, '0')).charAt(0) == 1){
+                          ret = parseInt(register.value.toString(10))-0x100000000;
+                        }
+                        if ((((register.value).toString(2)).padStart(register.nbits, '0')).charAt(0) == 0){
+                          ret = (register.value).toString(10);
+                        }
+                      }
+                      else {
+                        // ret = parseInt(register.value.toString(), 10) >> 0;
+                        if (architecture.components[this._props.component.index].double_precision === false) {
+                          ret = float2int_v2 (bi_BigIntTofloat(register.value));
+                        }
+                        else{
+                          ret = double2int_v2 (bi_BigIntTodouble(register.value));
+                        }
+                      }
+                      break;
+
+                    case "unsigned":
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
+                        ret = parseInt(register.value.toString(10)) >>> 0;
+                      }
+                      else {
+                        //ret = parseInt(register.value.toString(), 10) >>> 0;
+                        if (architecture.components[this._props.component.index].double_precision === false) {
+                          ret = float2int_v2 (bi_BigIntTofloat(register.value)) >>> 0;
+                        }
+                        else{
+                          ret = double2int_v2 (bi_BigIntTodouble(register.value)) >>> 0;
+                        }
+                      }
+                      break;
+
+                    case "char":
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers"   || architecture.components[this._props.component.index].type == "int_registers") {
+                        ret = hex2char8((((register.value).toString(16)).padStart(register.nbits/4, "0")));
+                      }
+                      else {
+                        if (architecture.components[this._props.component.index].double_precision === false) {
+                          ret = hex2char8(bin2hex(float2bin(bi_BigIntTofloat(register.value))));
+                        }
+                        else {
+                          ret = hex2char8(bin2hex(double2bin(bi_BigIntTodouble(register.value))));
+                        }
+                      } 
+                      break;
+
+                    case "ieee32":
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers"  || architecture.components[this._props.component.index].type == "int_registers") {
+                        ret = hex2float("0x"+(((register.value).toString(16)).padStart(8, "0")));
+                      }
+                      else {
+                        ret = bi_BigIntTofloat(register.value);
+                      }
+                      break;
+
+                    case "ieee64":
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers"  || architecture.components[this._props.component.index].type == "int_registers") {
+                        ret = hex2double("0x"+(((register.value).toString(16)).padStart(16, "0")));
+                      }
+                      else {
+                        ret = bi_BigIntTodouble(register.value);
+                      }
+                      break;
+                  }
+
+                  ret = ret.toString();
+
+                  return ret
+                  
+                },
+
+                //Update a new register value
+                update_register(comp, elem, type, precision){
+                  for (var i = 0; i < architecture.components[comp].elements.length; i++) {
+                    if(type == "int_registers" || type == "ctrl_registers"){
+                      if(architecture.components[comp].elements[i].name == elem && this.newValue.match(/^0x/)){
+                        var value = this.newValue.split("x");
+                        if(value[1].length * 4 > architecture.components[comp].elements[i].nbits){
+                          value[1] = value[1].substring(((value[1].length * 4) - architecture.components[comp].elements[i].nbits)/4, value[1].length)
+                        }
+                        writeRegister(parseInt(value[1], 16), comp, i, "int_registers");
+                      }
+                      else if(architecture.components[comp].elements[i].name == elem && this.newValue.match(/^(\d)+/)){
+                        writeRegister(parseInt(this.newValue,10), comp, i, "int_registers");
+                      }
+                      else if(architecture.components[comp].elements[i].name == elem && this.newValue.match(/^-/)){
+                        writeRegister(parseInt(this.newValue,10), comp, i, "int_registers");
+                      }
+                    }
+                    else if(type =="fp_registers"){
+                      if(precision === false){
+                        if(architecture.components[comp].elements[i].name == elem && this.newValue.match(/^0x/)){
+                          writeRegister(hex2float(this.newValue), comp, i, "SFP-Reg");
+                        }
+                        else if(architecture.components[comp].elements[i].name == elem && this.newValue.match(/^(\d)+/)){
+                          writeRegister(parseFloat(this.newValue, 10), comp, i, "SFP-Reg");
+                        }
+                        else if(architecture.components[comp].elements[i].name == elem && this.newValue.match(/^-/)){
+                          writeRegister(parseFloat(this.newValue, 10), comp, i, "SFP-Reg");
+                        }
+                      }
+
+                      else if(precision === true){
+                        if(architecture.components[comp].elements[i].name == elem && this.newValue.match(/^0x/)){
+                          writeRegister(hex2double(this.newValue), comp, i, "DFP-Reg");
+                        }
+                        else if(architecture.components[comp].elements[i].name == elem && this.newValue.match(/^(\d)+/)){
+                          writeRegister(parseFloat(this.newValue, 10), comp, i, "DFP-Reg");
+                        }
+                        else if(architecture.components[comp].elements[i].name == elem && this.newValue.match(/^-/)){
+                          writeRegister(parseFloat(this.newValue, 10), comp, i, "DFP-Reg");
+                        }
+                      }
+                    }
+                  }
+                  this.newValue = '';
+
+                  // Google Analytics
+                  creator_ga('data', 'data.change', 'data.change.register_value');
+                  creator_ga('data', 'data.change', 'data.change.register_value_' + elem);
+                },
+
+                get_cols(index)
+                {
+                  if (architecture.components[index].double_precision === true){
+                    return 3;
+                  }
+                  else{
+                    return 2;
+                  }
+                },
+
+                button_sel_vec_pos(total_elm){
+                  return  '<b-dropdown size="sm" text="Small" class="m-2">' +
+                            '<b-dropdown-item-button' +
+                            '  v-for="i in total_elm"' +
+                            '  :key="index"' +
+                            '  @click="show_vec_pos(i)"'+
+                            '>' +
+                            '  {{ i }}' +
+                            '</b-dropdown-item-button>' +
+                          '</b-dropdown>'
+                }
+
+
+
+              },
+
+template:     '<b-popover :target="target" ' +
+              '           triggers="click blur" ' +
+              '           class="popover">' +
+              '  <template v-slot:title>' +
+              '    <b-button @click="closePopover" class="close" aria-label="Close">' +
+              '      <span class="d-inline-block" aria-hidden="true">&times;</span>' +
+              '    </b-button>' +
+              '    {{register.name.join(\' | \')}}' +
+              '  </template>' +
+              '' +
+              '  <table class="table table-bordered table-sm popoverText">' +
+              '    <tbody>' +
+              '      <tr>' +
+              '        <td>Hex.</td>' +
+              '        <td>' +
+              '          <b-badge class="registerPopover">' +
+              '            {{show_value(register, \'hex\')}}' +
+              '          </b-badge>' +
+              '        </td>' +
+              '      </tr>' +
+              '      <tr>' +
+              '        <td>Binary</td>' +
+              '        <td>' +
+              '          <b-badge class="registerPopover">' +
+              '            {{show_value(register, \'bin\')}}' +
+              '          </b-badge>' +
+              '        </td>' +
+              '      </tr>' +
+              '      <tr v-if="architecture.components[component.index].type != \'fp_registers\'">' +
+              '        <td>Signed</td>' +
+              '        <td>' +
+              '          <b-badge class="registerPopover">' +
+              '            {{show_value(register, \'signed\')}}' +
+              '          </b-badge>' +
+              '        </td>' +
+              '      </tr>' +
+              '      <tr v-if="architecture.components[component.index].type != \'fp_registers\'">' +
+              '        <td>Unsig.</td>' +
+              '        <td>' +
+              '          <b-badge class="registerPopover">' +
+              '            {{show_value(register, \'unsigned\')}}' +
+              '          </b-badge>' +
+              '        </td>' +
+              '      </tr>' +
+              '      <tr v-if="architecture.components[component.index].type != \'fp_registers\'">' +
+              '        <td>Char</td>' +
+              '        <td>' +
+              '          <b-badge class="registerPopover">' +
+              '            {{show_value(register, \'char\')}}' +
+              '          </b-badge>' +
+              '        </td>' +
+              '      </tr>' +
+              '      <tr>' +
+              '        <td>IEEE 754 (32 bits)</td>' +
+              '        <td>' +
+              '          <b-badge class="registerPopover">' +
+              '            {{show_value(register, \'ieee32\')}}' +
+              '          </b-badge>' +
+              '        </td>' +
+              '      </tr>' +
+
+              '      <tr>' +
+              '        <td>IEEE 754 (64 bits)</td>' +
+              '        <td>' +
+              '          <b-badge class="registerPopover">' +
+              '            {{show_value(register, \'ieee64\')}}' +
+              '          </b-badge>' +
+              '        </td>' +
+              '      </tr>' +
+
+              '    </tbody>' +
+              '  </table>' +
+              '' +
+              '   <b-container fluid align-h="center" class="mx-0">' +
+              '     <b-row align-h="center" :cols="get_cols(component.index)">' +
+              ' ' +
+              '       <b-col class="popoverFooter">' +
+              '         <b-form-input v-model="newValue" ' +
+              '                       type="text" ' +
+              '                       size="sm" ' +
+              '                       title="New Register Value" ' +
+              '                       placeholder="Enter new value">' +
+              '         </b-form-input>' +
+              '       </b-col>' +
+              ' ' +
+              '       <b-col v-if="architecture.components[component.index].double_precision == true">' +
+              '         <b-form-select v-model="precision"' +
+              '                        size="sm" block>' +
+              '           <b-form-select-option value="false"       >Simple Precision</b-form-select-option>' +
+              '           <b-form-select-option value="true" active>Double Precision</b-form-select-option>' +
+              '         </b-form-select>' +
+              '       </b-col>' +
+              ' ' +
+              '       <b-col>' +
+              '         <b-button class="btn btn-primary btn-sm w-100" ' +
+              '                   @click="update_register(component.index, register.name, architecture.components[component.index].type, precision==\'true\')">' +
+              '           Update' +
+              '          </b-button>' +
+              '       </b-col>' +
+              ' ' +
+              '     </b-row>' +
+              '   </b-container>' +
+              '</b-popover>'
+
+};
+
+Vue.component('popover-register', uielto_register_popover);
+
+var uielto_register_popover_vec = {
   props: {
     target: { type: String, required: true },
     component: { type: Object, required: true },
-    register: { type: Object, required: true },
+    register: { type: Object, required: true }
   },
   data: function () {
-    return { newValue: "", precision: "true" };
+    return { tableHeight: 0, 
+      activeView: 'hex', 
+      newValue: "", 
+      precision: "true", 
+      result: [],
+      metadata: [ { 
+                    "Metadata": "", 
+                    "Nbits": this.register.nbits, 
+                    "Length": architecture.components[3].length_elem, 
+                    "Elems": architecture.components[3].total_elements, 
+                    "Elem_op": architecture.components[3].elems_op
+                  }
+                ]
+    };
+
   },
   methods: {
+    onPopoverShow(){
+      this._data.metadata[0].Length = architecture.components[3].length_elem;
+      this._data.metadata[0].Elems = architecture.components[3].total_elements;
+      this._data.metadata[0].Elem_op = architecture.components[3].elems_op;
+      this.show_value_vec(this._props.register, this._data.activeView);
+    },
     closePopover() {
       this.$root.$emit("bv::hide::popover");
     },
-    show_value(register, view) {
-      var ret = 0;
-      switch (view) {
-        case "hex":
-          if (
-            architecture.components[this._props.component.index].type ==
-              "ctrl_registers" ||
-            architecture.components[this._props.component.index].type ==
-              "int_registers"
-          ) {
-            ret = register.value
-              .toString(16)
-              .padStart(register.nbits / 4, "0")
-              .toUpperCase();
-          } else {
-            if (
-              architecture.components[this._props.component.index]
-                .double_precision === false
-            ) {
-              ret = bin2hex(float2bin(bi_BigIntTofloat(register.value)));
-            } else {
-              ret = bin2hex(double2bin(bi_BigIntTodouble(register.value)));
+
+    show_value_vec(register, view="hex") {
+      this.result.length = 0;
+      for (var i = 0; i < architecture.components[3].total_elements; i++){
+        switch (view) {
+          case "hex":
+            var ret_val = (512 / length_vext) - i - 1;
+            this.result.push({"Vector index": register.name[0] + " ["+i+"]", 'value':"0x" + register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 )});
+            break;
+          case "signed":
+            var ret_val = (512 / length_vext) - i - 1;
+            var ret = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
+
+            if (parseInt(ret, 16).toString(2).padStart(length_vext, "0").charAt(0) === "1"){
+              if (length_vext === 8){
+                this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : parseInt(ret, 16) - 256});
+
+              } else if (length_vext === 16){
+                this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : parseInt(ret, 16) - 65536});
+
+              } else if (length_vext === 32){
+                this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : parseInt(ret, 16) - 4294967296});
+
+              } else {
+                this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : parseInt(ret, 16) - 18446744073709551616n});
+              }
             }
-          }
-          break;
-        case "bin":
-          if (
-            architecture.components[this._props.component.index].type ==
-              "ctrl_registers" ||
-            architecture.components[this._props.component.index].type ==
-              "int_registers"
-          ) {
-            ret = register.value.toString(2).padStart(register.nbits, "0");
-          } else {
-            if (
-              architecture.components[this._props.component.index]
-                .double_precision === false
-            ) {
-              ret = float2bin(bi_BigIntTofloat(register.value));
-            } else {
-              ret = double2bin(bi_BigIntTodouble(register.value));
-            }
-          }
-          break;
-        case "signed":
-          if (
-            architecture.components[this._props.component.index].type ==
-              "ctrl_registers" ||
-            architecture.components[this._props.component.index].type ==
-              "int_registers"
-          ) {
-            if (
-              register.value
-                .toString(2)
-                .padStart(register.nbits, "0")
-                .charAt(0) == 1
-            ) {
-              ret = parseInt(register.value.toString(10)) - 4294967296;
-            }
-            if (
-              register.value
-                .toString(2)
-                .padStart(register.nbits, "0")
-                .charAt(0) == 0
-            ) {
-              ret = register.value.toString(10);
-            }
-          } else {
-            if (
-              architecture.components[this._props.component.index]
-                .double_precision === false
-            ) {
-              ret = float2int_v2(bi_BigIntTofloat(register.value));
-            } else {
-              ret = double2int_v2(bi_BigIntTodouble(register.value));
-            }
-          }
-          break;
-        case "unsigned":
-          if (
-            architecture.components[this._props.component.index].type ==
-              "ctrl_registers" ||
-            architecture.components[this._props.component.index].type ==
-              "int_registers"
-          ) {
-            ret = parseInt(register.value.toString(10)) >>> 0;
-          } else {
-            if (
-              architecture.components[this._props.component.index]
-                .double_precision === false
-            ) {
-              ret = float2int_v2(bi_BigIntTofloat(register.value)) >>> 0;
-            } else {
-              ret = double2int_v2(bi_BigIntTodouble(register.value)) >>> 0;
-            }
-          }
-          break;
-        case "char":
-          if (
-            architecture.components[this._props.component.index].type ==
-              "ctrl_registers" ||
-            architecture.components[this._props.component.index].type ==
-              "int_registers"
-          ) {
-            ret = hex2char8(
-              register.value.toString(16).padStart(register.nbits / 4, "0"),
-            );
-          } else {
-            if (
-              architecture.components[this._props.component.index]
-                .double_precision === false
-            ) {
-              ret = hex2char8(
-                bin2hex(float2bin(bi_BigIntTofloat(register.value))),
-              );
-            } else {
-              ret = hex2char8(
-                bin2hex(double2bin(bi_BigIntTodouble(register.value))),
-              );
-            }
-          }
-          break;
-        case "ieee32":
-          if (
-            architecture.components[this._props.component.index].type ==
-              "ctrl_registers" ||
-            architecture.components[this._props.component.index].type ==
-              "int_registers"
-          ) {
-            ret = hex2float(
-              "0x" + register.value.toString(16).padStart(8, "0"),
-            );
-          } else {
-            ret = bi_BigIntTofloat(register.value);
-          }
-          break;
-        case "ieee64":
-          if (
-            architecture.components[this._props.component.index].type ==
-              "ctrl_registers" ||
-            architecture.components[this._props.component.index].type ==
-              "int_registers"
-          ) {
-            ret = hex2double(
-              "0x" + register.value.toString(16).padStart(16, "0"),
-            );
-          } else {
-            ret = bi_BigIntTodouble(register.value);
-          }
-          break;
-      }
-      ret = ret.toString();
-      return ret;
-    },
-    update_register(comp, elem, type, precision) {
-      for (var i = 0; i < architecture.components[comp].elements.length; i++) {
-        if (type == "int_registers" || type == "ctrl_registers") {
-          if (
-            architecture.components[comp].elements[i].name == elem &&
-            this.newValue.match(/^0x/)
-          ) {
-            var value = this.newValue.split("x");
-            if (
-              value[1].length * 4 >
-              architecture.components[comp].elements[i].nbits
-            ) {
-              value[1] = value[1].substring(
-                (value[1].length * 4 -
-                  architecture.components[comp].elements[i].nbits) /
-                  4,
-                value[1].length,
-              );
-            }
-            writeRegister(parseInt(value[1], 16), comp, i, "int_registers");
-          } else if (
-            architecture.components[comp].elements[i].name == elem &&
-            this.newValue.match(/^(\d)+/)
-          ) {
-            writeRegister(
-              parseInt(this.newValue, 10),
-              comp,
-              i,
-              "int_registers",
-            );
-          } else if (
-            architecture.components[comp].elements[i].name == elem &&
-            this.newValue.match(/^-/)
-          ) {
-            writeRegister(
-              parseInt(this.newValue, 10),
-              comp,
-              i,
-              "int_registers",
-            );
-          }
-        } else if (type == "fp_registers") {
-          if (precision === false) {
-            if (
-              architecture.components[comp].elements[i].name == elem &&
-              this.newValue.match(/^0x/)
-            ) {
-              writeRegister(hex2float(this.newValue), comp, i, "SFP-Reg");
-            } else if (
-              architecture.components[comp].elements[i].name == elem &&
-              this.newValue.match(/^(\d)+/)
-            ) {
-              writeRegister(parseFloat(this.newValue, 10), comp, i, "SFP-Reg");
-            } else if (
-              architecture.components[comp].elements[i].name == elem &&
-              this.newValue.match(/^-/)
-            ) {
-              writeRegister(parseFloat(this.newValue, 10), comp, i, "SFP-Reg");
-            }
-          } else if (precision === true) {
-            if (
-              architecture.components[comp].elements[i].name == elem &&
-              this.newValue.match(/^0x/)
-            ) {
-              writeRegister(hex2double(this.newValue), comp, i, "DFP-Reg");
-            } else if (
-              architecture.components[comp].elements[i].name == elem &&
-              this.newValue.match(/^(\d)+/)
-            ) {
-              writeRegister(parseFloat(this.newValue, 10), comp, i, "DFP-Reg");
-            } else if (
-              architecture.components[comp].elements[i].name == elem &&
-              this.newValue.match(/^-/)
-            ) {
-              writeRegister(parseFloat(this.newValue, 10), comp, i, "DFP-Reg");
-            }
-          }
+            else
+              this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : parseInt(ret, 16)});
+            break;
+          case "unsigned":
+            var ret_val = (512 / length_vext) - 1 - i;
+            var ret = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
+            this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : BigInt("0x"+ret)});
+            break;
         }
       }
-      this.newValue = "";
-      creator_ga("data", "data.change", "data.change.register_value");
-      creator_ga("data", "data.change", "data.change.register_value_" + elem);
-    },
-    get_cols(index) {
-      if (architecture.components[index].double_precision === true) {
-        return 3;
-      } else {
-        return 2;
-      }
-    },
+      
+      this.activeView = view;
+
+      this.$nextTick(() => {
+        const table = this.$refs.vectorTable?.$el;
+        if (table) {
+          this.tableHeight = table.offsetHeight;
+        }
+      });
+      
+      console.log(this.result);
+    }
   },
   template:
     '<b-popover :target="target" ' +
     '           triggers="click blur" ' +
+    '           @show="onPopoverShow"'+
     '           class="popover">' +
     "  <template v-slot:title>" +
     '    <b-button @click="closePopover" class="close" aria-label="Close">' +
@@ -12704,99 +13032,202 @@ var uielto_register_popover = {
     "    {{register.name.join(' | ')}}" +
     "  </template>" +
     "" +
-    '  <table class="table table-bordered table-sm popoverText">' +
-    "    <tbody>" +
-    "      <tr>" +
-    "        <td>Hex.</td>" +
-    "        <td>" +
-    '          <b-badge class="registerPopover">' +
-    "            {{show_value(register, 'hex')}}" +
-    "          </b-badge>" +
-    "        </td>" +
-    "      </tr>" +
-    "      <tr>" +
-    "        <td>Binary</td>" +
-    "        <td>" +
-    '          <b-badge class="registerPopover">' +
-    "            {{show_value(register, 'bin')}}" +
-    "          </b-badge>" +
-    "        </td>" +
-    "      </tr>" +
-    "      <tr v-if=\"architecture.components[component.index].type != 'fp_registers'\">" +
-    "        <td>Signed</td>" +
-    "        <td>" +
-    '          <b-badge class="registerPopover">' +
-    "            {{show_value(register, 'signed')}}" +
-    "          </b-badge>" +
-    "        </td>" +
-    "      </tr>" +
-    "      <tr v-if=\"architecture.components[component.index].type != 'fp_registers'\">" +
-    "        <td>Unsig.</td>" +
-    "        <td>" +
-    '          <b-badge class="registerPopover">' +
-    "            {{show_value(register, 'unsigned')}}" +
-    "          </b-badge>" +
-    "        </td>" +
-    "      </tr>" +
-    "      <tr v-if=\"architecture.components[component.index].type != 'fp_registers'\">" +
-    "        <td>Char</td>" +
-    "        <td>" +
-    '          <b-badge class="registerPopover">' +
-    "            {{show_value(register, 'char')}}" +
-    "          </b-badge>" +
-    "        </td>" +
-    "      </tr>" +
-    "      <tr>" +
-    "        <td>IEEE 754 (32 bits)</td>" +
-    "        <td>" +
-    '          <b-badge class="registerPopover">' +
-    "            {{show_value(register, 'ieee32')}}" +
-    "          </b-badge>" +
-    "        </td>" +
-    "      </tr>" +
-    "      <tr>" +
-    "        <td>IEEE 754 (64 bits)</td>" +
-    "        <td>" +
-    '          <b-badge class="registerPopover">' +
-    "            {{show_value(register, 'ieee64')}}" +
-    "          </b-badge>" +
-    "        </td>" +
-    "      </tr>" +
-    "    </tbody>" +
-    "  </table>" +
-    "" +
-    '   <b-container fluid align-h="center" class="mx-0">' +
-    '     <b-row align-h="center" :cols="get_cols(component.index)">' +
-    " " +
-    '       <b-col class="popoverFooter">' +
-    '         <b-form-input v-model="newValue" ' +
-    '                       type="text" ' +
-    '                       size="sm" ' +
-    '                       title="New Register Value" ' +
-    '                       placeholder="Enter new value">' +
-    "         </b-form-input>" +
-    "       </b-col>" +
-    " " +
-    '       <b-col v-if="architecture.components[component.index].double_precision == true">' +
-    '         <b-form-select v-model="precision"' +
-    '                        size="sm" block>' +
-    '           <b-form-select-option value="false"       >Simple Precision</b-form-select-option>' +
-    '           <b-form-select-option value="true" active>Double Precision</b-form-select-option>' +
-    "         </b-form-select>" +
-    "       </b-col>" +
-    " " +
-    "       <b-col>" +
-    '         <b-button class="btn btn-primary btn-sm w-100" ' +
-    "                   @click=\"update_register(component.index, register.name, architecture.components[component.index].type, precision=='true')\">" +
-    "           Update" +
-    "          </b-button>" +
-    "       </b-col>" +
-    " " +
-    "     </b-row>" +
-    "   </b-container>" +
+    '  <b-table ref="MetadataTable" stripped :items="metadata" class="w-100 table-borderless custom-text" sticky-header head-variant="light"></b-table>'+
+    ''+
+    '  <b-container fluid>'+
+    '   <b-row cols="2" style="height: 100%;" class="align-items-stretch">'+
+    '     <b-col cols="4" class="d-flex justify-content-center align-items-center" :style="{ minHeight: tableHeight + \'px\' }">'+
+    '       <b-button-group vertical v-model="activeView">' +
+    '         <b-button variant="outline-secondary" :pressed="activeView === \'hex\'" value="hex" class="button_vec" @click="show_value_vec(register, \'hex\')">Hex</b-button>' +
+    '         <b-button variant="outline-secondary" :pressed="activeView === \'signed\'" value="signed" class="button_vec" @click="show_value_vec(register, \'signed\')">Signed</b-button>' +
+    '         <b-button variant="outline-secondary" :pressed="activeView === \'unsigned\'" value="unsigned" class="button_vec" @click="show_value_vec(register, \'unsigned\')">Unsigned</b-button>' +
+    '       </b-button-group>'+
+    '     </b-col>'+
+    '     <b-col align-self="baseline" cols="8" class="center">'+
+    '       <b-table ref="vectorTable" striped  responsive :items="result" class="table-borderless custom-text" sticky-header style="max-height: 250px; overflow-x:auto; width: 30ch;" head-variant="light"></b-table>'+
+    '     </b-col>'+
+    '   </b-row>'+
+    '  </b-container>'+
     "</b-popover>",
 };
-Vue.component("popover-register", uielto_register_popover);
+Vue.component("popover-register-vec", uielto_register_popover_vec);
+
+var uielto_csr_register_file = {
+  props: {
+    // userRegs : {type: String, required: true},
+    // supervisorRegs: {type: Array, required: true},
+    // machineRegs: {type: Array, required: true},
+    // commonRegs: {type: Array, required: true} 
+  },
+  data: function (){
+      return {
+              userRegs: architecture.components[4].elements.user,
+              userElems :   (architecture.components[4].elements.user.length % 2 === 0)       ? architecture.components[4].elements.user.length / 2       : (architecture.components[4].elements.user.length / 2) + 1,
+              superRegs: architecture.components[4].elements.supervisor,
+              superElems:   (architecture.components[4].elements.supervisor.length % 2 === 0) ? architecture.components[4].elements.supervisor.length / 2 : (architecture.components[4].elements.supervisor.length / 2) + 1,
+              machineRegs: architecture.components[4].elements.machine,
+              machineElems: (architecture.components[4].elements.machine.length % 2 === 0)    ? architecture.components[4].elements.machine.length / 2    : (architecture.components[4].elements.machine.length / 2) + 1, 
+              commonRegs: architecture.components[4].elements.common,
+              commonElems:  (architecture.components[4].elements.common.length % 2 === 0)     ? architecture.components[4].elements.common.length / 2     : (architecture.components[4].elements.common.length / 2) + 1
+            }
+  },
+  methods: {
+    // csreg_id(register){
+    //   console.log("Que tenemos", register);
+    //   return "csrreg" + registers[index] + "-" /*+ index*/;
+    // },
+    // actualindex(h, index){
+    //   console.log("Indice actual: ",index);
+    //   console.log("indice total: ", h)
+    // }
+  },
+  template:           
+  
+  '<div>'+
+  '<b-container v-b-toggle.user fluid align-h="between" class="mx-0 my-3 px-2">' +
+  '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;">' +
+  '           <b-col cols="1">' +
+  '               <img src="./images/csr_menu.png" alt="open_close_menu_user">'+
+  '           </b-col>' +
+  '           <b-col>' +
+  '               <div>USER MODE REGISTERS</div>' +
+  '           </b-col>' +
+  '       </b-row>' +
+  '</b-container>'+
+
+  '<b-collapse id="user"> '+
+  '<b-container fluid>'+
+  ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(architecture.components[4].elements.user.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
+  
+  '   <csr-register :id="(i-1)*2"'+
+  '                 :register="architecture.components[4].elements.user[(i-1)*2]"'+
+  '                 ></csr-register>'+
+
+  '   <csr-register :id="(i - 1) * 2 + 1"'+
+  '                 v-if="(i - 1) * 2 + 1 < architecture.components[4].elements.user.length"'+
+  '                 :register="architecture.components[4].elements.user[(i - 1) * 2 + 1]"'+
+  '                 ></csr-register>'+
+  ' </b-row>' +
+  '</b-container>'+
+  '</b-collapse>'+
+
+  '<b-container v-b-toggle.super fluid align-h="between" class="mx-0 my-3 px-2">' +
+  '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;">' +
+  '           <b-col cols="1">' +
+  '               <img src="./images/csr_menu.png" alt="open_close_menu_user">'+
+  '           </b-col>' +
+  '           <b-col>' +
+  '               <div>SUPERVISOR MODE REGISTERS</div>' +
+  '           </b-col>' +
+  '       </b-row>' +
+  '</b-container>'+
+
+  '<b-collapse id="super">'+
+  '<b-container fluid>'+
+  ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(architecture.components[4].elements.supervisor.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
+  
+  '   <csr-register :id="(i-1)*2"'+
+  '                 :register="architecture.components[4].elements.supervisor[(i-1)*2]"'+
+  '                 ></csr-register>'+
+
+  '   <csr-register :id="(i - 1) * 2 + 1"'+
+  '                 v-if="(i - 1) * 2 + 1 < architecture.components[4].elements.supervisor.length"'+
+  '                 :register="architecture.components[4].elements.supervisor[(i - 1) * 2 + 1]"'+
+  '                 ></csr-register>'+
+  ' </b-row>' +
+  '</b-container>'+
+  '</b-collapse>'+
+
+  '<b-container v-b-toggle.machine fluid align-h="between" class="mx-0 my-3 px-2">' +
+  '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;">' +
+  '           <b-col cols="1">' +
+  '               <img src="./images/csr_menu.png" alt="open_close_menu_user">'+
+  '           </b-col>' +
+  '           <b-col>' +
+  '               <div>MACHINE MODE REGISTERS</div>' +
+  '           </b-col>' +
+  '       </b-row>' +
+  '</b-container>'+
+
+  '<b-collapse id="machine">'+
+  '<b-container fluid>'+
+  ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(architecture.components[4].elements.machine.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
+  
+  '   <csr-register :id="(i-1)*2"'+
+  '                 :register="architecture.components[4].elements.machine[(i-1)*2]"'+
+  '                 ></csr-register>'+
+
+  '   <csr-register :id="(i - 1) * 2 + 1"'+
+  '                 v-if="(i - 1) * 2 + 1 < architecture.components[4].elements.machine.length"'+
+  '                 :register="architecture.components[4].elements.machine[(i - 1) * 2 + 1]"'+
+  '                 ></csr-register>'+
+  ' </b-row>' +
+  '</b-container>'+
+  '</b-collapse>'+
+
+  '<b-container v-b-toggle.common fluid align-h="between" class="mx-0 my-3 px-2">' +
+  '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;">' +
+  '           <b-col cols="1">' +
+  '               <img src="./images/csr_menu.png" alt="open_close_menu_user">'+
+  '           </b-col>' +
+  '           <b-col>' +
+  '               <div>COMMON REGISTERS</div>' +
+  '           </b-col>' +
+  '       </b-row>' +
+  ' </b-container>'+
+
+  '<b-collapse id="common">'+
+  '<b-container fluid>'+
+  ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(architecture.components[4].elements.common.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
+  
+  '   <csr-register :id="(i-1)*2"'+
+  '                 :register="architecture.components[4].elements.common[(i-1)*2]"'+
+  '                 ></csr-register>'+
+
+  '   <csr-register :id="(i - 1) * 2 + 1"'+
+  '                 v-if="(i - 1) * 2 + 1 < architecture.components[4].elements.common.length"'+
+  '                 :register="architecture.components[4].elements.common[(i - 1) * 2 + 1]"'+
+  '                 ></csr-register>'+
+  ' </b-row>' +
+  '</b-container>'+
+  '</b-collapse>'+
+  '</div>'
+
+
+
+};
+Vue.component('csr-register-file', uielto_csr_register_file);
+
+var uielto_csr_register = {
+  props: {
+      register: {type: Object, required: true}
+  },
+  methods:{
+      show_csr_value(register){
+        console.log(register);
+          return "0x"+register.value;
+      },
+      update_csr_value(register){
+          console.log("actulizar valor");
+      }
+  },
+  template: 
+  '<div>'+
+  '   <b-col>'+
+  '     <div class="d-flex align-items-center justify-content-between">'+
+  '       <div class="d-flex align-items-center">'+
+  '         <span id="assemblyInfo" class="csr-register-icon fas fa-info-circle"></span>'+
+  '         <popover-shortcuts target="assemblyInfo""></popover-shortcuts>'+
+  '         <span class="h5 csr-register-name">{{register.name}}</span>'+
+  '       </div>'+
+  '       <span class="register-csr">{{show_csr_value(register)}}</span>'+
+  '     </div>'+
+  '   </b-col>'+
+  '</div>'
+}
+Vue.component("csr-register", uielto_csr_register);
+
+
 var uielto_memory = {
   props: {
     main_memory: { type: Array, required: true },
@@ -13835,6 +14266,7 @@ try {
         err,
       "danger",
     );
+    console.log(info);
     setTimeout(function () {
       location.reload(true);
     }, 3e3);
@@ -13887,6 +14319,7 @@ try {
     return parseInt(b, 2);
   }
 } catch (e) {
+  console.log("le error");
   show_notification(
     "An error has ocurred, the simulator is going to restart.  \n Error: " + e,
     "danger",

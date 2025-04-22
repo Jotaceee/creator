@@ -135,7 +135,9 @@ if (ENVIRONMENT_IS_SHELL) {
 // const instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+) ([^,]+), ([^,]+)(?:, (.+))?/;
 var instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+)(?: ([^,]+), ([^,]+)(?:, (.+))?)?/;
 var registerExp = /(x\d+) (<-) 0x([0-9A-Fa-f]+)/; // /(x\d+) (<-|->) 0x([0-9A-Fa-f]+)/;
+var vectorExp = /(v\d+) (<-) 0x([0-9A-Fa-f]+)/;
 var memoryExp = /mem\[0x([0-9A-Fa-f]+)\]\s*(<-|->)\s*0x([0-9A-Fa-f]+)/;
+var CSRTypeExp = /(CSR\S*)\s+(\S+)\s+(\S+)\s+(0x)([\dA-Fa-f]{1,8})/;
 // var displayExp = /^[A-Za-z\s]+:\s*(.*)$/;
 var displayExp = /^([\w\s]+):\s*(.*)$/;       
 var userMode = false;
@@ -143,12 +145,43 @@ var instoper = "";
 var syscall_print_code = -1;
 var prev_add_to_jump;
 Module['print'] = function (message) {
+
   var next_add_to_jump;
-  let instMatch = message.match(instructionExp);
-  let regiMatch = message.match(registerExp);
-  let memoMatch = message.match(memoryExp);
-  let printMatch = message.match(displayExp);
-   
+  let instMatch   = message.match(instructionExp);
+  let regiMatch   = message.match(registerExp);
+  let memoMatch   = message.match(memoryExp);
+  let printMatch  = message.match(displayExp);
+  let CSRMatch    = message.match(CSRTypeExp); 
+  let vectorMatch = message.match(vectorExp);
+  if(CSRMatch){
+    console.log(CSRMatch);
+    if (CSRMatch[2] === "vtype"){
+      var size_elem = parseInt(CSRMatch[5], 16).toString(2).padStart(32, '0');
+      size_elem = size_elem.slice(26, 29);
+      console.log("Tamaño: ", size_elem);
+      if(size_elem === "000"){
+        length_vext = 8;
+        architecture.components[3].total_elements = 64;
+      } else if (size_elem === "001") {
+        length_vext = 16;
+        architecture.components[3].total_elements = 32;
+      } else if (size_elem === "010"){
+        length_vext = 32;
+        architecture.components[3].total_elements = 16;
+      }else {
+        length_vext = 64;
+        architecture.components[3].total_elements = 8;
+      }
+      architecture.components[3].length_elem = length_vext;
+    }
+    if (CSRMatch[2] === "vl"){
+      architecture.components[3].elems_op = parseInt(CSRMatch[5], 16);
+    }
+  }
+  if (vectorMatch){
+    let regtowrite = crex_findReg(vectorMatch[1]);
+    writeRegister(vectorMatch[3], regtowrite.indexComp, regtowrite.indexElem);
+  }
   if (instMatch && instMatch[2] === 'U'){
 
     //Actualizamos el pc
@@ -352,8 +385,6 @@ Module['print'] = function (message) {
   
   }
 
-  
-
   if(printMatch && syscall_print_code !== -1){
 
     let value_2_print = printMatch[2].trim();
@@ -394,9 +425,6 @@ Module['print'] = function (message) {
 
   }
 
-
-
-  
   console.log(message);
 
 }
@@ -6956,3 +6984,8 @@ function preprocess_sail(elffile, enablefpd, enablevec, entry_add){
 
 }
 
+function update_vector(){
+  for (let au = 0; au < 31; au++){
+    creator_callstack_writeRegister(3, au);
+  }
+}

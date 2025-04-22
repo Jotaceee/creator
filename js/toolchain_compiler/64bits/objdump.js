@@ -238,6 +238,9 @@ Module['print'] = function (message) {
     }
   }
   else if(labelmatch && sectionasm != 0){
+    labelmatch[1] = labelmatch[1].replace(/^0+/, '');
+    if (labelmatch[1] === "") 
+      labelmatch[1] = "0";
     // console.log("Identificado:", labelmatch);
     const allEqual = labelmatch[1] === labelmatch[1][0].repeat(labelmatch[1].length);
     if (!allEqual)

@@ -11,6 +11,39 @@ body{
 .flexbox .normal { flex: 0; margin: 0 0 0 1rem; }
 .flexbox div input { padding: .5em 1em; width: 100%; }
 .flexbox div button { padding: .5em 1em; white-space: nowrap; }
+.flexbox_popover {  white-space: nowrap;  text-align: center;}
+
+
+.register-csr {
+  height: calc(1.5em + .75rem + 2px);
+  width: 40%;
+  padding: .375rem .75rem;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #495057;
+  background-color: #e9ecef;
+  background-clip: padding-box;
+  border:
+1px solid #ced4da;
+  border-radius:
+.25rem;
+  transition:
+  border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+  
+}
+
+.csr-register-name{
+  margin-left: 1vh;
+  /* margin-right: 1vh; */
+}
+.csr-regiser-icon{
+  margin-left: 10vh;
+}
+
+.left_part { width: 5%;}
+.right_part { width: 95%;}
+.button_vec { margin-top: 10px; margin-bottom: 5px;}
 
 .contenedor {
   display: -webkit-flex;
@@ -50,6 +83,22 @@ h2 {
   display: inline-block;
 }
 
+.metadata{
+  width: 50%;
+}
+
+.custom-text{
+  text-align: center;
+  vertical-align: middle;
+}
+
+.custom-text td,
+.custom-text th {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+
 .h6Sm {
   font-size: 0.85rem;
   margin-bottom: .5rem;
@@ -73,7 +122,7 @@ h2 {
 }
 
 .center {
-    text-align: center;
+    text-align: center !important; 
 }
 
 .left {
@@ -321,6 +370,7 @@ h2 {
 .registerPopover {
   background-color:#CEECF5;
   color:black;
+  text-align: center;
 }
 
 .popoverFooter {
@@ -435,6 +485,13 @@ h2 {
   font-weight: bold;
 }
 
+/* .navfile-close-btn {
+  
+}
+
+.navfile-close-btn:hover {
+  color: #dc3545;
+} */
 
 
 
