@@ -297,6 +297,7 @@ Module['printErr'] = function(message) {
   input.s: Assembler messages:
   input.s:36: Error: illegal operands `add t4,t3,t1sdfs'
   */
+ console.log(message);
  var ErrMatch = message.match(ErrExp);
   if (ErrMatch && !err_comp){
     console.log("Error instruccion: ", ErrMatch);
@@ -5797,13 +5798,34 @@ function preprocess_as(file_p, content_p, enablefpd, enablevec) {
 
   // Comprobacion de que el contenido no generará conflicto a futuro con la ejecucion del simulador
   asarguments = ["-o", "input.o"];
-  if (enablefpd)
-    asarguments.unshift("-march=rv32imfd");
-  if (enablevec){
-    asarguments.unshift("-march=rv32gcv", "-mabi=ilp32");
+
+  asarguments = ["-o", "input.o"];
+  var march = "-march=rv32i"
+  var mabi = 0; // 0: only integer, 1: float, 2: double
+  for(var i = 0; i < set_extensions.length; i++){
+    if(set_extensions[i].activated){
+      march = march + set_extensions[i].arg;
+      if (set_extensions[i].name === "FD" || set_extensions[i].name === "V") {
+        mabi = 2;
+      }
+    }
   }
-  if (enablefpd && enablevec)
-    throw new Error("You have enabled Floating point extension and Vectorial Extension");
+
+  switch(mabi){
+    case 0: asarguments.unshift("-mabi=ilp32"); break;
+    case 1: asarguments.unshift("-mabi=ilp32f"); break;
+    case 2: asarguments.unshift("-mabi=ilp32d"); break;
+    default: break;
+  }
+  asarguments.unshift(march);
+
+  // if (enablefpd)
+  //   asarguments.unshift("-march=rv32imfd");
+  // if (enablevec){
+  //   asarguments.unshift("-march=rv32gcv", "-mabi=ilp32");
+  // }
+  // if (enablefpd && enablevec)
+  //   throw new Error("You have enabled Floating point extension and Vectorial Extension");
   
   for (let i = 0; i < file_p.length; i++){
     asarguments.push(file_p[i]);

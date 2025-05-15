@@ -2,9 +2,11 @@ var inputelffile, outputlogfile;
 var is_breakpoint = instructions[0].Break;
 var pc_sail = crex_findReg_bytag("program_counter");
 var last_execution_mode_run = -1;
+var pc_min = parseInt("80000000", 16);
 var Module = typeof Module != "undefined" ? Module : {};
 var moduleOverrides = Object.assign({}, Module);
 var arguments_ = [];
+var hiden_executed, hiden_next_execute;
 var thisProgram = "./this.program";
 
 var quit_ = (status, toThrow) => {
@@ -138,6 +140,8 @@ var registerExp = /(x\d+) (<-) 0x([0-9A-Fa-f]+)/; // /(x\d+) (<-|->) 0x([0-9A-Fa
 var vectorExp = /(v\d+) (<-) 0x([0-9A-Fa-f]+)/;
 var memoryExp = /mem\[0x([0-9A-Fa-f]+)\]\s*(<-|->)\s*0x([0-9A-Fa-f]+)/;
 var CSRTypeExp = /(CSR\S*)\s+(\S+)\s+(\S+)\s+(0x)([\dA-Fa-f]{1,8})/;
+var CSRExp = /^(CSR)\s+(\w+)\s+(<-|->)\s+0x([0-9a-fA-F]+)(?:\s+(.*))?$/;
+var jumpExp = /Next_PC:\s*(0x[0-9a-fA-F]+)/;
 // var displayExp = /^[A-Za-z\s]+:\s*(.*)$/;
 var displayExp = /^([\w\s]+):\s*(.*)$/;       
 var userMode = false;
@@ -145,6 +149,9 @@ var instoper = "";
 var syscall_print_code = -1;
 var prev_add_to_jump;
 Module['print'] = function (message) {
+  if(message === "err call_convenction"){
+    crex_show_notification("Possible failure in the parameter passing convention", "danger");
+  }
 
   var next_add_to_jump;
   let instMatch   = message.match(instructionExp);
@@ -152,9 +159,35 @@ Module['print'] = function (message) {
   let memoMatch   = message.match(memoryExp);
   let printMatch  = message.match(displayExp);
   let CSRMatch    = message.match(CSRTypeExp); 
+  let CSREMatch   = message.match(CSRExp);
   let vectorMatch = message.match(vectorExp);
-  if(CSRMatch){
-    console.log(CSRMatch);
+  let jumpMatch   = message.match(jumpExp);
+
+  if (message === "May your execution has an infinity loop."){
+    execution_mode_run = 1;
+    crex_show_notification("May your execution has an infinity loop", "danger");
+    instructions[hiden_executed]._rowVariant = "info";
+    instructions[hiden_next_execute]._rowVariant = "success";
+  }
+  if (jumpMatch){
+    const current_ins = instructions.findIndex(insn => insn.Address === (jumpMatch[1].toLowerCase()));
+    
+      for (var i = 0; i < instructions.length; i++){
+        if(instructions[i]._rowVariant === "success" && execution_mode_run !== 0) // ajustar lo del user mode
+          instructions[i]._rowVariant = "";
+      }
+    if (current_ins !== -1) instructions[current_ins]._rowVariant = "success";
+  }
+
+  if(CSREMatch){
+    console.log(CSREMatch);
+    if (CSREMatch[2] !== "vtype" && CSREMatch[2] !== "vl"){
+      let regtowrite = crex_findReg(CSREMatch[2]);
+      if(regtowrite.match !== 0)
+        writeRegister(CSREMatch[4], regtowrite.indexComp, regtowrite.indexElem);
+    }
+  }
+  if (CSRMatch){
     if (CSRMatch[2] === "vtype"){
       var size_elem = parseInt(CSRMatch[5], 16).toString(2).padStart(32, '0');
       size_elem = size_elem.slice(26, 29);
@@ -174,7 +207,7 @@ Module['print'] = function (message) {
       }
       architecture.components[3].length_elem = length_vext;
     }
-    if (CSRMatch[2] === "vl"){
+    else if (CSRMatch[2] === "vl"){
       architecture.components[3].elems_op = parseInt(CSRMatch[5], 16);
     }
   }
@@ -182,14 +215,18 @@ Module['print'] = function (message) {
     let regtowrite = crex_findReg(vectorMatch[1]);
     writeRegister(vectorMatch[3], regtowrite.indexComp, regtowrite.indexElem);
   }
-  if (instMatch && instMatch[2] === 'U'){
-
+  if (instMatch && (instMatch[2] === 'U' || parseInt(instMatch[3], 16) >= pc_min)){
+    for (var i = 0; i < instructions.length; i++) {
+      if (instructions[i]._rowVariant === "info")
+        instructions[i]._rowVariant = "";
+    }
+    instoper = "";
     //Actualizamos el pc
     writeRegister(parseInt(instMatch[3], 16), pc_sail.indexComp, pc_sail.indexElem);
     // console.log("PC actual:",pc_sail);
 
     userMode = true;
-    console.log("Instruccion: ", instMatch);
+    // console.log("Instruccion: ", instMatch);
     const current_ins = instructions.findIndex(insn => insn.Address === ("0x"+instMatch[3].toLowerCase()));
     if(prev_add_to_jump !== undefined){
       instructions[prev_add_to_jump]._rowVariant = "";
@@ -206,19 +243,22 @@ Module['print'] = function (message) {
       next_add_to_jump = instructions.findIndex(insn => insn.Address === ("0x"+next_add_to_jump.toLowerCase()));
       prev_add_to_jump = current_ins;
 
-
-
-      console.log("Siguiente direccion del jalr: ", next_add);
-    }else if (instructions[current_ins].loaded.includes("jal")){
+      // var stack_entry_func = instructions[next_add_to_jump].label;
+      creator_callstack_enter(instructions[next_add_to_jump].Label); 
+      track_stack_enter(instructions[next_add_to_jump].Label);
+    }
+    if (instructions[current_ins].loaded.includes("jal") && !instructions[current_ins].loaded.includes("jalr")){
       var next_add = instructions[current_ins].loaded.split("\t");
-      console.log("Siguiente direccion del jal: ", next_add);
 
-    }else if (instructions[current_ins].loaded.includes("ret")){
+    }
+    if (instructions[current_ins].loaded.includes("ret")){
       // Mirar el ra
       var aux_reg = crex_findReg("ra");
       next_add_to_jump = readRegister(aux_reg.indexComp, aux_reg.indexElem).toString(16);
       next_add_to_jump = instructions.findIndex(insn => insn.Address === ("0x"+next_add_to_jump.toLowerCase()));
       prev_add_to_jump = current_ins;
+      track_stack_leave();
+      creator_callstack_leave();
     }
 
 
@@ -234,6 +274,14 @@ Module['print'] = function (message) {
     }
     // Para el caso de run without stop y la siguiente instruccion es un breakpoint
     else if (execution_mode_run === 0){
+      // se almacena el estado de la instruccion en caso de que haya una parada por infinity loop
+      hiden_executed = current_ins;
+      if (current_ins < instructions.length - 1  || next_add_to_jump !== undefined) {
+        hiden_next_execute = (next_add_to_jump !== undefined) ? next_add_to_jump : current_ins + 1;
+      } else 
+        hiden_next_execute = current_ins + 1;
+
+
       if (current_ins < instructions.length - 1 || next_add_to_jump !== undefined) {
         is_breakpoint = instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)].Break;
       }
@@ -341,8 +389,10 @@ Module['print'] = function (message) {
 
     instoper = instMatch[5];
 
+    
+
   }
-  else if (instMatch && instMatch[2] !== 'U')
+  else if (instMatch /*&& instMatch[2] !== 'U'*/)
     userMode = false;
 
   if (regiMatch /*&& userMode === true*/) {
@@ -350,16 +400,14 @@ Module['print'] = function (message) {
     if (regiMatch[2] === '<-'){
       let regtowrite = crex_findReg(regiMatch[1]);
       // console.log("Registro identificado: ", regtowrite);
-      if (regiMatch[1] !== 'x2')
+      // if (regiMatch[1] !== 'x2')
         writeRegister(parseInt(regiMatch[3], 16), regtowrite.indexComp, regtowrite.indexElem);
     }
     
   }
 
-  if (memoMatch && userMode === true) {
-    // En caso de ser escritura '<-' pintamos el valor en la posicion de memoria
+  if (memoMatch /*&& userMode === true*/) {
     if (memoMatch[2] === '<-'){
-      // console.log("Operador: ", instoper);
       switch(instoper){
         case 'sh': // Para almacenar un half
         writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'half');
@@ -376,11 +424,23 @@ Module['print'] = function (message) {
         case 'fsd': // Para almacenar un double
         writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'double');
         break;
+        case 'vse8':
+        writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'byte');
+          break;
+        case 'vse16':
+        writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'half');
+          break;
+        case 'vse32':
+        writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'word');
+          break;
+        case 'vse64':
+          writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'double');
+          break;
         default:
           break;
       }
 
-      instoper = "";
+      // instoper = "";
     }
   
   }
@@ -430,6 +490,7 @@ Module['print'] = function (message) {
 }
 
 var out = Module["print"] /*|| console.log.bind(console)*/;
+// var out = console.log.bind(console);
 var err = Module["printErr"] || console.warn.bind(console);
 Object.assign(Module, moduleOverrides);
 moduleOverrides = null;
@@ -4103,7 +4164,7 @@ function _exit(status) {
     let init_index = instructions.findIndex(insn => insn.Address === "0x" + entry_elf);
     if(init_index !== undefined)
       instructions[init_index]._rowVariant = 'success';
-  }
+  } 
   exit(status);
 }
 function maybeExit() {
@@ -4919,12 +4980,12 @@ var Browser = {
   },
 };
 function _emscripten_force_exit(status) {
-  warnOnce(
-    "emscripten_force_exit cannot actually shut down the runtime, as the build does not have EXIT_RUNTIME set",
-  );
-  noExitRuntime = false;
-  runtimeKeepaliveCounter = 0;
-  exit(status);
+    warnOnce(
+      "emscripten_force_exit cannot actually shut down the runtime, as the build does not have EXIT_RUNTIME set",
+    );
+    noExitRuntime = false;
+    runtimeKeepaliveCounter = 0;
+    exit(status);
 }
 function _emscripten_memcpy_big(dest, src, num) {
   HEAPU8.copyWithin(dest, src, src + num);
@@ -6861,6 +6922,7 @@ function stackCheckInit() {
   writeStackCookie();
 }
 function run(args) {
+  console.log(args);
   args = args || arguments_;
   if (runDependencies > 0) {
     return;
@@ -6940,12 +7002,12 @@ function exit(status, implicit) {
         "program exited (with status: " +
         status +
         "), but EXIT_RUNTIME is not set, so halting execution but not exiting the runtime or preventing further async execution (build with EXIT_RUNTIME=1, if you want a true shutdown)";
-      if (status === 0){
-        show_notification('The execution of the program has finished', 'success') ;
-        finished = true;
-      }
+        if (status === 0){
+            show_notification('The execution of the program has finished', 'success') ;
+            finished = true;
+        }
         err(msg);
-      can_reset = true;
+        can_reset = true;
     }
   } else {
     exitRuntime();
@@ -6974,12 +7036,37 @@ function preprocess_sail(elffile, enablefpd, enablevec, entry_add){
   // run(["--config-flags", "4"]);
   // enablefpd = true;
   // console.log("FPD y VEC: ", enablefpd, enablevec);
-  if(enablefpd)
-    run(["--entry-address", entry_add, "--config-flags", "8", "-p", "output.elf"]);
-  if(enablevec)
-    run(["--entry-address", entry_add, "--config-flags", "4", "-p", "output.elf"]);
-  if(!enablefpd && !enablevec)
-    run(["--entry-address", entry_add, "--config-flags", "0", "-p", "output.elf"]);
+  var argumentsToRun = [];
+  for (var i = 0; i < set_extensions.length; i++){
+    switch(set_extensions[i].name){
+      case "FD":
+        if (!set_extensions[i].activated)
+          argumentsToRun.push("--disable-fdext");
+        break;
+      case "V":
+        if (!set_extensions[i].activated)
+          argumentsToRun.push("-W");
+        break;
+      case "C":
+        if (!set_extensions[i].activated)
+          argumentsToRun.push("--disable-compressed");
+        break;
+      case "B":
+        if (set_extensions[i].activated)
+          argumentsToRun.push("-B");
+        break;
+    }
+  }
+  console.log("Argumentos: ", argumentsToRun);
+
+  run(["--entry-address", entry_add, ...argumentsToRun, "-p", "output.elf"]);
+
+  // if(enablefpd)
+  //   run(["--entry-address", entry_add, "--config-flags", "8", "-p", "output.elf"]);
+  // if(enablevec)
+  //   run(["--entry-address", entry_add, "--config-flags", "4", "-p", "output.elf"]);
+  // if(!enablefpd && !enablevec)
+  //   run(["--entry-address", entry_add, "--config-flags", "0", "-p", "output.elf"]);
 
 
 }

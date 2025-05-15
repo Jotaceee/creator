@@ -4851,13 +4851,31 @@ function preprocess_as(file_p, content_p, enablefpd, enablevec) {
 
   // Comprobacion de que el contenido no generará conflicto a futuro con la ejecucion del simulador
   asarguments = ["-o", "input.o"];
-  if (enablefpd)
-    asarguments.unshift("-march=rv64imfd");
-  if (enablevec){
-    asarguments.unshift("-march=rv64gcv");
+  var march = "-march=rv64i"
+  var mabi = 0; // 0: only integer, 1: float, 2: double
+  for(var i = 0; i < set_extensions.length; i++){
+    if(set_extensions[i].activated){
+      march = march + set_extensions[i].arg;
+      if (set_extensions[i].name === "FD" || set_extensions[i].name === "V") {
+        mabi = 2;
+      }
+    }
   }
-  if (enablefpd && enablevec)
-    throw new Error("You have enabled Floating point extension and Vectorial Extension");
+
+  switch(mabi){
+    case 0: asarguments.unshift("-mabi=lp64"); break;
+    case 1: asarguments.unshift("-mabi=lp64f"); break;
+    case 2: asarguments.unshift("-mabi=lp64d"); break;
+    default: break;
+  }
+  asarguments.unshift(march);
+  // if (enablefpd)
+  //   asarguments.unshift("-march=rv64imfd");
+  // if (enablevec){
+  //   asarguments.unshift("-march=rv64gcv");
+  // }
+  // if (enablefpd && enablevec)
+  //   throw new Error("You have enabled Floating point extension and Vectorial Extension");
   
   for (let i = 0; i < file_p.length; i++){
     asarguments.push(file_p[i]);

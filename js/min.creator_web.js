@@ -10,6 +10,20 @@ var is_32b_arch = false;
 var insn_number;
 var entry_elf;
 var length_vext = 64;
+var select_all = false;
+var set_extensions = [
+                      {"name": "M",  "description": "(Multiply and Division)",   "arg": "m",  "activated" : true},
+                      {"name": "FD", "description": "(Float and Double)",        "arg": "fd", "activated" : true},
+                      {"name": "A",  "description": "(Atomic)",                  "arg": "a",  "activated" : false},
+                      {"name": "C",  "description": "(Compressed)",              "arg": "c",  "activated" : false},
+                      {"name": "V",  "description": "(Vector)",                  "arg": "v",  "activated" : true},
+                      {"name": "Q",  "description": "(Quad)",                    "arg": "q",  "activated" : false},
+                      {"name": "B",  "description": "(Bit manipulation)",        "arg": "_zba_zbb_zbs", "activated" : false},
+                      {"name": "P",  "description": "(Privileged instructions)", "arg": "_zicsr", "activated" : false},
+                      // {"name": "T",  "activated" : false}, Non officially implemented
+                      // {"name": "P",  "activated" : false}, Non officially implemented                 
+                      ];
+
 
 // FP Extension:
 const fpdextension = ["fadd.s", "fadd.d", "fsub.s", "fsub.d", "fmul.s", "fmul.d", "fdiv.s", "fdiv.d", "fsqrt.s", "fsqrt.d", "fmadd.s", 
@@ -384,7 +398,7 @@ function register_value_deserialize(architecture) {
   for (var i = 0; i < architecture.components.length; i++) {
     for (var j = 0; j < architecture.components[i].elements.length; j++) {
       if (architecture.components[i].type != "fp_registers") {
-        if (architecture.components[i].type === "v_registers"){
+        if (architecture.components[i].type === "v_registers" || architecture.components[i].type === "csr_registers" ){
           architecture.components[i].elements[j].value = 
             architecture.components[i].elements[j].value;
         }else {
@@ -402,7 +416,7 @@ function register_value_deserialize(architecture) {
       }
       if (architecture.components[i].double_precision !== true) {
         if (architecture.components[i].type != "fp_registers") {
-          if (architecture.components[i].type === "v_registers"){
+          if (architecture.components[i].type === "v_registers" || architecture.components[i].type === "csr_registers"){
             architecture.components[i].elements[j].default_value = 
               architecture.components[i].elements[j].default_value;
           }else {
@@ -410,9 +424,6 @@ function register_value_deserialize(architecture) {
               architecture.components[i].elements[j].default_value,
               10,
             );
-          }
-          if (architecture.components[i].type === "v_registers"){
-            console.log("Defualt Value despues:", architecture.components[i].elements[j].default_value);
           }
         } else {
           architecture.components[i].elements[j].default_value =
@@ -1581,7 +1592,8 @@ function crex_findReg(value1) {
         ret.match = 1;
         ret.indexComp = i;
         ret.indexElem = j;
-        break;
+        return ret;
+        // break;
       }
     }
   }
@@ -1876,6 +1888,40 @@ function writeRegister(value, indexComp, indexElem, register_type, force=0) {
         );
       }
     }
+  } else if (architecture.components[indexComp].type == "csr_registers") {
+    if (
+      architecture.components[indexComp].elements[
+        indexElem
+      ].properties.includes("write") !== true
+    ) {
+      if (
+        architecture.components[indexComp].elements[
+          indexElem
+        ].properties.includes("ignore_write") !== false
+      ) {
+        return;
+      }
+      for (var i = 0; i < instructions.length; i++) {
+        draw.space.push(i);
+      }
+      draw.danger.push(execution_index);
+      throw packExecute(
+        true,
+        "The register " +
+          architecture.components[indexComp].elements[indexElem].name.join(
+            " | ",
+          ) +
+          " cannot be written",
+        "danger",
+        null,
+      );
+    }
+    else {
+      architecture.components[indexComp].elements[indexElem].value = value;
+      creator_callstack_writeRegister(indexComp, indexElem);
+    }
+
+
   }
 }
 function updateDouble(comp, elem) {
@@ -2100,6 +2146,7 @@ function main_memory_read_bydatatype(addr, type) {
     case "w":
     case "integer":
     case "word":
+    case "dword":
       ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes);
       ret = parseInt(ret, 16);
       break;
@@ -2193,6 +2240,11 @@ function main_memory_write_bydatatype(addr, value, type, value_human) {
     case "float":
     case "word":
       size = word_size_bytes;
+      ret = main_memory_write_nbytes(addr, value, size, type);
+      main_memory_datatypes_update_or_create(addr, value_human, size, type);
+      break;
+    case "dword": 
+      size = word_size_bytes * 2;
       ret = main_memory_write_nbytes(addr, value, size, type);
       main_memory_datatypes_update_or_create(addr, value_human, size, type);
       break;
@@ -2513,8 +2565,11 @@ function creator_memory_update_space_view(
   }
 }
 function writeMemory(value, addr, type) {
-  main_memory_write_bydatatype(addr, value, type, value);
-  creator_memory_updaterow(addr);
+  // var aux = readMemory(addr, type);
+  // if(aux !== parseInt(value, 16) && aux === 0){
+    main_memory_write_bydatatype(addr, value, type, value);
+    creator_memory_updaterow(addr);
+  // }
 }
 function readMemory(addr, type) {
   return main_memory_read_bydatatype(addr, type);
@@ -2944,7 +2999,7 @@ function identify_pseudo(instruction_assembly){
   else if (instruction_assembly.search("call") != -1)
   {
     list_user_instructions.push(instruction_assembly);
-    // list_user_instructions.push("");
+    list_user_instructions.push("");
   } 
   else if (instruction_assembly.search("lw") != -1)
     {
@@ -2954,7 +3009,6 @@ function identify_pseudo(instruction_assembly){
       if( isNaN(parts[1]?.trim()) && !(parts[1]?.trim()).includes("(") ){
 
         list_user_instructions.push("");
-        console.log("vuelvo");
         return;
       }
     } 
@@ -3071,6 +3125,7 @@ function assembly_compiler()
                   data_to_store.value = parseInt(matchvalue[2]).toString(16);
                   break;
                 case "word":
+                case "dword":
                 case "integer":
                   data_to_store.value = parseInt(matchvalue[2]).toString(16);
                   break;
@@ -3207,17 +3262,100 @@ function assembly_compiler()
   
             switch(dumpdatainstructions[i][6]){
               case "half":
+
+              if(dumpdatainstructions[i][1].length > 4){
+                var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                var elements = Math.floor(dumpdatainstructions[i][1].length / 4);
+                if(dumpdatainstructions[i][1].length % 4 !== 0){
+                  elements = elements + 1;
+                  dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*4,"0");
+                }
+                for (var j = 0; j < elements; j++){
+                  var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2) * 2, dumpdatainstructions[i][1].length - (4 * j));
+                  console.log("direccion donde se insterta: ", (init_add + j*2).toString(16));
+                  console.log("Elemento a insertar: ", element_to_insert); 
+                  if (j === 0 )
+                    creator_memory_data_compiler(init_add, element_to_insert, 2, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
+                  else
+                    creator_memory_data_compiler(init_add + j*2, element_to_insert, 2, null, (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
+                  
+                }
+              }else {
                 creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+              }
+                // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                 break;
               case "byte":
+
+              if(dumpdatainstructions[i][1].length > 2){
+                var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                var elements = Math.floor(dumpdatainstructions[i][1].length / 2); // 4
+                if(dumpdatainstructions[i][1].length % 2 !== 0){
+                  elements = elements + 1;
+                }
+                dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements * 2,"0");
+
+                for (var j = 0; j < elements;j++){
+                  var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2), dumpdatainstructions[i][1].length - (2 * j));
+                  console.log("Elemento a insertar: ", element_to_insert); 
+                  if (j === 0 )
+                    creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 24) >> 24, dumpdatainstructions[i][6],);
+                  else
+                    creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, null, (parseInt(element_to_insert,16) << 24 ) >> 24, dumpdatainstructions[i][6],);
+                  
+                }
+              }else {
+                creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+              }
+
                 console.log("Byte o char");
-                creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), parseInt(dumpdatainstructions[i][1], 16), 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), parseInt(dumpdatainstructions[i][1], 16), 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                 
                 break;
               case "word":
               case "integer":
-                creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                if(dumpdatainstructions[i][1].length > 8){
+                  var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                  var elements = Math.floor(dumpdatainstructions[i][1].length / 8);
+                  if(dumpdatainstructions[i][1].length % 8 !== 0){
+                    elements = elements + 1;
+                    dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*8,"0");
+                  }
+                  for (var j = 0; j < elements; j++){
+                    var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 8, dumpdatainstructions[i][1].length - (8 * j));
+                    console.log("Elemento a insertar: ", element_to_insert); 
+                    if (j === 0 )
+                      creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], element_to_insert >> 0, dumpdatainstructions[i][6],);
+                    else
+                      creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, null, element_to_insert >> 0, dumpdatainstructions[i][6],);
+                    
+                  }
+                }else {
+                  creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                }
                 
+                break;
+              case "dword":
+                if(dumpdatainstructions[i][1].length > 16){
+                  var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                  var elements = Math.floor(dumpdatainstructions[i][1].length / 16);
+                  if(dumpdatainstructions[i][1].length % 16 !== 0){
+                    elements = elements + 1;
+                    dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*16,"0");
+                  }
+                  for (var j = 0; j < elements; j++){
+                    var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 16, dumpdatainstructions[i][1].length - (16 * j));
+                    console.log("direccion donde se insterta: ", (init_add + j*8).toString(16));
+                    console.log("Elemento a insertar: ", element_to_insert); 
+                    if (j === 0 )
+                      creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, dumpdatainstructions[i][4], element_to_insert >> 0, dumpdatainstructions[i][6],);
+                    else
+                      creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, null, element_to_insert >> 0, dumpdatainstructions[i][6],);
+                    
+                  }
+                }else {
+                  creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                }
                 break;
   
               case "float":
@@ -3269,36 +3407,25 @@ function assembly_compiler()
                 creator_memory_storestring(dumpdatainstructions[i][1], dumpdatainstructions[i][1], parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
                 break;
             }
-            // creator_memory_data_compiler(dumpdatainstructions[i][0], dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], dumpdatainstructions[i][4], dumpdatainstructions[i][5],   )
-            // creator_memory_data_compiler(data_address, auxTokenString, parseInt(architecture.directives[j].size), label, (parseInt(auxTokenString, 16) >> 0), "byte") ;
-            
-            // if (dumpdatainstructions[i][1] === ""){
-            //   const regex = new RegExp(`(${dumpdatainstructions[i][4]}):\\s*[\\n\\t ]*\\.(zero|space)\\s+(\\d+)`, 'g');
-            //   let match;
-            //   while ((match = regex.exec(code_assembly)) !== null) { // Para cuando son zeros o un space
-            //       // console.log(`Label = ${match[1]}, Directiva = ${match[2]}, Número extraído = ${match[3]}`);
-            //       // console.log(creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2));
-            //       creator_memory_storestring(parseInt(match[3]), parseInt(match[3]), parseInt(dumpdatainstructions[i][0], 16), match[1], match[2], 2);
-            //     }
-  
-            // }
-            // // Identificar el tipo de dato que es
-            // else{
-              // console.log("Address:  ", parseInt(dumpdatainstructions[i][0], 16));
-              // console.log("valor:    ", dumpdatainstructions[i][1]);
-              // console.log("tamaño:   ", 4);
-              // console.log("Label:    ", dumpdatainstructions[i][4]);
-              // console.log("DefValue: ", parseInt(dumpdatainstructions[i][1], 16) >> 0);
-              // console.log("Tipo:     ", "word");
-              // console.log(creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",));
-            //   creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, "word",);
-            //   //Plantilla para almacenar los datos
-            //   // creator_memory_data_compiler(data_address, auxTokenString, parseInt(architecture.directives[j].size), label, (parseInt(auxTokenString, 16) >> 0), "byte") ;
-            // }
           }
           
           creator_memory_prereset();
           creator_memory_reset();
+
+          // Initialize stack
+          stack_address = parseInt(architecture.memory_layout[4].value);
+          writeMemory("00", parseInt(stack_address), "word") ;
+          // stack_address = parseInt(architecture.memory_layout[4].value);
+          architecture.components[1].elements[2].value = bi_intToBigInt(
+            stack_address,
+            10,
+          );
+          architecture.components[1].elements[2].default_value = bi_intToBigInt(
+            stack_address,
+            10,
+          );
+
+
           show_notification("Compilation completed successfully","success");
 
 
@@ -7452,6 +7579,7 @@ var uielto_toolbar_btngroup = {
     group: { type: Array, required: true },
     browser: { type: String, required: true },
     arch_available: { type: Array, required: true },
+    c_sudo : {type: Boolean, required: true}
   },
   data: function () {
     return {
@@ -7463,6 +7591,9 @@ var uielto_toolbar_btngroup = {
     };
   },
   methods: {
+    change_sudo_mode(){
+      app._data.c_sudo = !app._data.c_sudo;
+    },
     change_UI_mode(e) {
       if (app._data.creator_mode != e) {
         if (e == "architecture") {
@@ -7809,6 +7940,7 @@ var uielto_toolbar_btngroup = {
     '         <span class="col px-0 mr-1" v-for="(item, index) in group">' +
     button_architecture() +
     button_assembly() +
+    button_sudo() +
     button_simulator() +
     button_edit_architecture() +
     button_save_architecture() +
@@ -7845,6 +7977,7 @@ function button_architecture() {
   );
 }
 function button_assembly() {
+  // console.log("demos al boton");
   return (
     '<b-button v-if="item==\'btn_assembly\'" class="btn btn-block btn-outline-secondary menuGroup btn-sm assembly_btn h-100 text-truncate"' +
     '          id="assembly_btn_sim"' +
@@ -7852,6 +7985,18 @@ function button_assembly() {
     '  <span class="fas fa-hashtag"></span>' +
     "  Assembly" +
     "</b-button>"
+  );
+}
+function button_sudo(){
+  return (    
+    '<b-form-checkbox v-if="item==\'btn_sudo\'" class="d-flex sudo_btn h-100 text-center align-items-center" style="padding-left:40%;"' +
+    '                 id="sudo_btn_sim"' +
+    '                 v-model="c_sudo"' +
+    '                 switch size="md"' +
+    '                 @change="change_sudo_mode">' +
+  '                 {{c_sudo ? \'Machine Mode\' : \'User Mode\'}}'+
+    "</b-form-checkbox>" +
+  ''
   );
 }
 function button_simulator() {
@@ -8049,13 +8194,16 @@ var uielto_configuration = {
     instruction_help_size: { type: Number, required: true },
     dark: { type: Boolean, required: true },
     c_debug: { type: Boolean, required: true },
+    c_kernel: { type: Boolean, required: true, default: true },
   },
   data: function () {
     return {
       architectures: (architectures = [
         { text: "None", value: "none" },
-        { text: "RISC-V (RV32IMFD)", value: "RISC-V (RV32IMFD)" },
-        { text: "MIPS-32", value: "MIPS-32" },
+        { text: "RISC-V SAIL (RV32)", value: "RISC-V SAIL (RV32)"},
+        { text: "RISC-V SAIL (RV64)", value: "RISC-V SAIL (RV64)"},
+        // { text: "RISC-V (RV32IMFD)", value: "RISC-V (RV32IMFD)" },
+        // { text: "MIPS-32", value: "MIPS-32" },
       ]),
     };
   },
@@ -8242,6 +8390,15 @@ var uielto_configuration = {
         "configuration.debug_mode." + this._props.c_debug,
       );
     },
+    change_kernel_simulator() {
+      this._props.c_kernel = !this._props.c_kernel;
+      app._data.c_kernel = this._props.c_kernel;
+      creator_ga(
+        "configuration",
+        "configuration.kernel_simulator",
+        "configuration.kernel_simulator." + this._props.c_kernel,
+      );
+    }
   },
   template:
     ' <b-modal  :id ="id" ' +
@@ -8257,6 +8414,11 @@ var uielto_configuration = {
     '                        @change="change_default_architecture" ' +
     '                        title="Default Architecture">' +
     "         </b-form-select>" +
+    "     </b-list-group-item>" +
+    " " +
+    '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
+    '       <label for="range-1">Set extensions to use:</label>' +
+    '     <select-extension style="margin-top:1.5%;"><select-extension>'+
     "     </b-list-group-item>" +
     " " +
     '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
@@ -8351,6 +8513,16 @@ var uielto_configuration = {
     '                        name="check-button"' +
     '                        switch size="lg"' +
     '                        @change="change_debug_mode">' +
+    "       </b-form-checkbox>" +
+    "     </b-list-group-item>" +
+    " " +
+    '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
+    '       <label for="range-6">Kernel Simulator:</label>' +
+    '       <b-form-checkbox id="range-7"' +
+    '                        v-model="c_kernel"' +
+    '                        name="check-button"' +
+    '                        switch size="lg"' +
+    '                        @change="change_kernel_simulator">' +
     "       </b-form-checkbox>" +
     "     </b-list-group-item>" +
     " " +
@@ -8939,6 +9111,16 @@ var uielto_preload_architecture = {
     "      </b-card-body>" +
     "    </b-col>" +
     " " +
+    '    <b-col sm="12" ' +
+    '                   v-if="default_arch(item.name) == false">' +
+    "      <b-card-body>" +
+    '     <select-extension><select-extension>'+
+    // '        <b-card-text class="justify">' +
+    // "          {{item.description}}" +
+    // "        </b-card-text>" +
+    "      </b-card-body>" +
+    "    </b-col>" +
+    " " +
     '    <b-col sm="12" @click="load_arch_select(item)"' +
     '                   v-if="default_arch(item.name) == true">' +
     "      <b-card-body :title=item.name" +
@@ -8948,7 +9130,20 @@ var uielto_preload_architecture = {
     "        </b-card-text>" +
     "      </b-card-body>" +
     "    </b-col>" +
+    
     " " +
+    '    <b-col sm="12" ' +
+    '                   v-if="default_arch(item.name) == true">' +
+    "      <b-card-body>" +
+    '     <select-extension><select-extension>'+
+    // '        <b-card-text class="justify">' +
+    // "          {{item.description}}" +
+    // "        </b-card-text>" +
+    "      </b-card-body>" +
+    "    </b-col>" +
+    " " +
+
+
     '    <b-col sm="12" class="center" v-if="default_arch(item.name) == true">' +
     '      <b-button class="m-2 w-75 btn btn-outline-danger btn-sm buttonBackground arch_delete" ' +
     '                @click.stop="modal_remove_cache_arch(index, item.name, $event.target)"' +
@@ -8962,6 +9157,70 @@ var uielto_preload_architecture = {
     "</b-card>",
 };
 Vue.component("preload-architecture", uielto_preload_architecture);
+
+var uielto_select_extension = {
+  props: {
+
+  },
+  data: function(){
+    return {
+            local_extensions: set_extensions,
+    };
+    
+  },
+  computed: {
+    selectAll: {
+      get() {
+        return this._data.local_extensions.length > 0 && this._data.local_extensions.every(ext => ext.activated);
+      },
+      set(value){
+        this._data.local_extensions.forEach(ext => {
+          ext.activated = value;
+        });
+        set_extensions = this._data.local_extensions;
+      }
+    }
+  },
+  template:
+  '<div>'+
+  ' <b-row>'+
+  '<b-col>'+
+  '   <b-form-checkbox style="margin-bottom:2%;" v-model="selectAll">Select all</b-form-checkbox>'+
+  '</b-col>'+
+  ' </b-row>'+
+  ' <b-row v-for="i in Math.ceil(local_extensions.length / 2)" :key="i">'+
+  '   <b-col>'+
+  '     <b-form-checkbox v-model="local_extensions[ (i - 1) * 2].activated"'+
+  '      name="local_extensions[ (i - 1) * 2].name">'+
+  '     {{local_extensions[(i - 1) * 2].name + " " + local_extensions[(i - 1) * 2].description}}'+
+  '     </b-form-checkbox>'+
+  '   </b-col>'+
+  ''+
+  '   <b-col>'+
+  '     <b-form-checkbox v-model="local_extensions[ (i - 1) * 2 + 1].activated"'+
+  '      name="local_extensions[ (i - 1) * 2 + 1].name"'+
+  '      v-if="(i - 1) * 2 + 1 < local_extensions.length">'+
+  '     {{local_extensions[(i - 1) * 2 + 1].name + " " + local_extensions[(i - 1) * 2 + 1].description}}'+
+  '     </b-form-checkbox>'+
+  '   </b-col>'+
+  ''+
+  ' </b-row>'+
+  '</div>'
+   
+
+};
+Vue.component("select-extension", uielto_select_extension);
+
+
+
+
+
+
+
+
+
+
+
 var uielto_new_architecture = {
   props: {},
   data: function () {
@@ -13017,7 +13276,6 @@ var uielto_register_popover_vec = {
         }
       });
       
-      console.log(this.result);
     }
   },
   template:
@@ -13054,67 +13312,87 @@ Vue.component("popover-register-vec", uielto_register_popover_vec);
 
 var uielto_csr_register_file = {
   props: {
-    // userRegs : {type: String, required: true},
-    // supervisorRegs: {type: Array, required: true},
-    // machineRegs: {type: Array, required: true},
-    // commonRegs: {type: Array, required: true} 
   },
   data: function (){
       return {
-              userRegs: architecture.components[4].elements.user,
-              userElems :   (architecture.components[4].elements.user.length % 2 === 0)       ? architecture.components[4].elements.user.length / 2       : (architecture.components[4].elements.user.length / 2) + 1,
-              superRegs: architecture.components[4].elements.supervisor,
-              superElems:   (architecture.components[4].elements.supervisor.length % 2 === 0) ? architecture.components[4].elements.supervisor.length / 2 : (architecture.components[4].elements.supervisor.length / 2) + 1,
-              machineRegs: architecture.components[4].elements.machine,
-              machineElems: (architecture.components[4].elements.machine.length % 2 === 0)    ? architecture.components[4].elements.machine.length / 2    : (architecture.components[4].elements.machine.length / 2) + 1, 
-              commonRegs: architecture.components[4].elements.common,
-              commonElems:  (architecture.components[4].elements.common.length % 2 === 0)     ? architecture.components[4].elements.common.length / 2     : (architecture.components[4].elements.common.length / 2) + 1
+              openedSections : { user: false, supervisor: false, machine: false, common: false},
+              userRegs: this.getRegs("user"),
+              // userElems :   (architecture.components[4].elements.user.length % 2 === 0)       ? architecture.components[4].elements.user.length / 2       : (architecture.components[4].elements.user.length / 2) + 1,
+              superRegs: this.getRegs("supervisor"),
+              // superElems:   (architecture.components[4].elements.supervisor.length % 2 === 0) ? architecture.components[4].elements.supervisor.length / 2 : (architecture.components[4].elements.supervisor.length / 2) + 1,
+              machineRegs: this.getRegs("machine"),
+              // machineElems: (architecture.components[4].elements.machine.length % 2 === 0)    ? architecture.components[4].elements.machine.length / 2    : (architecture.components[4].elements.machine.length / 2) + 1, 
+              commonRegs: this.getRegs("common"),
+              // commonElems:  (architecture.components[4].elements.common.length % 2 === 0)     ? architecture.components[4].elements.common.length / 2     : (architecture.components[4].elements.common.length / 2) + 1
             }
   },
   methods: {
-    // csreg_id(register){
-    //   console.log("Que tenemos", register);
-    //   return "csrreg" + registers[index] + "-" /*+ index*/;
-    // },
-    // actualindex(h, index){
-    //   console.log("Indice actual: ",index);
-    //   console.log("indice total: ", h)
-    // }
+    toggleSeccion(name){
+      this._data.openedSections[name] = !this._data.openedSections[name];
+      if(this._data.openedSections[name]){
+        this.getRegs(name);
+      }
+    },
+    getRegs(type){
+      var ret = [];
+      for(var i = 0; i < architecture.components[4].elements.length; i++){
+      
+        if (architecture.components[4].elements[i].type === type && type === "user"){
+          ret.push(architecture.components[4].elements[i]);
+        } else if (architecture.components[4].elements[i].type === type && type === "supervisor"){
+          ret.push(architecture.components[4].elements[i]);
+        } else if (architecture.components[4].elements[i].type === type && type === "machine"){
+          ret.push(architecture.components[4].elements[i]);
+        } else if(architecture.components[4].elements[i].type === type && type === "common"){
+          ret.push(architecture.components[4].elements[i]);
+        }
+      }
+      return ret;
+    
+    }
   },
   template:           
   
   '<div>'+
   '<b-container v-b-toggle.user fluid align-h="between" class="mx-0 my-3 px-2">' +
-  '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;">' +
-  '           <b-col cols="1">' +
-  '               <img src="./images/csr_menu.png" alt="open_close_menu_user">'+
-  '           </b-col>' +
-  '           <b-col>' +
-  '               <div>USER MODE REGISTERS</div>' +
-  '           </b-col>' +
-  '       </b-row>' +
+  '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;" @click="toggleSeccion(\'user\')">' +
+  '         <b-col cols="1">' +
+  '           <img '+
+  '             src="./images/csr_menu.png" '+
+  '             alt="toggle_user" ' +
+  '             :class="{ rotated: openedSections.user }" ' +
+  '             class="toggle-icon">' +
+  '         </b-col>' +
+  '       <b-col>' +
+  '     <div>USER MODE REGISTERS</div>' +
+  '   </b-col>' +
+  ' </b-row>' +
   '</b-container>'+
 
   '<b-collapse id="user"> '+
-  '<b-container fluid>'+
-  ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(architecture.components[4].elements.user.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
+  ' <b-container fluid>'+
+  '   <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(userRegs.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
   
-  '   <csr-register :id="(i-1)*2"'+
-  '                 :register="architecture.components[4].elements.user[(i-1)*2]"'+
-  '                 ></csr-register>'+
+  '     <csr-register :id="(i-1)*2"'+
+  '                   :register="userRegs[(i-1)*2]"'+
+  '                   ></csr-register>'+
 
-  '   <csr-register :id="(i - 1) * 2 + 1"'+
-  '                 v-if="(i - 1) * 2 + 1 < architecture.components[4].elements.user.length"'+
-  '                 :register="architecture.components[4].elements.user[(i - 1) * 2 + 1]"'+
-  '                 ></csr-register>'+
-  ' </b-row>' +
-  '</b-container>'+
+  '     <csr-register :id="(i - 1) * 2 + 1"'+
+  '                   v-if="(i - 1) * 2 + 1 < userRegs.length"'+
+  '                   :register="userRegs[(i - 1) * 2 + 1]"'+
+  '                   ></csr-register>'+
+  '   </b-row>' +
+  ' </b-container>'+
   '</b-collapse>'+
 
   '<b-container v-b-toggle.super fluid align-h="between" class="mx-0 my-3 px-2">' +
-  '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;">' +
+  '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;" @click="toggleSeccion(\'supervisor\')">' +
   '           <b-col cols="1">' +
-  '               <img src="./images/csr_menu.png" alt="open_close_menu_user">'+
+  '           <img '+
+  '             src="./images/csr_menu.png" '+
+  '             alt="toggle_super" ' +
+  '             :class="{ rotated: openedSections.supervisor }" ' +
+  '             class="toggle-icon">' +
   '           </b-col>' +
   '           <b-col>' +
   '               <div>SUPERVISOR MODE REGISTERS</div>' +
@@ -13124,24 +13402,28 @@ var uielto_csr_register_file = {
 
   '<b-collapse id="super">'+
   '<b-container fluid>'+
-  ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(architecture.components[4].elements.supervisor.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
+  ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(superRegs.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
   
   '   <csr-register :id="(i-1)*2"'+
-  '                 :register="architecture.components[4].elements.supervisor[(i-1)*2]"'+
+  '                 :register="superRegs[(i-1)*2]"'+
   '                 ></csr-register>'+
 
   '   <csr-register :id="(i - 1) * 2 + 1"'+
-  '                 v-if="(i - 1) * 2 + 1 < architecture.components[4].elements.supervisor.length"'+
-  '                 :register="architecture.components[4].elements.supervisor[(i - 1) * 2 + 1]"'+
+  '                 v-if="(i - 1) * 2 + 1 < superRegs.length"'+
+  '                 :register="superRegs[(i - 1) * 2 + 1]"'+
   '                 ></csr-register>'+
   ' </b-row>' +
   '</b-container>'+
   '</b-collapse>'+
 
   '<b-container v-b-toggle.machine fluid align-h="between" class="mx-0 my-3 px-2">' +
-  '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;">' +
+  '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;" @click="toggleSeccion(\'machine\')">' +
   '           <b-col cols="1">' +
-  '               <img src="./images/csr_menu.png" alt="open_close_menu_user">'+
+  '           <img '+
+  '             src="./images/csr_menu.png" '+
+  '             alt="toggle_machine" ' +
+  '             :class="{ rotated: openedSections.machine }" ' +
+  '             class="toggle-icon">' +
   '           </b-col>' +
   '           <b-col>' +
   '               <div>MACHINE MODE REGISTERS</div>' +
@@ -13151,24 +13433,28 @@ var uielto_csr_register_file = {
 
   '<b-collapse id="machine">'+
   '<b-container fluid>'+
-  ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(architecture.components[4].elements.machine.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
+  ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(machineRegs.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
   
   '   <csr-register :id="(i-1)*2"'+
-  '                 :register="architecture.components[4].elements.machine[(i-1)*2]"'+
+  '                 :register="machineRegs[(i-1)*2]"'+
   '                 ></csr-register>'+
 
   '   <csr-register :id="(i - 1) * 2 + 1"'+
-  '                 v-if="(i - 1) * 2 + 1 < architecture.components[4].elements.machine.length"'+
-  '                 :register="architecture.components[4].elements.machine[(i - 1) * 2 + 1]"'+
+  '                 v-if="(i - 1) * 2 + 1 < machineRegs.length"'+
+  '                 :register="machineRegs[(i - 1) * 2 + 1]"'+
   '                 ></csr-register>'+
   ' </b-row>' +
   '</b-container>'+
   '</b-collapse>'+
 
   '<b-container v-b-toggle.common fluid align-h="between" class="mx-0 my-3 px-2">' +
-  '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;">' +
+  '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;" @click="toggleSeccion(\'common\')">' +
   '           <b-col cols="1">' +
-  '               <img src="./images/csr_menu.png" alt="open_close_menu_user">'+
+  '           <img '+
+  '             src="./images/csr_menu.png" '+
+  '             alt="toggle_common" ' +
+  '             :class="{ rotated: openedSections.common }" ' +
+  '             class="toggle-icon">' +
   '           </b-col>' +
   '           <b-col>' +
   '               <div>COMMON REGISTERS</div>' +
@@ -13178,15 +13464,15 @@ var uielto_csr_register_file = {
 
   '<b-collapse id="common">'+
   '<b-container fluid>'+
-  ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(architecture.components[4].elements.common.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
+  ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(commonRegs.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
   
   '   <csr-register :id="(i-1)*2"'+
-  '                 :register="architecture.components[4].elements.common[(i-1)*2]"'+
+  '                 :register="commonRegs[(i-1)*2]"'+
   '                 ></csr-register>'+
 
   '   <csr-register :id="(i - 1) * 2 + 1"'+
-  '                 v-if="(i - 1) * 2 + 1 < architecture.components[4].elements.common.length"'+
-  '                 :register="architecture.components[4].elements.common[(i - 1) * 2 + 1]"'+
+  '                 v-if="(i - 1) * 2 + 1 < commonRegs.length"'+
+  '                 :register="commonRegs[(i - 1) * 2 + 1]"'+
   '                 ></csr-register>'+
   ' </b-row>' +
   '</b-container>'+
@@ -13203,8 +13489,7 @@ var uielto_csr_register = {
       register: {type: Object, required: true}
   },
   methods:{
-      show_csr_value(register){
-        console.log(register);
+      show_csr_value(register){ 
           return "0x"+register.value;
       },
       update_csr_value(register){
@@ -13535,7 +13820,7 @@ var uielto_memory = {
     '           <span class="badge badge-white border border-secondary text-dark mx-1">System <br>stack</span>' +
     " " +
     '           <b-popover target="stack_funct_popover" triggers="hover" placement="top"> ' +
-    "             <span>0x000...</span>" +
+    "             <span>0x800060...</span>" +
     '             <b-list-group class="my-2">' +
     '               <b-list-group-item v-for="(item, index) in track_stack_names.slice().reverse()"> ' +
     '                 <span class="text-success" v-if="index == 0">{{item}}</span>' +
@@ -13543,7 +13828,7 @@ var uielto_memory = {
     '                 <span class="text-dark" v-if="index > 1">{{item}}</span>' +
     "               </b-list-group-item>" +
     "             </b-list-group>" +
-    "             <span>0xFFF...</span>" +
+    "             <span>0x80006F...</span>" +
     "           </b-popover>" +
     " " +
     "         </div>" +
@@ -14092,6 +14377,8 @@ try {
       autoscroll: true,
       font_size: 15,
       c_debug: false,
+      c_kernel: true,
+      c_sudo: false,
       dark: false,
       arch_available: architecture_available,
       back_card: back_card,

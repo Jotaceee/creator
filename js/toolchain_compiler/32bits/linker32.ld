@@ -3,10 +3,11 @@ ENTRY(_main)
 MEMORY
 {
   /* Definir la región de memoria para el código */
-  text_mem (rx) : ORIGIN = 0x80000000, LENGTH = 0x1000
-  data_mem (rw) : ORIGIN = 0x80001000, LENGTH = 0x1000
-  bss_mem  (rw) : ORIGIN = 0x80002000, LENGTH = 0x3000
-  heap_mem (rw) : ORIGIN = 0x80005000, LENGTH = 0x1000
+  text_mem  (rx) : ORIGIN = 0x80000000, LENGTH = 0x1000
+  data_mem  (rw) : ORIGIN = 0x80001000, LENGTH = 0x1000
+  bss_mem   (rw) : ORIGIN = 0x80002000, LENGTH = 0x3000
+  heap_mem  (rw) : ORIGIN = 0x80005000, LENGTH = 0x1000
+  stack_mem (rw) : ORIGIN = 0x80006000, LENGTH = 0x1000
 }
 
 
@@ -19,17 +20,17 @@ SECTIONS
   /* Alineación de la siguiente sección */
   . = ALIGN(0x1000);
 
-  /* Sección .text desde 0x00000000 */
+  /* Sección .text desde 0x80000000 */
   .text : {
     *(.text)
   } > text_mem
 
-  /* Sección .data desde 0x0000200000000000 */
+  /* Sección .data desde 0x80001000 */
   .data : {
     *(.data)
   } > data_mem
 
-  /* Sección .bss desde 0x0000400000000000 */
+  /* Sección .bss desde 0x80002000 */
   .bss : {
     *(.bss)
 
@@ -41,10 +42,19 @@ SECTIONS
     . += 8;              /* Reserva 8 bytes para fromhost */
   } > bss_mem
 
-  /* Sección .heap desde 0x0000600000000000 */
+  /* Sección .heap desde 0x80005000 */
   .heap : {
     *(.heap)
   } > heap_mem
+
+  /* Seccion .stack desde 0x80006000 */
+  .stack : {
+    . = ALIGN(16);
+    _stack_top = .;
+    . += LENGTH(stack_mem);
+    _stack_bottom = .;
+  } > stack_mem
+
 
   /* Marca el final del programa */
   _end = .;
