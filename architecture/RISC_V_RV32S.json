@@ -91,8 +91,8 @@
               "sp"
             ],
             "nbits": "32",
-            "value": 268435452,
-            "default_value": 268435452,
+            "value": 2147508220,
+            "default_value": 2147508220,
             "properties": [
               "read",
               "write",
@@ -1355,207 +1355,427 @@
       {
         "name": "CSR Registers",
         "type": "csr_registers",
-        "elements": {
-          "user": [
-            {
-              "name" : "ustatus",
-              "value": "00000000",
-              "info" : "Blablabla user1"
-            },
-            {
-              "name" : "uie",
-              "value": "00000000",
-              "info" : "Blablabla user2"
-            },
-            {
-              "name" : "utvec",
-              "value": "00000000",
-              "info" : "Blablabla user3"
-            },
-            {
-              "name" : "uscratch",
-              "value": "00000000",
-              "info" : "Blablabla user4"
-            },
-            {
-              "name" : "uepc",
-              "value": "00000000",
-              "info" : "Blablabla user4"
-            },
-            {
-              "name" : "ucause",
-              "value": "00000000",
-              "info" : "Blablabla user4"
-            },
-            {
-              "name" : "utval",
-              "value": "00000000",
-              "info" : "Blablabla user4"
-            },
-            {
-              "name" : "uip",
-              "value": "00000000",
-              "info" : "Blablabla user4"
-            }
-
-          ],
-          "supervisor": [
-            {
-              "name" : "sstatus",
-              "value": "00000000",
-              "info" : "Blablabla supervisor1"
-            },
-            {
-              "name" : "sedeleg",
-              "value": "00000000",
-              "info" : "Blablabla supervisor2"
-            },
-            {
-              "name" : "sideleg",
-              "value": "00000000",
-              "info" : "Blablabla supervisor3"
-            },
-            {
-              "name" : "sie",
-              "value": "00000000",
-              "info" : "Blablabla supervisor4"
-            },
-            {
-              "name" : "stvec",
-              "value": "00000000",
-              "info" : "Blablabla supervisor2"
-            },
-            {
-              "name" : "sscratch",
-              "value": "00000000",
-              "info" : "Blablabla supervisor2"
-            },
-            {
-              "name" : "sepc",
-              "value": "00000000",
-              "info" : "Blablabla supervisor2"
-            },
-            {
-              "name" : "scause",
-              "value": "00000000",
-              "info" : "Blablabla supervisor2"
-            },
-            {
-              "name" : "stval",
-              "value": "00000000",
-              "info" : "Blablabla supervisor2"
-            },
-            {
-              "name" : "sip",
-              "value": "00000000",
-              "info" : "Blablabla supervisor2"
-            },
-            {
-              "name" : "satp",
-              "value": "00000000",
-              "info" : "Blablabla supervisor2"
-            }
-          ],
-          "machine" : [
-            {
-              "name" : "mstatus",
-              "value": "00000000",
-              "info" : "Blablabla machine1"
-            },
-            {
-              "name" : "misa",
-              "value": "00000000",
-              "info" : "Blablabla machine2"
-            },
-            {
-              "name" : "medeleg",
-              "value": "00000000",
-              "info" : "Blablabla machine3"
-            },
-            {
-              "name" : "mideleg",
-              "value": "00000000",
-              "info" : "Blablabla machine3"
-            },
-            {
-              "name" : "mie",
-              "value": "00000000",
-              "info" : "Blablabla machine3"
-            },
-            {
-              "name" : "mstvec",
-              "value": "00000000",
-              "info" : "Blablabla machine3"
-            },
-            {
-              "name" : "mscratch",
-              "value": "00000000",
-              "info" : "Blablabla machine3"
-            },
-            {
-              "name" : "mepc",
-              "value": "00000000",
-              "info" : "Blablabla machine3"
-            },
-            {
-              "name" : "mcause",
-              "value": "00000000",
-              "info" : "Blablabla machine3"
-            },
-            {
-              "name" : "mtval",
-              "value": "00000000",
-              "info" : "Blablabla machine3"
-            },
-            {
-              "name" : "mip",
-              "value": "00000000",
-              "info" : "Blablabla machine3"
-            },
-            {
-              "name" : "mcycle",
-              "value": "00000000",
-              "info" : "Blablabla machine3"
-            },
-            {
-              "name" : "minstret",
-              "value": "00000000",
-              "info" : "Blablabla machine3"
-            }
-          ], 
-          "common": [
-            {
-              "name" : "cycle",
-              "value": "00000000",
-              "info" : "Blablabla Common1"
-            },
-            {
-              "name" : "time",
-              "value": "00000000",
-              "info" : "Blablabla Common2"
-            },
-            {
-              "name" : "instret",
-              "value": "00000000",
-              "info" : "Blablabla Common3"
-            },
-            {
-              "name" : "hpmcounterX",
-              "value": "00000000",
-              "info" : "Blablabla common4"
-            },
-            {
-              "name" : "hpmcounterXh",
-              "value": "00000000",
-              "info" : "Blablabla common4"
-            },
-            {
-              "name" : "mhartid",
-              "value": "00000000",
-              "info" : "Blablabla common4"
-            }
-          ]
-        }
+        "double_precision": false,
+        "elements": [
+          {
+            "name" : "ustatus",
+            "type" : "user",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla user1",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "uie",
+            "type" : "user",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla user2",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "utvec",
+            "type" : "user",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla user3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "uscratch",
+            "type" : "user",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla user4",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "uepc",
+            "type" : "user",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla user4",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "ucause",
+            "type" : "user",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla user4",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "utval",
+            "type" : "user",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla user4",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "uip",
+            "type" : "user",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla user4",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "sstatus",
+            "type" : "supervisor",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla supervisor1",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "sedeleg",
+            "type" : "supervisor",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla supervisor2",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "sideleg",
+            "type" : "supervisor",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla supervisor3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "sie",
+            "type" : "supervisor",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla supervisor4",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "stvec",
+            "type" : "supervisor",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla supervisor2",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "sscratch",
+            "type" : "supervisor",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla supervisor2",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "sepc",
+            "type" : "supervisor",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla supervisor2",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "scause",
+            "type" : "supervisor",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla supervisor2",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "stval",
+            "type" : "supervisor",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla supervisor2",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "sip",
+            "type" : "supervisor",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla supervisor2",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "satp",
+            "type" : "supervisor",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla supervisor2",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "mstatus",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine1",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "misa",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine2",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "medeleg",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "mideleg",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "mie",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "mstvec",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "mscratch",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "mepc",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "mcause",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "mtval",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "mip",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "mcycle",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "minstret",
+            "type" : "machine",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla machine3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          }, 
+          {
+            "name" : "cycle",
+            "type" : "common",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla Common1",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "time",
+            "type" : "common",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla Common2",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "instret",
+            "type" : "common",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla Common3",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "hpmcounterX",
+            "type" : "common",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla common4",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "hpmcounterXh",
+            "type" : "common",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla common4",
+            "properties": [
+              "read",
+              "write"
+            ]
+          },
+          {
+            "name" : "mhartid",
+            "type" : "common",
+            "value": "00000000",
+            "default_value": "00000000",
+            "info" : "Blablabla common4",
+            "properties": [
+              "read",
+              "write"
+            ]
+          }
+        ]
       }
     ],
     "directives": [
@@ -1649,11 +1869,11 @@
       },
       {
         "name": "stack start",
-        "value": "0x80002000"
+        "value": "0x80006FFC"
       },
       {
         "name": "stack end",
-        "value": "0x80005FFF"
+        "value": "0x80006FFF"
       }
     ]
   }

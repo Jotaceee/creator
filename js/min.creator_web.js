@@ -3119,24 +3119,39 @@ function assembly_compiler()
               data_to_store.type = matchvalue[1];
               switch(data_to_store.type){
                 case "half":
-                  data_to_store.value = matchvalue[2];
+                  if(matchvalue[2].includes(","))
+                    data_to_store.value = matchvalue[2].trim().split(",");
+                  else
+                    data_to_store.value = matchvalue[2];
                   break;
                 case "byte":
-                  data_to_store.value = parseInt(matchvalue[2]).toString(16);
+                  if (matchvalue[2].includes(","))
+                    data_to_store.value = matchvalue[2].trim().split(",");
+                  else
+                    data_to_store.value = parseInt(matchvalue[2]).toString(16);
                   break;
                 case "word":
                 case "dword":
                 case "integer":
-                  data_to_store.value = parseInt(matchvalue[2]).toString(16);
+                  if (matchvalue[2].includes(","))
+                    data_to_store.value = matchvalue[2].trim().split(",");
+                  else
+                    data_to_store.value = parseInt(matchvalue[2]).toString(16);
                   break;
 
                 case "float":
-                  console.log("primero: ", parseFloat(matchvalue[2]));
-                  data_to_store.value = parseFloat(matchvalue[2]);
-                  console.log("Segundo: ", data_to_store.value);
+                  // console.log("primero: ", parseFloat(matchvalue[2]));
+                  if (matchvalue[2].includes(","))
+                    data_to_store.value = matchvalue[2].trim().split(",");
+                  else
+                    data_to_store.value = parseFloat(matchvalue[2]);
+                  // console.log("Segundo: ", data_to_store.value);
                   break;
                 case "double":
-                  data_to_store.value = parseFloat(matchvalue[2]).toString(16);
+                  if (matchvalue[2].includes(","))
+                    data_to_store.value = matchvalue[2].trim().split(",");
+                  else
+                    data_to_store.value = parseFloat(matchvalue[2]).toString(16);
                   break;
                 // case "char":
                 //   data_to_store.value = matchvalue[2];
@@ -3155,6 +3170,9 @@ function assembly_compiler()
                   data_to_store.value = matchvalue[2];
                   break;
               }
+              // if (data_to_store.value.includes(",")){
+              //   data_to_store.value = data_to_store.value.trim().split(",");
+              // }
               list_data_instructions.push(data_to_store);
               // console.log(data_to_store);
               data_to_store = Object.assign({}, {
@@ -3322,12 +3340,13 @@ function assembly_compiler()
                     dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*8,"0");
                   }
                   for (var j = 0; j < elements; j++){
+
                     var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 8, dumpdatainstructions[i][1].length - (8 * j));
                     console.log("Elemento a insertar: ", element_to_insert); 
                     if (j === 0 )
-                      creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], element_to_insert >> 0, dumpdatainstructions[i][6],);
+                      creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], parseInt(element_to_insert, 16) >> 0, dumpdatainstructions[i][6],);
                     else
-                      creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, null, element_to_insert >> 0, dumpdatainstructions[i][6],);
+                      creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, null, parseInt(element_to_insert, 16) >> 0, dumpdatainstructions[i][6],);
                     
                   }
                 }else {
@@ -3359,35 +3378,124 @@ function assembly_compiler()
                 break;
   
               case "float":
-                let buffer = new ArrayBuffer(4); // 4 bytes para float
-                let view = new DataView(buffer);
+
+
+                if(dumpdatainstructions[i][1].length > 8){
+                  var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                  var elements = Math.floor(dumpdatainstructions[i][1].length / 8);
+                  if(dumpdatainstructions[i][1].length % 8 !== 0){
+                    elements = elements + 1;
+                    dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*8,"0");
+                  }
+                  for (var j = 0; j < elements; j++){
+                    let buffer = new ArrayBuffer(4); // 4 bytes para float
+                    let view = new DataView(buffer);
+
+                    var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 8, dumpdatainstructions[i][1].length - (8 * j));
+                    view.setUint32(0, parseInt(element_to_insert, 16), false);
+                    
+                    console.log("Elemento a insertar: ", element_to_insert); 
+                    if (j === 0 )
+                      creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], view.getFloat32(0, false), dumpdatainstructions[i][6],);
+                    else
+                      creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, null, view.getFloat32(0, false), dumpdatainstructions[i][6],);
+                    
+                  }
+                }else {
+                  let buffer = new ArrayBuffer(4); // 4 bytes para float
+                  let view = new DataView(buffer);
+    
+                  // Convertir hexadecimal a entero
+                  let intVal = parseInt(dumpdatainstructions[i][1], 16);
+    
+                  // Escribir el entero en el buffer como float
+                  view.setUint32(0, intVal, false); 
+                  creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4],view.getFloat32(0, false), dumpdatainstructions[i][6],);
+                }
+
+              //   let buffer = new ArrayBuffer(4); // 4 bytes para float
+              //   let view = new DataView(buffer);
   
-                // Convertir hexadecimal a entero
-                let intVal = parseInt(dumpdatainstructions[i][1], 16);
+              //   // Convertir hexadecimal a entero
+              //   let intVal = parseInt(dumpdatainstructions[i][1], 16);
   
-                // Escribir el entero en el buffer como float
-                view.setUint32(0, intVal, false); // false = Big Endian
+              //   // Escribir el entero en el buffer como float
+              //   view.setUint32(0, intVal, false); // false = Big Endian
   
-                // Leer como float de 32 bits
-                // return view.getFloat32(0, false);
-              creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4],view.getFloat32(0, false), dumpdatainstructions[i][6],);
+              //   // Leer como float de 32 bits
+              //   // return view.getFloat32(0, false);
+              // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4],view.getFloat32(0, false), dumpdatainstructions[i][6],);
                 break;
               case "double":
-                let bufferd = new ArrayBuffer(8); // 8 bytes para double
-                let viewd = new DataView(bufferd);
+
+                if(dumpdatainstructions[i][1].length > 16){
+                  var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                  var elements = Math.floor(dumpdatainstructions[i][1].length / 16);
+                  if(dumpdatainstructions[i][1].length % 16 !== 0){
+                    elements = elements + 1;
+                    dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*16,"0");
+                  }
+                  for (var j = 0; j < elements; j++){
+                    let bufferd = new ArrayBuffer(8); // 8 bytes para double
+                    let viewd = new DataView(bufferd);
   
-                // Convertir hexadecimal a entero
-                let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
-                let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
-  
-                // Escribir los valores en el buffer
-                viewd.setUint32(0, high, false); // Parte alta
-                viewd.setUint32(4, low, false);  // Parte baja
-  
-                // Leer como double de 64 bits
-                // return viewd.getFloat64(0, false);
-              creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+
+                    var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 16, dumpdatainstructions[i][1].length - (16 * j));
+                    
+                    // Convertir hexadecimal a entero
+                    let high = parseInt(element_to_insert.slice(0, 8), 16); // Parte alta
+                    let low = parseInt(element_to_insert.slice(8, 16), 16); // Parte baja
+      
+                    // Escribir los valores en el buffer
+                    viewd.setUint32(0, high, false); // Parte alta
+                    viewd.setUint32(4, low, false);  // Parte baja
+
+                    console.log("direccion donde se insterta: ", (init_add + j*8).toString(16));
+                    console.log("Elemento a insertar: ", element_to_insert); 
+                    
+                    if (j === 0 )
+                      creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                    else
+                      creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, null, viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                    
+                  }
+                }else {
+                  let bufferd = new ArrayBuffer(8); // 8 bytes para double
+                  let viewd = new DataView(bufferd);
+    
+                  // Convertir hexadecimal a entero
+                  let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
+                  let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
+    
+                  // Escribir los valores en el buffer
+                  viewd.setUint32(0, high, false); // Parte alta
+                  viewd.setUint32(4, low, false);  // Parte baja
+    
+                  // Leer como double de 64 bits
+                  // return viewd.getFloat64(0, false);
+                  creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                  // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                }
                 break;
+
+
+
+                // let bufferd = new ArrayBuffer(8); // 8 bytes para double
+                // let viewd = new DataView(bufferd);
+  
+                // // Convertir hexadecimal a entero
+                // let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
+                // let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
+  
+                // // Escribir los valores en el buffer
+                // viewd.setUint32(0, high, false); // Parte alta
+                // viewd.setUint32(4, low, false);  // Parte baja
+  
+                // // Leer como double de 64 bits
+                // // return viewd.getFloat64(0, false);
+                // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                // break;
+
               // case "char":
                 
               // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);

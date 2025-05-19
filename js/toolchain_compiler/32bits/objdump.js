@@ -221,21 +221,61 @@ Module['print'] = function (message) {
       exaaa.push("");
       if(exaaa[3] === 0){
         console.log("Exaa que se va a insertar en un dumpdata anterior: ", exaaa);
-        if(exaaa[1].includes("madd.s")){
+        console.log("Que es esto: ", /[^0-9a-fA-F]/.test(exaaa[1]));
+        if(/[^0-9a-fA-F]/.test(exaaa[1])/*   exaaa[1].includes("madd.s")*/){
           //buscamos la palabra completa almacenada por el list_data_instructions
           var auxda = list_data_instructions.findIndex(data => data.label === dumpdatainstructions[dumpdatainstructions.length -1][4]);
-          if (list_data_instructions[auxda].value.length % 2 !== 0){
-            let sd =  list_data_instructions[auxda].value.slice(-2);
-            let sd1 = sd.charCodeAt(0).toString(16).padStart(2, '0');
-            console.log("Resultado: ", sd1);
-            dumpdatainstructions[dumpdatainstructions.length -1][1] = String(sd1) + dumpdatainstructions[dumpdatainstructions.length -1][1];
-          }else {
-            let sd =  list_data_instructions[auxda].value.slice(-3);
-            let sd1 = sd.charCodeAt(0).toString(16).padStart(2, '0');
-            let sd2 = sd.charCodeAt(1).toString(16).padStart(2, '0'); 
-            console.log("Resultado: ", sd1, sd2);
-            dumpdatainstructions[dumpdatainstructions.length -1][1] = String(sd2) + String(sd1) + dumpdatainstructions[dumpdatainstructions.length -1][1];
+          var list_data_elem;
+          var aux_index_value = list_data_instructions[auxda].value.length;
+          if (typeof list_data_instructions[auxda].value === "object"){
+            if (list_data_instructions[auxda].value[aux_index_value - 1].includes("-")){
+              // caso de ser el valor negativo
+              let buff, buff_view;
+              switch (list_data_instructions[auxda].type){
+              case "half":
+                list_data_elem = (parseInt(list_data_instructions[auxda].value[aux_index_value - 1]) & 0xFFFF).toString(16).padStart(4, "0");
+                break;
+              case "word":
+                list_data_elem = (parseInt(list_data_instructions[auxda].value[aux_index_value - 1]) >>> 0).toString(16).padStart(8, "0");
+                break;
+              case "byte":
+                list_data_elem = (parseInt(list_data_instructions[auxda].value[aux_index_value - 1]) & 0xFF).toString(16).padStart(2, "0");
+                break;
+              case "float":
+                buff = new ArrayBuffer(4);
+                buff_view = new DataView(buff);
+                buff_view.setFloat32(0, parseFloat(list_data_instructions[auxda].value[aux_index_value - 1]), true);
+                list_data_elem = buff_view.getUint32(0, true).toString(16).padStart(8, '0');
+
+                // list_data_elem = (parseFloat(list_data_instructions[auxda].value[aux_index_value - 1])).toString(16);
+                break;
+              case "double":
+                buff = new ArrayBuffer(8);
+                buff_view = new DataView(buff);
+                buff_view.setFloat64(0, parseFloat(list_data_instructions[auxda].value[aux_index_value - 1]), true);
+                let lo = buff_view.getUint32(0, true).toString(16).padStart(8, '0');
+                let hi = buff_view.getUint32(4, true).toString(16).padStart(8, '0');
+
+                list_data_elem = lo + hi;
+                break;
+            }
+              dumpdatainstructions[dumpdatainstructions.length - 1][1] = list_data_elem + dumpdatainstructions[dumpdatainstructions.length -1][1];
+            }else { // Caso de ser el valor positivo o sin signo
+              dumpdatainstructions[dumpdatainstructions.length -1][1] = list_data_instructions[auxda].value[aux_index_value - 1].toString(16) + dumpdatainstructions[dumpdatainstructions.length -1][1];
+            }
           }
+          // if (list_data_instructions[auxda].value.length % 2 !== 0){
+          //   let sd =  list_data_instructions[auxda].value.slice(-2);
+          //   let sd1 = sd.charCodeAt(0).toString(16).padStart(2, '0');
+          //   console.log("Resultado: ", sd1);
+          //   dumpdatainstructions[dumpdatainstructions.length -1][1] = String(sd1) + dumpdatainstructions[dumpdatainstructions.length -1][1];
+          // }else {
+          //   let sd =  list_data_instructions[auxda].value.slice(-3);
+          //   let sd1 = sd.charCodeAt(0).toString(16).padStart(2, '0');
+          //   let sd2 = sd.charCodeAt(1).toString(16).padStart(2, '0'); 
+          //   console.log("Resultado: ", sd1, sd2);
+          //   dumpdatainstructions[dumpdatainstructions.length -1][1] = String(sd2) + String(sd1) + dumpdatainstructions[dumpdatainstructions.length -1][1];
+          // }
         }
         else dumpdatainstructions[dumpdatainstructions.length -1][1] = exaaa[1] + dumpdatainstructions[dumpdatainstructions.length -1][1];
         inside_label += 1;

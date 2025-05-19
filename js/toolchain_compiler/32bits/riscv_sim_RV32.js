@@ -9,6 +9,30 @@ var arguments_ = [];
 var hiden_executed, hiden_next_execute;
 var thisProgram = "./this.program";
 
+let registers_before_function = [ 
+  { name: "t0", can_operate : false},
+  { name: "t1", can_operate : false},
+  { name: "t2", can_operate : false},
+  { name: "t3", can_operate : false},
+  { name: "t4", can_operate : false}, 
+  { name: "t5", can_operate : false},
+  { name: "t6", can_operate : false},
+  { name: "s0", can_operate : false},
+  { name: "s1", can_operate : false},
+  { name: "s2", can_operate : false},
+  { name: "s3", can_operate : false},
+  { name: "s4", can_operate : false}, 
+  { name: "s5", can_operate : false},
+  { name: "s6", can_operate : false},
+  { name: "s7", can_operate : false},
+  { name: "s8", can_operate : false},
+  { name: "s9", can_operate : false},
+  { name: "s10", can_operate : false}, 
+  { name: "s11", can_operate : false}
+]
+var callstack_convention = [];
+var inside_function = false;
+
 var quit_ = (status, toThrow) => {
   throw toThrow;
 };
@@ -148,6 +172,27 @@ var userMode = false;
 var instoper = "";
 var syscall_print_code = -1;
 var prev_add_to_jump;
+
+async function check_call_convention_temp_regs(instMatch) {
+  if(((instMatch[7] != undefined && (instMatch[7].includes("t") || (instMatch[7].includes("s") && !instMatch[7].includes("sp")) ) ) || (instMatch[8] != undefined && (instMatch[8].includes("t") || (instMatch[8].includes("s") && !instMatch[8].includes("sp")) ))) && inside_function) {
+    if((instMatch[5] != "li" && instMatch[5] != "lui" && instMatch[5] != "la") ){
+      for (var i = 0; i < callstack_convention[callstack_convention.length - 1].length; i++ ){
+        (callstack_convention[callstack_convention.length - 1][i].name === instMatch[7] || callstack_convention[callstack_convention.length - 1][i].name === instMatch[8]) &&
+        (callstack_convention[callstack_convention.length - 1][i].can_operate === false) ? crex_show_notification("Possible failure in the parameter passing convention", "danger") : 0 ; 
+      }
+        
+        // callstack_convention[callstack_convention.length - 1].name 
+
+    }
+  }
+  if ((instMatch[6].includes("t") || (instMatch[6].includes("s") && !instMatch[6].includes("sp"))) && inside_function) {
+    for (var i = 0; i < callstack_convention[callstack_convention.length - 1].length; i++ ){
+      callstack_convention[callstack_convention.length - 1][i].can_operate = (callstack_convention[callstack_convention.length - 1][i].name === instMatch[6]) ? true : callstack_convention[callstack_convention.length - 1][i].can_operate; 
+    }
+  }
+}
+
+
 Module['print'] = function (message) {
   if(message === "err call_convenction"){
     crex_show_notification("Possible failure in the parameter passing convention", "danger");
@@ -216,6 +261,11 @@ Module['print'] = function (message) {
     writeRegister(vectorMatch[3], regtowrite.indexComp, regtowrite.indexElem);
   }
   if (instMatch && (instMatch[2] === 'U' || parseInt(instMatch[3], 16) >= pc_min)){
+    if (inside_function) 
+      check_call_convention_temp_regs(instMatch);
+
+
+
     for (var i = 0; i < instructions.length; i++) {
       if (instructions[i]._rowVariant === "info")
         instructions[i]._rowVariant = "";
@@ -226,7 +276,7 @@ Module['print'] = function (message) {
     // console.log("PC actual:",pc_sail);
 
     userMode = true;
-    // console.log("Instruccion: ", instMatch);
+    console.log("Instruccion: ", instMatch);
     const current_ins = instructions.findIndex(insn => insn.Address === ("0x"+instMatch[3].toLowerCase()));
     if(prev_add_to_jump !== undefined){
       instructions[prev_add_to_jump]._rowVariant = "";
@@ -246,6 +296,8 @@ Module['print'] = function (message) {
       // var stack_entry_func = instructions[next_add_to_jump].label;
       creator_callstack_enter(instructions[next_add_to_jump].Label); 
       track_stack_enter(instructions[next_add_to_jump].Label);
+      callstack_convention.push(structuredClone(registers_before_function));
+      inside_function = true;
     }
     if (instructions[current_ins].loaded.includes("jal") && !instructions[current_ins].loaded.includes("jalr")){
       var next_add = instructions[current_ins].loaded.split("\t");
@@ -259,6 +311,8 @@ Module['print'] = function (message) {
       prev_add_to_jump = current_ins;
       track_stack_leave();
       creator_callstack_leave();
+      callstack_convention.pop();
+      inside_function = (callstack_convention.length > 0); 
     }
 
 
@@ -389,7 +443,10 @@ Module['print'] = function (message) {
 
     instoper = instMatch[5];
 
-    
+
+
+
+
 
   }
   else if (instMatch /*&& instMatch[2] !== 'U'*/)

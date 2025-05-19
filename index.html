@@ -575,7 +575,7 @@
 
               <!-- Navbar -->
               <uielto-toolbar id="navbar_simulator" 
-                              components="btn_architecture,btn_assembly|btn_reset,btn_instruction,btn_run,btn_flash,btn_stop|btn_examples,btn_calculator|btn_configuration,btn_information" 
+                              components="btn_architecture,btn_assembly,btn_sudo|btn_reset,btn_instruction,btn_run,btn_flash,btn_stop|btn_examples,btn_calculator|btn_configuration,btn_information" 
                               :browser="browser"
                               :arch_available="arch_available">
               </uielto-toolbar>
@@ -629,8 +629,14 @@
                     <register-file  id="register_file"
                                     :render="render"
                                     :data_mode="data_mode"
-                                    v-if="data_mode == 'int_registers' ||  data_mode == 'fp_registers'">                  
+                                    v-if="data_mode == 'int_registers' ||  data_mode == 'fp_registers' || data_mode == 'v_registers'">                  
                     </register-file>
+
+
+                    <!-- CSR Registers view -->
+                    <csr-register-file  id="csr"
+                                        v-if="data_mode == 'csr'">
+                    </csr-register-file>
 
 
                     <!-- Memory view-->
