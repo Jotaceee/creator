@@ -1,5 +1,4 @@
 var execution_mode_run = -1; // -1: not running, 0: stepbystep, 1: run without stop, 2: pending of input
-var variablechula = -1;
 var can_reset = false;
 var finished = false;
 var assembled = false;
@@ -10,7 +9,8 @@ var is_32b_arch = false;
 var insn_number;
 var entry_elf;
 var length_vext = 64;
-var select_all = false;
+var selectedFile = null;
+var activeTabIndex = -1;
 var set_extensions = [
                       {"name": "M",  "description": "(Multiply and Division)",   "arg": "m",  "activated" : true},
                       {"name": "FD", "description": "(Float and Double)",        "arg": "fd", "activated" : true},
@@ -42,39 +42,10 @@ const regexvec = new RegExp(`\\b(${vecextension.join('|')})\\b`, 'g');
 let enablefpd = false;
 let enablevec = false;
 
-// const fileInput = document.getElementById('FileInput');
-
 var linkercontent, objectcontent, elffile, file, content, reader, scriptas, scriptld, scriptsail, scriptdump;
 const filenames = [];
 const filecontents = [];
 
-// Cargado del script de enlace para generar el binario (Falta diferencia para el caso de 32 o 64 bits)
-
-
-// fetch(window.location.href+'js/toolchain_compiler/wasm64_riscv_sim_RV32.wasm')
-//   .then(response => response.arrayBuffer())
-//   .then(bytes => WebAssembly.compile(bytes))
-//   .then(module => console.log("para wasm64",WebAssembly.Module.imports(module)));
-
-// fetch(window.location.href+'js/toolchain_compiler/riscv_sim_RV32.wasm')
-//   .then(response => response.arrayBuffer())
-//   .then(bytes => WebAssembly.compile(bytes))
-//   .then(module => console.log("para wasm32",WebAssembly.Module.imports(module)));
-
-
-// fetch(window.location.href+'js/toolchain_compiler/output.elf')
-// .then(response => response.arrayBuffer())
-//   .then(buffer => {
-//     elffile = new Uint8Array(buffer);
-//     console.log("elffile:", elffile);
-//   });
-
-// fetch(window.location.href+'js/toolchain_compiler/64bits/my_code_v4.elf')
-//   .then(response => response.arrayBuffer())
-//     .then(buffer => {
-//       elffile = new Uint8Array(buffer);
-//       console.log("elffile:", elffile);
-// });
 
 function clean_environment() {
   const moduleKeys = [
@@ -95,8 +66,6 @@ function clean_environment() {
     });
     
   
-  // console.log("Module.env", Module.env);
-  // Module.env = {};
   delete window.missingLibrarySymbol;
   delete window.ccall;
   delete window.safeSetTimeout;
@@ -114,9 +83,6 @@ function clean_environment() {
     Module = null;
     window.Module = undefined;
   }
-  // delete window.Module;
-  // globalThis.Module = undefined;
-  // delete window.Asyncify;
 }
 
 // Funcion para limpiar el entorno en caso de que haya ocurrido algun error durante la ejecución 
@@ -199,9 +165,6 @@ function resetenvironment (value){
         can_reset = false;
         finished = false;
       }else if (execution_mode_run === -1 || can_reset) {
-        // En caso de que no este ejecutando el motor o 
-        // que si que estuviese ejecutando y quieres parar 
-        // y recompilar con cambios
         calledRun = false;
         calledMain = false;
         calledRun = false;
@@ -246,11 +209,7 @@ function resetenvironment (value){
 }
 // Funcion asíncrona para lanzar el motor de sail
 function loadSailFunction(maxAttemps = 50){
-  console.log("Preprocesamos sail");
-  // entry_elf = "0x0000000000000000";
-  // entry_elf = "0x80000000";
   preprocess_sail(elffile, enablefpd, enablevec, entry_elf);
-  // show notification cuando termine
 }
 
 async function dissamble_binary(maxAttemps = 50) {
@@ -306,7 +265,6 @@ function preprocess_run(asfilen, ascode, fpd, vec){
   if (!assembled) {
     return false;
   }
-  // Se carga el script ld.js para ejecutar el enlazador.
   scriptld = document.createElement('script');
   if(is_32b_arch)
     scriptld.src = window.location.href +'js/toolchain_compiler/32bits/ld-new.js';
@@ -327,12 +285,9 @@ async function waitForFunction(maxAttemps = 50) {
     attemps++;
   }
   if(load_binary)
-    elffile = preprocess_ld(objectcontent, linkercontent, update_binary); // Llamamos a runner_ld cuando preprocess_ld esté definida
+    elffile = preprocess_ld(objectcontent, linkercontent, update_binary); 
   else 
     elffile = preprocess_ld(objectcontent, linkercontent);
-
-
-  console.log("Tipo de dato de elffile: ", typeof elffile);
 
   scriptld.parentNode.removeChild(scriptld);
   clean_environment();
@@ -2565,11 +2520,8 @@ function creator_memory_update_space_view(
   }
 }
 function writeMemory(value, addr, type) {
-  // var aux = readMemory(addr, type);
-  // if(aux !== parseInt(value, 16) && aux === 0){
     main_memory_write_bydatatype(addr, value, type, value);
     creator_memory_updaterow(addr);
-  // }
 }
 function readMemory(addr, type) {
   return main_memory_read_bydatatype(addr, type);
@@ -2696,7 +2648,7 @@ var architecture = {
 var architecture_json = "";
 var textarea_assembly_editor;
 var codemirrorHistory = null;
-var assembly_files = []; // En cada entrada habra un objeto: {filename (string), assembly_code (string), to_compile (bool)}
+var assembly_files = []; //[{filename: "void", assembly_code: "nada", to_compile: false}]; // En cada entrada habra un objeto: {filename (string), assembly_code (string), to_compile (bool)}
 var code_assembly = "";
 var tokenIndex = 0;
 var nEnters = 0;
@@ -2801,8 +2753,8 @@ var tag_instructions = {};
 var instructions_binary = [];
 var data = [];
 var data_tag = [];
-var code_binary = undefined; // undefined
-var update_binary = undefined; //undefined
+var code_binary = undefined; 
+var update_binary = undefined; 
 var load_binary = false;
 
 function load_arch_select(cfg) {
@@ -2879,8 +2831,6 @@ function first_token() {
 function get_token() {
   var assembly = code_assembly;
 
-  // console.log("El codigo ensamblador: ", assembly);
-  // preprocess_run(["input.s"], [assembly], true, false);
   var index = tokenIndex;
   if (index >= assembly.length) {
     return null;
@@ -2977,12 +2927,9 @@ function next_token() {
 var list_user_instructions = [];
 var list_data_instructions = [];
 function identify_pseudo(instruction_assembly){
-  // Identificamos las pseudo instrucciones
   if(instruction_assembly.search("li") != -1 && instruction_assembly.search("vsetvli") === -1){
-    // console.log("li:", instruction_assembly);
     list_user_instructions.push(instruction_assembly);
     let parts = instruction_assembly.split(',');
-    // console.log("Parts li: ", parseInt(parts[1]?.trim(), 16), parseInt(parts[1]?.trim(), 10));
     
     if (!(-2048 >= parseInt(parts[1]?.trim(), 16)) && !(parseInt(parts[1]?.trim(), 16) <= 2047)){
       list_user_instructions.push("");
@@ -3005,7 +2952,6 @@ function identify_pseudo(instruction_assembly){
     {
       list_user_instructions.push(instruction_assembly);
       let parts = instruction_assembly.split(',');
-      console.log("PArtes del lw: ",parts);
       if( isNaN(parts[1]?.trim()) && !(parts[1]?.trim()).includes("(") ){
 
         list_user_instructions.push("");
@@ -3030,14 +2976,10 @@ function process_data_to_store_memory(){
           console.warn("Dealineamiento de memoria en string.");
       }
 
-      // Dividir en bytes de 2 caracteres
       let bytes = dumpdatainstructions[dump_ins][1].match(/.{1,2}/g);
 
-      // Invertir el orden
       let reversedBytes = bytes.reverse().join('');
 
-      // Unir de nuevo en una cadena
-      // dumpdatainstructions[dump_ins][1] = reversedBytes.join('');
 
       if (reversedBytes.endsWith("00") && list_data_instructions[i].type === "ascii")
         reversedBytes = reversedBytes.slice(0, -2);
@@ -3045,14 +2987,10 @@ function process_data_to_store_memory(){
       dumpdatainstructions[dump_ins][1] = reversedBytes.match(/.{1,2}/g)
           .map(byte => String.fromCharCode(parseInt(byte, 16)))
           .join('');
-
-      console.log("nuevo string: ", dumpdatainstructions[dump_ins][1]);
       }
       else if (list_data_instructions[i].type === "space" || list_data_instructions[i].type === "zero"){
         dumpdatainstructions[dump_ins][1] = parseInt(list_data_instructions[i].value,10);
       }
-      // if(list_data_instructions[i].type === "byte" )
-      // dumpdatainstructions[dump_ins][1] = list_data_instructions[i].value;
     }
   }
 }
@@ -3086,8 +3024,6 @@ function assembly_compiler()
     for(let j = 0; j < assembly_files.length; j++){
       if(assembly_files[j].to_compile){
         filecontents.push(assembly_files[j].code);
-        // console.log("Codigo en bruto: ", code_assembly);
-        // console.log("Tipo de code_assembly: ", typeof code_assembly);
         var code_assembly_array = assembly_files[j].code.split('\n').map(line => line.split('#')[0].trim()).filter(line => line !== '');
         for (let i = 0; i < code_assembly_array.length; i++){
           if (code_assembly_array[i].search(".text") != -1){
@@ -3105,17 +3041,13 @@ function assembly_compiler()
             let matchvalue = code_assembly_array[i].match(expvalue);
             if (matchlabel){
               
-              // console.log("matchlabel: ", matchlabel);
               data_to_store.label = matchlabel[1];
             }
             if (matchalign){
 
               data_to_store.align = parseInt(matchalign[1], 10);
-              console.log("matchalign: ", parseInt(matchalign[1], 10));
-              console.log(data_to_store.align);
             }
             if (matchvalue && !(code_assembly_array[i].includes(".align") || code_assembly_array[i].includes("section") || code_assembly_array[i].includes("data") )){
-              console.log("matchvalue: ", matchvalue);
               data_to_store.type = matchvalue[1];
               switch(data_to_store.type){
                 case "half":
@@ -3140,12 +3072,10 @@ function assembly_compiler()
                   break;
 
                 case "float":
-                  // console.log("primero: ", parseFloat(matchvalue[2]));
                   if (matchvalue[2].includes(","))
                     data_to_store.value = matchvalue[2].trim().split(",");
                   else
                     data_to_store.value = parseFloat(matchvalue[2]);
-                  // console.log("Segundo: ", data_to_store.value);
                   break;
                 case "double":
                   if (matchvalue[2].includes(","))
@@ -3153,9 +3083,6 @@ function assembly_compiler()
                   else
                     data_to_store.value = parseFloat(matchvalue[2]).toString(16);
                   break;
-                // case "char":
-                //   data_to_store.value = matchvalue[2];
-                //   break;
 
                 case "asciz":
                   data_to_store.value = matchvalue[2];
@@ -3170,11 +3097,7 @@ function assembly_compiler()
                   data_to_store.value = matchvalue[2];
                   break;
               }
-              // if (data_to_store.value.includes(",")){
-              //   data_to_store.value = data_to_store.value.trim().split(",");
-              // }
               list_data_instructions.push(data_to_store);
-              // console.log(data_to_store);
               data_to_store = Object.assign({}, {
                 align: 0,
                 value: 0,
@@ -3208,12 +3131,9 @@ function assembly_compiler()
     }
 
     if(!preprocess_run(filenames, filecontents, enablefpd, enablevec)){
-      console.log("Malardo");
       nEnters = parseInt(objectcontent[1], 10)-1;
       can_reset = true;
       if(comp_after_run){
-        //Imprimimos mensaje de error
-        console.log("Comp_After_run");
         uielto_toolbar_btngroup.methods.compile_error(
           "Incorrect instruction syntax for '"+objectcontent[2]+"'",
           objectcontent[2],
@@ -3250,7 +3170,7 @@ function assembly_compiler()
         })().then(() => {
           align = 1;
           for (let i = 0; i < dumptextinstructions.length; i++){
-            /*console.log(*/creator_insert_instruction(parseInt(dumptextinstructions[i][0], 16), dumptextinstructions[i][2], dumptextinstructions[i][2], false, dumptextinstructions[i][1], "00", dumptextinstructions[i][4])/*)*/;
+            creator_insert_instruction(parseInt(dumptextinstructions[i][0], 16), dumptextinstructions[i][2], dumptextinstructions[i][2], false, dumptextinstructions[i][1], "00", dumptextinstructions[i][4]);
             instructions.push({
               Break: null,
               Address: "0x" + dumptextinstructions[i][0],
@@ -3274,10 +3194,8 @@ function assembly_compiler()
   
           process_data_to_store_memory();
   
-          console.log("Nuevo dumpdata: ", dumpdatainstructions);
           for (let i = 0; i < dumpdatainstructions.length; i++){
-            console.log(dumpdatainstructions);
-  
+            
             switch(dumpdatainstructions[i][6]){
               case "half":
 
@@ -3290,8 +3208,6 @@ function assembly_compiler()
                 }
                 for (var j = 0; j < elements; j++){
                   var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2) * 2, dumpdatainstructions[i][1].length - (4 * j));
-                  console.log("direccion donde se insterta: ", (init_add + j*2).toString(16));
-                  console.log("Elemento a insertar: ", element_to_insert); 
                   if (j === 0 )
                     creator_memory_data_compiler(init_add, element_to_insert, 2, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
                   else
@@ -3301,34 +3217,28 @@ function assembly_compiler()
               }else {
                 creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
               }
-                // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                 break;
               case "byte":
 
-              if(dumpdatainstructions[i][1].length > 2){
-                var init_add = parseInt(dumpdatainstructions[i][0], 16);
-                var elements = Math.floor(dumpdatainstructions[i][1].length / 2); // 4
-                if(dumpdatainstructions[i][1].length % 2 !== 0){
-                  elements = elements + 1;
-                }
-                dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements * 2,"0");
+                if(dumpdatainstructions[i][1].length > 2){
+                  var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                  var elements = Math.floor(dumpdatainstructions[i][1].length / 2); // 4
+                  if(dumpdatainstructions[i][1].length % 2 !== 0){
+                    elements = elements + 1;
+                  }
+                  dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements * 2,"0");
 
-                for (var j = 0; j < elements;j++){
-                  var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2), dumpdatainstructions[i][1].length - (2 * j));
-                  console.log("Elemento a insertar: ", element_to_insert); 
-                  if (j === 0 )
-                    creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 24) >> 24, dumpdatainstructions[i][6],);
-                  else
-                    creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, null, (parseInt(element_to_insert,16) << 24 ) >> 24, dumpdatainstructions[i][6],);
-                  
+                  for (var j = 0; j < elements;j++){
+                    var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2), dumpdatainstructions[i][1].length - (2 * j));
+                    if (j === 0 )
+                      creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 24) >> 24, dumpdatainstructions[i][6],);
+                    else
+                      creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, null, (parseInt(element_to_insert,16) << 24 ) >> 24, dumpdatainstructions[i][6],);
+                    
+                  }
+                }else {
+                  creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                 }
-              }else {
-                creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
-              }
-
-                console.log("Byte o char");
-                // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), parseInt(dumpdatainstructions[i][1], 16), 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
-                
                 break;
               case "word":
               case "integer":
@@ -3342,7 +3252,6 @@ function assembly_compiler()
                   for (var j = 0; j < elements; j++){
 
                     var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 8, dumpdatainstructions[i][1].length - (8 * j));
-                    console.log("Elemento a insertar: ", element_to_insert); 
                     if (j === 0 )
                       creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], parseInt(element_to_insert, 16) >> 0, dumpdatainstructions[i][6],);
                     else
@@ -3364,8 +3273,6 @@ function assembly_compiler()
                   }
                   for (var j = 0; j < elements; j++){
                     var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 16, dumpdatainstructions[i][1].length - (16 * j));
-                    console.log("direccion donde se insterta: ", (init_add + j*8).toString(16));
-                    console.log("Elemento a insertar: ", element_to_insert); 
                     if (j === 0 )
                       creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, dumpdatainstructions[i][4], element_to_insert >> 0, dumpdatainstructions[i][6],);
                     else
@@ -3394,7 +3301,6 @@ function assembly_compiler()
                     var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 8, dumpdatainstructions[i][1].length - (8 * j));
                     view.setUint32(0, parseInt(element_to_insert, 16), false);
                     
-                    console.log("Elemento a insertar: ", element_to_insert); 
                     if (j === 0 )
                       creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], view.getFloat32(0, false), dumpdatainstructions[i][6],);
                     else
@@ -3412,19 +3318,6 @@ function assembly_compiler()
                   view.setUint32(0, intVal, false); 
                   creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4],view.getFloat32(0, false), dumpdatainstructions[i][6],);
                 }
-
-              //   let buffer = new ArrayBuffer(4); // 4 bytes para float
-              //   let view = new DataView(buffer);
-  
-              //   // Convertir hexadecimal a entero
-              //   let intVal = parseInt(dumpdatainstructions[i][1], 16);
-  
-              //   // Escribir el entero en el buffer como float
-              //   view.setUint32(0, intVal, false); // false = Big Endian
-  
-              //   // Leer como float de 32 bits
-              //   // return view.getFloat32(0, false);
-              // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4],view.getFloat32(0, false), dumpdatainstructions[i][6],);
                 break;
               case "double":
 
@@ -3450,9 +3343,6 @@ function assembly_compiler()
                     viewd.setUint32(0, high, false); // Parte alta
                     viewd.setUint32(4, low, false);  // Parte baja
 
-                    console.log("direccion donde se insterta: ", (init_add + j*8).toString(16));
-                    console.log("Elemento a insertar: ", element_to_insert); 
-                    
                     if (j === 0 )
                       creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
                     else
@@ -6630,7 +6520,6 @@ function execute_instruction() {
     if (i_reg.match != 0) {
       var i_reg_value = readRegister(i_reg.indexComp, i_reg.indexElem);
       if (i_reg_value != 0) {
-        console.log("Interruption detected");
         draw.warning.push(execution_index);
         var epc_reg = crex_findReg_bytag("exception_program_counter");
         var pc_reg = crex_findReg_bytag("program_counter");
@@ -7433,24 +7322,14 @@ function kbd_read_string(keystroke, params) {
   }
   var neltos = readRegister(params.indexComp, params.indexElem);
   writeMemory(value, parseInt(neltos), "string");
-  console.log("String a guardar: ", value);
-  console.log("Tipo de dato: ", typeof value);
-  console.log("Longitud del value: ", value.length);
-  // Obtener tamaño de la cadena incluyendo el null terminator
   var lengthBytes = lengthBytesUTF8(value) + 1;
     
-  // Asignar memoria en el heap de WebAssembly
   var buffer = Module._malloc(lengthBytes);
   
-  // Copiar el string en el heap en formato UTF-8
   stringToUTF8(value, buffer, lengthBytes);
   
-  // Llamar a la función en C con el puntero a la cadena
   Module._send_string_to_C(buffer);
   
-  // No liberar la memoria si necesitas que el string se conserve
-  // Si ya no lo necesitas después, puedes hacer: Module._free(buffer);
-  // Module._send_string_to_C(value);
   Module._free(buffer);
   execution_mode_run = last_execution_mode_run;
   last_execution_mode_run = -1;
@@ -7721,12 +7600,9 @@ var uielto_toolbar_btngroup = {
             displayAssemblyFiles(assembly_files);
             assembly_codemirror_start();
             if (codemirrorHistory != null) {
-              console.log("Previo al history:", textarea_assembly_editor);
-              console.log("codeMirror previo: ", codemirrorHistory);
               textarea_assembly_editor.setHistory(codemirrorHistory);
               textarea_assembly_editor.undo();
-              console.log("Despues del undo history:", textarea_assembly_editor);
-              console.log("El codemirror despues:", codemirrorHistory);
+              
             }
             textarea_assembly_editor.setValue(code_assembly);
             if (update_binary !== undefined) {
@@ -7737,11 +7613,9 @@ var uielto_toolbar_btngroup = {
           }, 50);
         }
         if (textarea_assembly_editor != null && e != "assembly") {
-          console.log("Cambio a: ", e);
           app._data.assembly_code = textarea_assembly_editor.getValue();
           code_assembly = textarea_assembly_editor.getValue();
           codemirrorHistory = textarea_assembly_editor.getHistory();
-          console.log("CodeMirrorHistory:", codemirrorHistory);
           textarea_assembly_editor.toTextArea();
         }
         app.$bvToast.hide();
@@ -8085,7 +7959,6 @@ function button_architecture() {
   );
 }
 function button_assembly() {
-  // console.log("demos al boton");
   return (
     '<b-button v-if="item==\'btn_assembly\'" class="btn btn-block btn-outline-secondary menuGroup btn-sm assembly_btn h-100 text-truncate"' +
     '          id="assembly_btn_sim"' +
@@ -8953,7 +8826,6 @@ var uielto_preload_architecture = {
       }
     },
     load_arch_select(e) {
-      console.log("Arquitectura que se carga:", e.alt);
       show_loading();
       if (e == null) {
         hide_loading();
@@ -9026,7 +8898,6 @@ var uielto_preload_architecture = {
         if (e.alt === "RISC-V32S"){
           if(window.Module !== undefined)
             clean_environment();
-          console.log("32bits");
           scriptas = document.createElement('script');
           scriptas.src = window.location.href + 'js/toolchain_compiler/32bits/as-new.js';
           scriptas.async = true;
@@ -9047,7 +8918,6 @@ var uielto_preload_architecture = {
           if(window.Module !== undefined)
             clean_environment();
           
-          console.log("64bits");
           scriptas = document.createElement('script');
           scriptas.src = window.location.href + 'js/toolchain_compiler/64bits/as-new.js';
           scriptas.async = true;
@@ -10899,6 +10769,197 @@ function getDebounceTime() {
     return 1e3;
   }
 }
+var uielto_multifile_editor = {
+  data : function(){
+    return {current_editor_tabs: app.tabs,
+            currentTabIndex: activeTabIndex,
+            tabskey: 0
+    };
+
+  },
+  methods: {
+    removeTab(index) {
+      let tabind = app.tabs.find(tab => tab.id === index);
+      if (tabind === undefined) return;
+      let tabid = tabind.id;
+      
+
+      
+
+      closeFile(app.tabs[tabid].title);
+      app.tabs.splice(tabid, 1);
+      for (let i = 0; i < app.tabs.length; i++){
+        if (app.tabs[i].id > tabid)
+          app.tabs[i].id = app.tabs[i].id - 1;
+      }
+
+      if (app.tabs.length > 0) {
+        let edited_f = assembly_files.find(f => f.editing_now === true);
+        let open_f = app.tabs.find(f => f.title === edited_f.filename);
+        if (open_f !== undefined) {
+          activeTabIndex = open_f.id;
+          showFile(open_f.title);
+        } else {
+          let changed = false;
+          for(var i = 0; i < app.tabs.length; i++){
+            if(app.tabs[i].id !== activeTabIndex && !changed){
+              activeTabIndex = app.tabs[i].id;
+              changed = true;
+              showFile(app.tabs[i].title);
+            }
+          }
+        }
+        
+      } else {
+        activeTabIndex = -1;
+      }
+      
+    },
+
+  },
+  watch: {
+    activeTabIndex(val) {
+      if (this.currentTabIndex !== val) {
+        this.currentTabIndex = val;
+      }
+    },
+    current_editor_tabs(newTabs, oldTabs) {
+        const lastTab = newTabs[newTabs.length - 1];
+        if (lastTab !== undefined){
+          activeTabIndex = lastTab.id;
+          this.$nextTick(() => {
+            this.currentTabIndex = lastTab.id;
+            this.tabskey++;
+          });
+        }else 
+        activeTabIndex = -1;
+    }
+  },
+
+  computed: {
+    currentTab: {
+      get() {
+        return this.currentTabIndex;
+      },
+      set(val) {
+        if (val !== this.currentTabIndex) {
+          this.currentTabIndex = val;
+          const tab = app.tabs.find(t => t.id === val);
+          if (tab) showFile(tab.title);
+          else { // limpiar el code mirror  
+          
+          }
+        }
+      }
+    }
+  },
+  template: 
+  "<b-tabs :key=\"tabskey\" content-class=\"mt-3\" v-model=\"currentTab\" >"+ // style=\"max-width: auto;\"
+  "  <b-tab v-for=\"tab in current_editor_tabs\" :value=\"tab.id\" :id=\"tab.title\" @click=\"showFile(tab.title)\" :title=\"tab.title\">" +
+  "    <template #title> "+
+  "    <span class=\"tab-title\">"+
+  "     {{ tab.title }}"+
+  "     <b-button variant=\"outline-danger\" size=\"sm\" class=\"close-btn\" @click.stop=\"removeTab(tab.id)\">X</b-button>"+
+  "    </span>"+
+  "    </template>"+
+  "  </b-tab>"+
+  "</b-tabs>"
+}
+Vue.component("multifile-editor", uielto_multifile_editor);
+
+var uielto_file_menu = {  // En cada entrada habra un objeto: {filename (string), assembly_code (string), to_compile (bool)}
+  props : {
+    files_to_list: {type: Array, required: true}
+  },
+  data: function () {
+    return {
+      fields : [
+        { key: 'Name', label: 'Name'},
+        { key: 'To_compile', label: 'To compile'}
+      ],
+    };
+  },
+  methods: {
+    modifyToCompile(filename){
+      
+      let file_index = this._props.files_to_list.findIndex(file => file.filename === filename);
+      
+      let assembly_index = assembly_files.findIndex(asmfile => asmfile.filename === filename);
+      
+      assembly_files[assembly_index].to_compile = !assembly_files[assembly_index].to_compile;
+      this._props.files_to_list[file_index].to_compile = !this._props.files_to_list[file_index].to_compile;
+    },
+    hideContextMenu(){
+      if (document.getElementById("contextMenu") !== null){
+        document.getElementById("contextMenu").style.display = "none";
+        selectedFile = null;
+      }
+    },
+    showContextMenu(event, filename){
+      
+      event.preventDefault();
+      selectedFile = event.target.textContent;
+
+      let menu = document.getElementById("contextMenu");
+
+      let x = event.pageX;
+      let y = event.pageY;
+      let menuWidth = menu.offsetWidth;
+      let menuHeight = menu.offsetHeight;
+      let windowWidth = window.innerWidth;
+      let windowHeight = window.innerHeight;
+
+      if (x + menuWidth > windowWidth) x = windowWidth - menuWidth - 5;
+      if (y + menuHeight > windowHeight) y = windowHeight - menuHeight - 5;
+
+
+      menu.style.left = x + "px";
+      menu.style.top = y + "px";
+      menu.style.display = "block";
+    }
+  },
+  computed: {
+    files: {
+      get() {
+        return this._props.files_to_list.map(file => ({Name :  file.filename, Selected: file.to_compile}));
+      },
+      set(newFile) {
+        newFile.forEach((newFile, i) => {
+          this._props.files_to_list.push({filename: newFile.filename, filename: newFile.to_compile});
+        })
+      }
+    }
+  },
+  mounted() {
+    document.addEventListener("click", this.hideContextMenu);
+  },
+  template: 
+
+  "<div style=\"overflow-x: auto; max-width: 100%;\">"+
+  " <b-table stripped hover :items=\"files\" :fields=\"fields\" style=\"width: 100%; table-layout:auto;\">"+
+  "   <template #cell(Name)=\"data\">"+
+  "     <div style=\"margin:2%;\" @contextmenu.prevent=\"(event) => showContextMenu(event, data.item.Name)\">{{ data.item.Name }}</div>"+
+  "   </template>"+
+  "   <template #cell(To_compile)=\"data\">"+
+  "      <b-form-checkbox switch v-model=\"data.item.Selected\" @change=\"modifyToCompile(data.item.Name)\"></b-form-checkbox>"+
+  "   </template>"+
+  " </b-table>"+
+  ' <div id="contextMenu" class="context-menu">'+
+  '   <ul>'+
+  '     <li onclick="openFile()">Abrir Fichero</li>'+
+  '     <li onclick="renameFile()">Renombrar Fichero</li>'+
+  '     <li onclick="deleteFile()">Eliminar Fichero</li>'+
+  '   </ul>'+
+  ' </div>'+
+  ""+
+  ""+
+  ""+
+  ""+
+  "</div>"
+
+}
+Vue.component("file-menu", uielto_file_menu);
+
 var uielto_textarea_assembly = {
   props: { browser: { type: String, required: true } },
   template:
@@ -12770,8 +12831,6 @@ var uielto_register = {
 
               show_value (register){
                 var ret = 0;
-
-                console.log(this.value_representation);
                 switch(this.value_representation){
                   case "signed":
                     if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
@@ -12948,13 +13007,10 @@ var uielto_register_vec = {
       return ret;
     },
     show_value_truncate_vec(register) {
-      // return "1";
-        // console.log(this.show_value_vec(register));
       var ret = this.show_value_vec(register).toString();
       if (ret.length > 8) {
         ret = ret.slice(0,8) + "...";
       }
-      // console.log("Ultima esperanza");
       return ret;
 
     },
@@ -14469,7 +14525,8 @@ try {
     el: "#app",
     data: {
       tabs: [],
-      activeTabIndex : 0,
+      files_list: [],
+      tabs_index: 0,
       render: 0,
       version: "",
       architecture_name: "",
@@ -14618,40 +14675,16 @@ try {
         this.target_port = this.target_ports[this.os];
       },
       addTab(filename) {
-        const newId = this.tabs.length + 1;
+        const newTabId = this.tabs.length;
         this.tabs.push({
-          id: newId,
+          id: newTabId,
           title: filename,
-          content: `Contenido de la tab ${filename}`
+          code: ""
         });
-        if (this.activeTabIndex === -1) {
-          this.activeTabIndex = 0;  // Selecciona la primera pestaña
-        } else {
-          this.activeTabIndex = this.tabs.length - 1;  // Selecciona la nueva pestaña
-        }
-        // let newTab = this.tabs.findIndex(tab => tab.id === newId);
-        // console.log("Antes: ",this.activeTabIndex);
-        // if (newTab !== this.tabs.length - 1)
-        //   this.activeTabIndex = newTab;
-        // else 
-        //   this.activeTabIndex = this.tabs.length - 2;
-        // this.$nextTick(() => {
-          
-          
-        //   console.log("Despues:" ,this.activeTabIndex);
-        
-        // });
-        // console.log(this.activeTabIndex);
-        // this.$forceUpdate();
-      },
-      removeTab(index) {
-        this.tabs.splice(index, 1);
-        console.log("Tamaño: ",this.tabs.length);
-        if (this.tabs.length > 0)
-          this.activeTabIndex = this.tabs.length - 1;
-        else (this.tabs.length === 0)
-          this.activeTabIndex = -1;
-        
+        this.$nextTick(() => {
+          activeTabIndex = newTabId;
+        });
+        return (this.tabs.length -1);
       }
     },
   });
@@ -14661,7 +14694,6 @@ try {
         err,
       "danger",
     );
-    console.log(info);
     setTimeout(function () {
       location.reload(true);
     }, 3e3);
@@ -14714,7 +14746,6 @@ try {
     return parseInt(b, 2);
   }
 } catch (e) {
-  console.log("le error");
   show_notification(
     "An error has ocurred, the simulator is going to restart.  \n Error: " + e,
     "danger",
@@ -14734,36 +14765,34 @@ function toCompile(_checkbox, filename){
         assembly_files[i].to_compile = false;
     }
   }
-  console.log("Esta checkeado? ", _checkbox.checked);
-  console.log("Assembly_files:", assembly_files);
 }
 
 function displayAssemblyFiles(asmfiles){
   for(let i = 0; i < asmfiles.length; i++){
-    let myFileTable = document.getElementById("files").getElementsByTagName('tbody')[0];
-    let newRow = document.createElement('tr');
-    newRow.setAttribute("id", "row-" + asmfiles[i].filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
-    newRow.setAttribute("oncontextmenu", `showContextMenu(event, '${myFileTable}')`);
-    let cellName = document.createElement("td");
-    cellName.textContent = asmfiles[i].filename;
-    let cellCompile = document.createElement("td");
-    cellCompile.classList.add("checkbox-container");
+    // let myFileTable = document.getElementById("files").getElementsByTagName('tbody')[0];
+    // let newRow = document.createElement('tr');
+    // newRow.setAttribute("id", "row-" + asmfiles[i].filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
+    // newRow.setAttribute("oncontextmenu", `showContextMenu(event, '${myFileTable}')`);
+    // let cellName = document.createElement("td");
+    // cellName.textContent = asmfiles[i].filename;
+    // let cellCompile = document.createElement("td");
+    // cellCompile.classList.add("checkbox-container");
 
-    let checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.classList.add("compile-checkbox");
-    checkbox.onchange = function() {
-      toCompile(this, asmfiles[i].filename);
-    };
-    if(asmfiles[i].to_compile)
-      checkbox.checked = true;
+    // let checkbox = document.createElement("input");
+    // checkbox.type = "checkbox";
+    // checkbox.classList.add("compile-checkbox");
+    // checkbox.onchange = function() {
+    //   toCompile(this, asmfiles[i].filename);
+    // };
+    // if(asmfiles[i].to_compile)
+    //   checkbox.checked = true;
 
-    cellCompile.appendChild(checkbox);
+    // cellCompile.appendChild(checkbox);
 
-    newRow.appendChild(cellName);
-    newRow.appendChild(cellCompile);
+    // newRow.appendChild(cellName);
+    // newRow.appendChild(cellCompile);
 
-    myFileTable.appendChild(newRow);
+    // myFileTable.appendChild(newRow);
 
     if(asmfiles[i].editing_now){
       openFile(asmfiles[i].filename);
@@ -14772,7 +14801,6 @@ function displayAssemblyFiles(asmfiles){
 }
 
 function newFile(){
-  console_log("Creando fichero");
 
   /* GENERACION DEL NUEVO FICHERO */
 
@@ -14783,65 +14811,22 @@ function newFile(){
   if(!filename_prompt.endsWith(".s"))
     filename_prompt = filename_prompt + ".s";
   
-  let myFileTable = document.getElementById("files").getElementsByTagName('tbody')[0];
-  let newRow = document.createElement('tr');
-  newRow.setAttribute("id", "row-" + filename_prompt.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
-  newRow.setAttribute("oncontextmenu", `showContextMenu(event, '${myFileTable}')`);
-  let cellName = document.createElement("td");
-  cellName.textContent = filename_prompt;
-  let cellCompile = document.createElement("td");
-  cellCompile.classList.add("checkbox-container");
-
-  let checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.classList.add("compile-checkbox");
-  checkbox.onchange = function() {
-    toCompile(this, filename_prompt);
-  };
-
-  cellCompile.appendChild(checkbox);
-
-  newRow.appendChild(cellName);
-  newRow.appendChild(cellCompile);
-
-  myFileTable.appendChild(newRow);
-
-  /* ACTUALIZACION DEL TOOLBAR DE FICHEROS */
-  app.addTab(filename_prompt);
-  let editorcont = document.getElementById("editor-container");
-
-  let divFile = document.createElement("div");
-  
-  divFile.classList.add(filename_prompt.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''), "btn", "btn-outline-secondary", "menuGroup", "btn-sm","simulator_btn", "btn_arch", "btn-secondary");
-  divFile.setAttribute("onclick", `showFile('${filename_prompt}')`);
-
-  let FilenameText = document.createElement("b");
-  FilenameText.textContent = filename_prompt;
-
-  let closeButton = document.createElement("button");
-  closeButton.classList.add("btn", "btn", "btn-outline-secondary", "menuGroup", "btn-sm", "simulator_btn", "btn_arch", "h-100", "btn-secondary");
-  // closeButton.setAttribute("onclick", "closeFile()");
-  closeButton.textContent = "X";
-
-  closeButton.onclick = function(event) {
-    event.stopPropagation();
-    closeFile(filename_prompt);
-  }
-
-  divFile.appendChild(FilenameText);
-  divFile.appendChild(closeButton);
-
-  editorcont.prepend(divFile);
+  /* ACTUALIZACION DEL EDITOR DE CÓDIGO */
 
   var newAssemblyFile =  {
     filename: filename_prompt,
-    code: "",
+    code: ".section .data\n\n# Declare your data to use here\n\n.section .bss\n.align 8\ntohost:\t.dword 0\n\n.section .text.init\n.globl _main\n\n# Complete your main function here\n_main:",
     to_compile: false,
     editing_now: false
   }
-  assembly_files.push(newAssemblyFile);
+  const newasm = assembly_files.find(asm => asm.filename === filename_prompt);
+  if (newasm === undefined){
 
-  showFile(filename_prompt);
+    assembly_files.push(newAssemblyFile);
+    app.files_list.push({filename: filename_prompt, to_compile: false});
+    const newId = app.addTab(filename_prompt);
+  }
+  openFile(filename_prompt);
 }
 
 function closeFile(filename){
@@ -14855,9 +14840,6 @@ function closeFile(filename){
     }
   }
   
-  let cierre = document.getElementsByClassName(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''))[0];
-  cierre.parentNode.removeChild(cierre);
-  console.log("Cerrando fichero", cierre);
 }
 
 function renameFile(){
@@ -14869,35 +14851,16 @@ function renameFile(){
   if(!new_filename.endsWith(".s"))
     new_filename = new_filename + ".s";
 
-  let ren_toolbar = document.getElementsByClassName(old_filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''))[0];
-  if(ren_toolbar !== undefined){
-    ren_toolbar.classList.remove(old_filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
-    ren_toolbar.classList.add(new_filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
-    ren_toolbar.onclick = function () {showFile(new_filename);};
-
-    ren_toolbar.childNodes[0].textContent = new_filename; // Rename of toolbar name
-    ren_toolbar.childNodes[1].onclick = function(event) {
-      event.stopPropagation();
-      closeFile(new_filename);
-    }
-  }
-
-  let ren_file = document.getElementById("row-" + old_filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
-  if(ren_file !== undefined){
-    ren_file.id = "row-" + new_filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, '');
-    ren_file.childNodes[0].textContent = new_filename;
-  }
-
-  // console.log("toolbar sons:", ren_toolbar.childNodes);
-  // console.log("file sons:", ren_file.childNodes);
-  for(let i = 0; i <assembly_files.length; i++){
+  for(let i = 0; i < assembly_files.length; i++){
     if (assembly_files[i].filename === old_filename){
       assembly_files[i].filename = new_filename;
+      app.files_list[i].filename = new_filename;
     }
   }
-
-
-
+  for (let i =0; i < app.tabs.length; i++){
+    if (app.tabs[i].title === old_filename)
+      app.tabs[i].title = new_filename;
+  }
 
 }
 
@@ -14906,21 +14869,19 @@ function deleteFile(){
   for(let i = 0; i <assembly_files.length; i++){
     if (assembly_files[i].filename === filename){
       assembly_files.splice(i,1);
+      app.files_list.splice(i,1);
       textarea_assembly_editor.setValue("");
     }
   }
 
-  // Ahora eliminamos del menu de ficheros y de la barra de navegacion
-  let del_toolbar = document.getElementsByClassName(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''))[0];
-  let del_file = document.getElementById("row-" + filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
-  if(del_toolbar !== undefined){
-    del_toolbar.parentNode.removeChild(del_toolbar);
-  }
-  if(del_file !== undefined){
-    del_file.parentNode.removeChild(del_file);
+  for (let i = 0; i < app.tabs.length; i++) {
+    
+    if (app.tabs[i].title === filename)
+      app.tabs.splice(i, 1);
+
   }
 
-  console.log("Borrar fichero");
+  console_log("Borrar fichero");
 }
 
 function openFile(name = ""){
@@ -14933,56 +14894,18 @@ function openFile(name = ""){
   let tabIndex = app.tabs.findIndex(tab => tab.title === filename);
 
   if (tabIndex !== -1){
-    return;
+    showFile(filename);
   }
   else {
     app.addTab(filename);
+    showFile(filename);
   }
 
 
-  // let checkit = document.getElementsByClassName(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
-  // if(checkit[0] === undefined){
-
-  //   let editorcont = document.getElementById("openedFiles");
-
-  //   // let divFile = document.createElement("div");
-  //   let btabFile = document.createElement("b-tab");
-    
-  //   btabFile.classList.add(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''), "active");
-  //   btabFile.title = filename;
-  //   // btabFile.setAttribute('active',"");
-  //   // divFile.classList.add(filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''), "btn", "btn-outline-secondary", "menuGroup", "btn-sm","simulator_btn", "btn_arch", "btn-secondary");
-  //   btabFile.setAttribute("onclick", `showFile('${selectedFile}')`);
-
-  //   // let FilenameText = document.createElement("b");
-  //   // FilenameText.textContent = filename;
-
-  //   // let closeButton = document.createElement("button");
-  //   // closeButton.classList.add("btn", "btn", "btn-outline-secondary", "menuGroup", "btn-sm", "simulator_btn", "btn_arch", "h-100", "btn-secondary");
-  //   // // closeButton.setAttribute("onclick", "closeFile()");
-  //   // closeButton.textContent = "X";
-
-  //   // closeButton.onclick = function(event) {
-  //   //   event.stopPropagation();
-  //   //   closeFile(filename);
-  //   // }
-
-  //   // divFile.appendChild(FilenameText);
-  //   // divFile.appendChild(closeButton);
-
-  //   editorcont.prepend(btabFile);
-  // }
-
-
-
-  console.log("Abrimos fichero: ", selectedFile);
-  showFile(filename);
 
 }
 
 function showFile(filename){
-  console.log("Abrimos el fichero: ", filename);
-  //Primero guardamos el fichero que se estaba editando
 
   let indice_file = assembly_files.findIndex(insn => insn.filename === filename);
     if(assembly_files[indice_file].editing_now)
@@ -15001,51 +14924,6 @@ function showFile(filename){
     }
   }
   console.log(assembly_files);
+  console.log("activo:", activeTabIndex);
   
 }
-var selectedFile = null;
-function showContextMenu(event, filename){
-  event.preventDefault();
-  selectedFile = event.target.textContent;
-  // console.log(event.target.textContent);
-
-  let menu = document.getElementById("contextMenu");
-
-  let x = event.pageX;
-  let y = event.pageY;
-  let menuWidth = menu.offsetWidth;
-  let menuHeight = menu.offsetHeight;
-  let windowWidth = window.innerWidth;
-  let windowHeight = window.innerHeight;
-
-  if (x + menuWidth > windowWidth) x = windowWidth - menuWidth - 5;
-  if (y + menuHeight > windowHeight) y = windowHeight - menuHeight - 5;
-
-
-  menu.style.left = x + "px";
-  menu.style.top = y + "px";
-  menu.style.display = "block";
-}
-
-function hideContextMenu(){
-  document.getElementById("contextMenu").style.display = "none";
-  selectedFile = null;
-}
-
-function toggleFileMenu()
-{
-  let fileMenu = document.getElementById("fileMenu");
-  let button = document.querySelector(".toggle-button");
-
-  if (fileMenu.style.display === "none") {
-    fileMenu.style.display = "block";
-    // button.textContent = "Ocultar Archivos";
-  } else {
-    fileMenu.style.display = "none";
-    // button.textContent = "Mostrar Archivos";
-  }
-
-}
-document.addEventListener("click", hideContextMenu);
-
-// window.instructions = instructions;

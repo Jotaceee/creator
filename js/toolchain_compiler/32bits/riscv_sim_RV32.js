@@ -9,7 +9,7 @@ var arguments_ = [];
 var hiden_executed, hiden_next_execute;
 var thisProgram = "./this.program";
 
-let registers_before_function = [ 
+var registers_before_function = [ 
   { name: "t0", can_operate : false},
   { name: "t1", can_operate : false},
   { name: "t2", can_operate : false},
