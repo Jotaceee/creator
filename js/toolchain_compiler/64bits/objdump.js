@@ -242,11 +242,11 @@ Module['print'] = function (message) {
     if (labelmatch[1] === "") 
       labelmatch[1] = "0";
     // console.log("Identificado:", labelmatch);
-    const allEqual = labelmatch[1] === labelmatch[1][0].repeat(labelmatch[1].length);
-    if (!allEqual)
+    // const allEqual = labelmatch[1] === labelmatch[1][0].repeat(labelmatch[1].length);
+    // if (!allEqual)
       exaaa.push(labelmatch[1].trim());
-    else 
-      exaaa.push(labelmatch[1][0].trim());
+    // else 
+      // exaaa.push(labelmatch[1][0].trim());
     exaaa.push("");
     exaaa.push("");
     exaaa.push(1);

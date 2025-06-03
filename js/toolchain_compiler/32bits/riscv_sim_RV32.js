@@ -3,11 +3,7 @@ var is_breakpoint = instructions[0].Break;
 var pc_sail = crex_findReg_bytag("program_counter");
 var last_execution_mode_run = -1;
 var pc_min = parseInt("80000000", 16);
-var Module = typeof Module != "undefined" ? Module : {};
-var moduleOverrides = Object.assign({}, Module);
-var arguments_ = [];
 var hiden_executed, hiden_next_execute;
-var thisProgram = "./this.program";
 
 var registers_before_function = [ 
   { name: "t0", can_operate : false},
@@ -32,6 +28,11 @@ var registers_before_function = [
 ]
 var callstack_convention = [];
 var inside_function = false;
+
+var Module = typeof Module != "undefined" ? Module : {};
+var moduleOverrides = Object.assign({}, Module);
+var arguments_ = [];
+var thisProgram = "./this.program";
 
 var quit_ = (status, toThrow) => {
   throw toThrow;
@@ -178,7 +179,7 @@ async function check_call_convention_temp_regs(instMatch) {
     if((instMatch[5] != "li" && instMatch[5] != "lui" && instMatch[5] != "la") ){
       for (var i = 0; i < callstack_convention[callstack_convention.length - 1].length; i++ ){
         (callstack_convention[callstack_convention.length - 1][i].name === instMatch[7] || callstack_convention[callstack_convention.length - 1][i].name === instMatch[8]) &&
-        (callstack_convention[callstack_convention.length - 1][i].can_operate === false) ? crex_show_notification("Possible failure in the parameter passing convention", "danger") : 0 ; 
+        (callstack_convention[callstack_convention.length - 1][i].can_operate === false) ? crex_show_notification("Possible failure in the parameter passing convention", "warning") : 0 ; 
       }
         
         // callstack_convention[callstack_convention.length - 1].name 
@@ -195,7 +196,7 @@ async function check_call_convention_temp_regs(instMatch) {
 
 Module['print'] = function (message) {
   if(message === "err call_convenction"){
-    crex_show_notification("Possible failure in the parameter passing convention", "danger");
+    crex_show_notification("Possible failure in the parameter passing convention", "warning");
   }
 
   var next_add_to_jump;

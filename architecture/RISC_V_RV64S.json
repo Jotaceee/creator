@@ -2,7 +2,7 @@
   "arch_conf": [
     {
       "name": "Name",
-      "value": "RISC-V (RV32IMFD)"
+      "value": "RISC-V SAIL (RISC-V 64bits)"
     },
     {
       "name": "Bits",
@@ -1871,11 +1871,11 @@
     },
     {
       "name": "stack start",
-      "value": "0x0000400000000000"
+      "value": "0x00007FFFFFFFFFFC"
     },
     {
       "name": "stack end",
-      "value": "0x00005FFFFFFFFFFF"
+      "value": "0x00007FFFFFFFFFFF"
     }
   ]
 }

@@ -5819,21 +5819,12 @@ function preprocess_as(file_p, content_p, enablefpd, enablevec) {
   }
   asarguments.unshift(march);
 
-  // if (enablefpd)
-  //   asarguments.unshift("-march=rv32imfd");
-  // if (enablevec){
-  //   asarguments.unshift("-march=rv32gcv", "-mabi=ilp32");
-  // }
-  // if (enablefpd && enablevec)
-  //   throw new Error("You have enabled Floating point extension and Vectorial Extension");
-  
   for (let i = 0; i < file_p.length; i++){
     asarguments.push(file_p[i]);
     asmfile.push(file_p[i]);
     asmcontent.push(content_p[i]);
   }
 
-  // console.log("argumentos", asarguments);
   run(asarguments);
   // para la version de 64bits run(["-march=rv64g", "-mabi=lp64d", "-o", "my_code_v2.o", "integer_code.s"]);
   if (!assembled)

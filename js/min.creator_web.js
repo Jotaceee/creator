@@ -1696,8 +1696,8 @@ function writeRegister(value, indexComp, indexElem, register_type, force=0) {
         null,
       );
     }
-    architecture.components[indexComp].elements[indexElem].value =
-      bi_intToBigInt(value, 10);
+    architecture.components[indexComp].elements[indexElem].value = value;
+      // bi_intToBigInt(value, 10);
     creator_callstack_writeRegister(indexComp, indexElem);
     if (
       architecture.components[indexComp].elements[
@@ -1705,7 +1705,10 @@ function writeRegister(value, indexComp, indexElem, register_type, force=0) {
       ].properties.includes("stack_pointer") !== false &&
       value != parseInt(architecture.memory_layout[4].value)
     ) {
-      writeStackLimit(parseInt(bi_intToBigInt(value, 10)));
+      if(is_32b_arch)
+        writeStackLimit(parseInt(bi_intToBigInt(value, 10)));
+      else
+        writeStackLimit(value);
     }
     if (typeof window !== "undefined") {
       btn_glow(
@@ -1943,11 +1946,16 @@ function updateSimple(comp, elem) {
   }
 }
 var word_size_bits = 32;
+if (!is_32b_arch)
+  word_size_bits = 64;
 var word_size_bytes = word_size_bits / 8;
 var main_memory = [];
 var main_memory_datatypes = {};
 var memory_hash = ["data_memory", "instructions_memory", "stack_memory"];
 function main_memory_get_addresses() {
+  // return main_memory /// TODO: Use this to search by addr field
+  //        .map((elem, index) => ({id: index, addr: elem.addr}))
+  //        .sort((a, b) => b.addr - a.addr);
   return Object.keys(main_memory).sort(function (a, b) {
     ia = parseInt(a);
     ib = parseInt(b);
@@ -2009,6 +2017,10 @@ function main_memory_read(addr) {
   if (typeof main_memory[addr] !== "undefined") {
     return main_memory[addr];
   }
+  const elem = main_memory.filter(add => add && typeof add.addr !== 'undefined')
+  .find(element => element.addr === addr);
+  if (elem !== null && elem !== undefined)
+    return elem;
   return main_memory_packs_forav(addr, "00");
 }
 function main_memory_write(addr, value) {
@@ -2095,24 +2107,41 @@ function main_memory_read_bydatatype(addr, type) {
     case "hu":
     case "half":
     case "half_word":
-      ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes / 2);
+      if (is_32b_arch)
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes / 2);
+      else
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes / 4);
       ret = parseInt(ret, 16);
       break;
     case "w":
     case "integer":
     case "word":
+      if (is_32b_arch)
+
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes);
+      else
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes / 2);
+      ret = parseInt(ret, 16);
+      break;
     case "dword":
-      ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes);
+      if (!is_32b_arch)
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes);
       ret = parseInt(ret, 16);
       break;
     case "float":
-      ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes);
+      if (is_32b_arch)
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes);
+      else 
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes / 2);
       ret = hex2float(ret);
       break;
     case "d":
     case "double":
     case "double_word":
-      ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes * 2);
+      if (is_32b_arch)
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes * 2);
+      else
+        ret = "0x" + main_memory_read_nbytes(addr,  word_size_bytes);
       ret = hex2double(ret);
       break;
     case "c":
@@ -2185,7 +2214,10 @@ function main_memory_write_bydatatype(addr, value, type, value_human) {
     case "h":
     case "half":
     case "half_word":
-      size = word_size_bytes / 2;
+      if (is_32b_arch)
+        size = word_size_bytes / 2;
+      else
+        size = word_size_bytes / 4;
       var value2 = creator_memory_value_by_type(value, type);
       ret = main_memory_write_nbytes(addr, value2, size, type);
       main_memory_datatypes_update_or_create(addr, value_human, size, type);
@@ -2194,19 +2226,28 @@ function main_memory_write_bydatatype(addr, value, type, value_human) {
     case "integer":
     case "float":
     case "word":
-      size = word_size_bytes;
+      if (is_32b_arch)
+        size = word_size_bytes;
+      else 
+        size = word_size_bytes / 2;
       ret = main_memory_write_nbytes(addr, value, size, type);
       main_memory_datatypes_update_or_create(addr, value_human, size, type);
       break;
     case "dword": 
-      size = word_size_bytes * 2;
+      if (is_32b_arch)
+        size = word_size_bytes * 2;
+      else
+        size = word_size_bytes;
       ret = main_memory_write_nbytes(addr, value, size, type);
       main_memory_datatypes_update_or_create(addr, value_human, size, type);
       break;
     case "d":
     case "double":
     case "double_word":
-      size = word_size_bytes * 2;
+      if (is_32b_arch)
+        size = word_size_bytes * 2;
+      else
+        size = word_size_bytes;
       ret = main_memory_write_nbytes(addr, value, size, type);
       main_memory_datatypes_update_or_create(addr, value_human, size, type);
       break;
@@ -2264,7 +2305,10 @@ function creator_memory_type2size(type) {
     case "hu":
     case "half":
     case "half_word":
-      size = word_size_bytes / 2;
+      if (is_32b_arch)
+        size = word_size_bytes / 2;
+      else
+        size = word_size_bytes / 4;
       break;
     case "w":
     case "wu":
@@ -2272,13 +2316,19 @@ function creator_memory_type2size(type) {
     case "float":
     case "integer":
     case "instruction":
-      size = word_size_bytes;
+      if (is_32b_arch)
+        size = word_size_bytes;
+      else 
+        size = word_size_bytes / 2;
       break;
     case "d":
     case "du":
     case "double":
     case "double_word":
-      size = word_size_bytes * 2;
+      if (is_32b_arch)
+        size = word_size_bytes * 2;
+      else
+        size = word_size_bytes;
       break;
   }
   return size;
@@ -2402,7 +2452,10 @@ function creator_memory_updaterow(addr) {
     return;
   }
   var addr_base = parseInt(addr);
-  addr_base = addr_base - (addr_base % word_size_bytes);
+  if (is_32b_arch)
+    addr_base = addr_base - (addr_base % word_size_bytes);
+  else 
+    addr_base = addr_base - (addr_base % (word_size_bytes /2));
   var elto = {
     addr: 0,
     addr_begin: "",
@@ -2416,27 +2469,35 @@ function creator_memory_updaterow(addr) {
     elto = app._data.main_memory[addr_base];
   } else {
     Vue.set(app._data.main_memory, addr_base, elto);
-    for (var i = 0; i < word_size_bytes; i++) {
-      elto.hex[i] = { byte: "00", tag: null };
+    if (is_32b_arch) {
+      for (var i = 0; i < word_size_bytes; i++) {
+        elto.hex[i] = { byte: "00", tag: null };
+      }
+    }else {
+      for (var i = 0; i < (word_size_bytes / 2); i++) {
+        elto.hex[i] = { byte: "00", tag: null };
+      }
     }
+    
   }
   elto.addr_begin =
     "0x" +
-    addr_base
+    main_memory[addr_base].addr
       .toString(16)
-      .padStart(word_size_bytes * 2, "0")
+      .padStart((is_32b_arch) ? word_size_bytes * 2 : word_size_bytes * 2, "0")
       .toUpperCase();
-  var addr_end = addr_base + word_size_bytes - 1;
+  var addr_end = main_memory[addr_base].addr  + ((is_32b_arch) ? word_size_bytes : word_size_bytes / 2) - 1;
   elto.addr_end =
     "0x" +
     addr_end
       .toString(16)
-      .padStart(word_size_bytes * 2, "0")
+      .padStart((is_32b_arch) ? word_size_bytes * 2 : word_size_bytes * 2, "0")
       .toUpperCase();
   elto.addr = addr_end;
   var v1 = {};
   elto.hex_packed = "";
-  for (var i = 0; i < word_size_bytes; i++) {
+  var aux_for = (is_32b_arch) ? word_size_bytes : (word_size_bytes / 2);
+  for (var i = 0; i < aux_for; i++) {
     v1 = main_memory_read(addr_base + i);
     elto.hex[i].byte = v1.bin;
     elto.hex[i].tag = v1.tag;
@@ -2447,7 +2508,7 @@ function creator_memory_updaterow(addr) {
   }
   elto.value = "";
   elto.size = 0;
-  for (var i = 0; i < word_size_bytes; i++) {
+  for (var i = 0; i < aux_for; i++) {
     if (typeof main_memory_datatypes[addr_base + i] == "undefined") {
       continue;
     }
@@ -2472,7 +2533,7 @@ function creator_memory_updateall() {
   var curr_addr = -1;
   for (var i = 0; i < addrs.length; i++) {
     curr_addr = parseInt(addrs[i]);
-    if (Math.abs(curr_addr - last_addr) > word_size_bytes - 1) {
+    if (Math.abs(curr_addr - last_addr) > (is_32b_arch) ? word_size_bytes : word_size_bytes / 2 - 1) {
       creator_memory_updaterow(addrs[i]);
       last_addr = curr_addr;
     }
@@ -2648,11 +2709,14 @@ var architecture = {
 var architecture_json = "";
 var textarea_assembly_editor;
 var codemirrorHistory = null;
-var assembly_files = []; //[{filename: "void", assembly_code: "nada", to_compile: false}]; // En cada entrada habra un objeto: {filename (string), assembly_code (string), to_compile (bool)}
+var assembly_files = []; // [{filename: "void", assembly_code: "nada", to_compile: false}]; // En cada entrada habra un objeto: {filename (string), assembly_code (string), to_compile (bool)}
 var code_assembly = "";
 var tokenIndex = 0;
 var nEnters = 0;
 var pc = 80000000;
+if (!is_32b_arch)
+  pc = 0;
+
 var address;
 var data_address;
 var stack_address;
@@ -2932,9 +2996,15 @@ function identify_pseudo(instruction_assembly){
     let parts = instruction_assembly.split(',');
     
     if (!(-2048 >= parseInt(parts[1]?.trim(), 16)) && !(parseInt(parts[1]?.trim(), 16) <= 2047)){
+      if (!is_32b_arch) {
+        list_user_instructions.push("");
+      }
       list_user_instructions.push("");
-    }else if(!(-2048 >= parseInt(parts[1]?.trim(), 10)) && !(parseInt(parts[1]?.trim(), 10) <= 2047))  
+    }else if(!(-2048 >= parseInt(parts[1]?.trim(), 10)) && !(parseInt(parts[1]?.trim(), 10) <= 2047)){
+      if (!is_32b_arch)
+        list_user_instructions.push("");
       list_user_instructions.push("");
+    }
   }
   else if (instruction_assembly.search("la") != -1)
     {
@@ -2943,10 +3013,11 @@ function identify_pseudo(instruction_assembly){
     } 
   else if (instruction_assembly.search("ecall") != -1)
     list_user_instructions.push(instruction_assembly);
-  else if (instruction_assembly.search("call") != -1)
+  else if (instruction_assembly.search("call") != -1 && !(instruction_assembly.search("ecall") != -1))
   {
     list_user_instructions.push(instruction_assembly);
-    list_user_instructions.push("");
+    if (is_32b_arch)
+      list_user_instructions.push("");
   } 
   else if (instruction_assembly.search("lw") != -1)
     {
@@ -2972,7 +3043,6 @@ function process_data_to_store_memory(){
 
       if(list_data_instructions[i].type === "asciz" || list_data_instructions[i].type === "ascii"){
         if (dumpdatainstructions[dump_ins][1].length % 2 !== 0) {
-          console.log("dumpdatains[dumpins]:", dumpdatainstructions[dump_ins][1]);
           console.warn("Dealineamiento de memoria en string.");
       }
 
@@ -3113,7 +3183,6 @@ function assembly_compiler()
             identify_pseudo(code_assembly_array[i]);
           }
         }
-        console.log(list_data_instructions);
         filenames.push(assembly_files[j].filename);
       }
       is_data = false;
@@ -3208,7 +3277,7 @@ function assembly_compiler()
                 }
                 for (var j = 0; j < elements; j++){
                   var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2) * 2, dumpdatainstructions[i][1].length - (4 * j));
-                  if (j === 0 )
+                  if (j === 0 ) 
                     creator_memory_data_compiler(init_add, element_to_insert, 2, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
                   else
                     creator_memory_data_compiler(init_add + j*2, element_to_insert, 2, null, (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
@@ -3414,14 +3483,19 @@ function assembly_compiler()
           stack_address = parseInt(architecture.memory_layout[4].value);
           writeMemory("00", parseInt(stack_address), "word") ;
           // stack_address = parseInt(architecture.memory_layout[4].value);
-          architecture.components[1].elements[2].value = bi_intToBigInt(
-            stack_address,
-            10,
-          );
-          architecture.components[1].elements[2].default_value = bi_intToBigInt(
-            stack_address,
-            10,
-          );
+          if (is_32b_arch) {
+            architecture.components[1].elements[2].value = bi_intToBigInt(
+              stack_address,
+              10,
+            );
+            architecture.components[1].elements[2].default_value = bi_intToBigInt(
+              stack_address,
+              10,
+            );
+          }else {
+            architecture.components[1].elements[2].value = stack_address;
+            architecture.components[1].elements[2].default_value = stack_address;
+          }
 
 
           show_notification("Compilation completed successfully","success");
@@ -6528,7 +6602,6 @@ function execute_instruction() {
         var handler_addres = 0;
         writeRegister(handler_addres, pc_reg.indexComp, pc_reg.indexElem);
         get_execution_index(draw);
-        console.log(i_reg);
         writeRegister(0, i_reg.indexComp, i_reg.indexElem);
       }
     }
@@ -7179,12 +7252,16 @@ function writeStackLimit(stackLimit) {
   } else {
     var diff = parseInt(architecture.memory_layout[4].value) - stackLimit;
     if (diff > 0) {
-      creator_memory_zerofill(stackLimit, diff);
+      creator_memory_zerofill(stackLimit, diff);  
     }
     track_stack_setsp(stackLimit);
-    architecture.memory_layout[4].value =
-      "0x" + stackLimit.toString(16).padStart(8, "0").toUpperCase();
-  }
+    if (is_32b_arch)
+      architecture.memory_layout[4].value =
+        "0x" + stackLimit.toString(16).padStart(8, "0").toUpperCase();
+    else
+      architecture.memory_layout[4].value = 
+        "0x" + stackLimit.toString(16).padStart(16, "0").toUpperCase();
+    }
 }
 var totalStats = 0;
 var stats_value = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -8912,6 +8989,9 @@ var uielto_preload_architecture = {
             });
   
           is_32b_arch = true;
+          word_size_bits = 32;
+          word_size_bytes = word_size_bits / 8;
+          pc = 0;
         }
         else if(e.alt === "RISC-V64S"){
 
@@ -8931,6 +9011,9 @@ var uielto_preload_architecture = {
             });
   
           is_32b_arch = false;
+          word_size_bits = 64;
+          word_size_bytes = word_size_bits / 8;
+          pc = 80000000;
         }
 
         var aux_architecture = cfg;
@@ -10794,8 +10877,9 @@ var uielto_multifile_editor = {
       }
 
       if (app.tabs.length > 0) {
-        let edited_f = assembly_files.find(f => f.editing_now === true);
-        let open_f = app.tabs.find(f => f.title === edited_f.filename);
+        // let edited_f = assembly_files.find(f => f.editing_now === true);
+        // let open_f = app.tabs.find(f => f.title === edited_f.filename);
+        let open_f = app.tabs[app.tabs.length - 1];
         if (open_f !== undefined) {
           activeTabIndex = open_f.id;
           showFile(open_f.title);
@@ -13657,7 +13741,6 @@ var uielto_csr_register = {
           return "0x"+register.value;
       },
       update_csr_value(register){
-          console.log("actulizar valor");
       }
   },
   template: 
@@ -13761,6 +13844,7 @@ var uielto_memory = {
   methods: {
     filter(row, filter) {
       var addr = parseInt(row.addr_begin);
+      // console.log(row);
       if (
         this.memory_segment == "instructions_memory" &&
         addr >= parseInt(architecture.memory_layout[0].value) &&
@@ -13856,9 +13940,7 @@ var uielto_memory = {
   },
   computed: {
     main_memory_items() {
-      return Object.entries(this.main_memory)
-        .sort((a, b) => a[0] - b[0])
-        .map((a) => a[1]);
+      return Object.values(this.main_memory).sort((a, b) => a.addr - b.addr);
     },
   },
   template:
@@ -14923,7 +15005,4 @@ function showFile(filename){
       assembly_files[i].editing_now = true;
     }
   }
-  console.log(assembly_files);
-  console.log("activo:", activeTabIndex);
-  
 }
