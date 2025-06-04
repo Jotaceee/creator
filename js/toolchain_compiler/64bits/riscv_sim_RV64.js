@@ -90,22 +90,23 @@ if (ENVIRONMENT_IS_SHELL) {
 }
 
 // const instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+) ([^,]+), ([^,]+)(?:, (.+))?/;
-var instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+)(?: ([^,]+), ([^,]+)(?:, (.+))?)?/;
-var registerExp = /(x\d+) (<-) 0x([0-9A-Fa-f]+)/; // /(x\d+) (<-|->) 0x([0-9A-Fa-f]+)/;
+var instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) ([\w.]+)(?: ([^,]+), ([^,]+)(?:, (.+))?)?/;
+var registerExp = /([xf]\d+) (<-) 0x([0-9A-Fa-f]+)/; // /(x\d+) (<-|->) 0x([0-9A-Fa-f]+)/;
 var vectorExp = /(v\d+) (<-) 0x([0-9A-Fa-f]+)/;
 var memoryExp = /mem\[0x([0-9A-Fa-f]+)\]\s*(<-|->)\s*0x([0-9A-Fa-f]+)/;
-var CSRTypeExp = /(CSR\S*)\s+(\S+)\s+(\S+)\s+(0x)([\dA-Fa-f]{1,8})/;
+var CSRTypeExp = /(CSR\S*)\s+(\S+)\s+(\S+)\s+(0x)([\dA-Fa-f]{1,16})/;
 var CSRExp = /^(CSR)\s+(\w+)\s+(<-|->)\s+0x([0-9a-fA-F]+)(?:\s+(.*))?$/;
-var jumpExp = /Next_PC:\s*(0x[0-9a-fA-F]+)/;
+var jumpExp = /Next_PC:\s*0x([0-9a-fA-F]+)/;
 // var displayExp = /^[A-Za-z\s]+:\s*(.*)$/;
 var displayExp = /^([\w\s]+):\s*(.*)$/;       
 var userMode = false;
 var instoper = "";
 var syscall_print_code = -1;
 var prev_add_to_jump;
+// var type_to_write;
 
 async function check_call_convention_temp_regs(instMatch) {
-  if(((instMatch[7] != undefined && (instMatch[7].includes("t") || (instMatch[7].includes("s") && !instMatch[7].includes("sp")) ) ) || (instMatch[8] != undefined && (instMatch[8].includes("t") || (instMatch[8].includes("s") && !instMatch[8].includes("sp")) ))) && inside_function) {
+  if(((instMatch[7] != undefined && (instMatch[7].includes("t") || (instMatch[7].includes("s") && !instMatch[7].includes("sp")) ) ) || (instMatch[8] != undefined && (instMatch[8].includes("t") || (instMatch[8].includes("s") && !instMatch[8].includes("sp")) ))) && instMatch[6] !== undefined && inside_function) {
     if((instMatch[5] != "li" && instMatch[5] != "lui" && instMatch[5] != "la") ){
       for (var i = 0; i < callstack_convention[callstack_convention.length - 1].length; i++ ){
         (callstack_convention[callstack_convention.length - 1][i].name === instMatch[7] || callstack_convention[callstack_convention.length - 1][i].name === instMatch[8]) &&
@@ -116,7 +117,7 @@ async function check_call_convention_temp_regs(instMatch) {
 
     }
   }
-  if ((instMatch[6].includes("t") || (instMatch[6].includes("s") && !instMatch[6].includes("sp"))) && inside_function) {
+  if (instMatch[6] !== undefined && (instMatch[6].includes("t") || (instMatch[6].includes("s") && !instMatch[6].includes("sp"))) && inside_function) {
     for (var i = 0; i < callstack_convention[callstack_convention.length - 1].length; i++ ){
       callstack_convention[callstack_convention.length - 1][i].can_operate = (callstack_convention[callstack_convention.length - 1][i].name === instMatch[6]) ? true : callstack_convention[callstack_convention.length - 1][i].can_operate; 
     }
@@ -147,6 +148,8 @@ Module['print'] = function (message) {
   let jumpMatch = message.match(jumpExp);
 
   if (jumpMatch){
+    jumpMatch[1] = "0x" + jumpMatch[1].replace(/^0+/, '');
+    console.log(jumpMatch);
     const current_ins = instructions.findIndex(insn => insn.Address === (jumpMatch[1].toLowerCase()));
     
       for (var i = 0; i < instructions.length; i++){
@@ -205,7 +208,12 @@ Module['print'] = function (message) {
     //Actualizamos el pc
     writeRegister(parseInt(instMatch[3], 16), pc_sail.indexComp, pc_sail.indexElem);
     // console.log("PC actual:",pc_sail);
-
+    // if ((instMatch[5].includes("w") || instMatch[5].includes(".s") || instMatch[5].includes(".w")) && !instMatch.includes(".d"))
+    //   type_toWrite = 32;
+    // else if (instMatch[5].includes("d"))
+    //   type_toWrite = 64;
+    // else 
+    //   type_toWrite = 0;
     userMode = true;
     console.log("Instruccion: ", instMatch);
     const current_ins = instructions.findIndex(insn => ( '0x' + (insn.Address.slice(2)).padStart(16, '0')) === ("0x"+instMatch[3].toLowerCase()));
@@ -397,8 +405,26 @@ Module['print'] = function (message) {
     // En caso de ser escritura '<-' pintamos el valor en el registro que corresponde
     if (regiMatch[2] === '<-'){
       let regtowrite = crex_findReg(regiMatch[1]);
-      // console.log("Registro identificado: ", regtowrite);
-      // if (regiMatch[1] !== 'x2')
+      if (regtowrite.indexComp === 2){
+        if (regiMatch[3].startsWith("0x")) regiMatch[3] = regiMatch[3].slice(2).replace(/^0+/, '');
+        else regiMatch[3] = regiMatch[3].replace(/^0+/, '');
+        if (regiMatch[3].length <= 8){
+          regiMatch[3] = regiMatch[3].padStart(8, "0");
+          writeRegister(hex2float(regiMatch[3]), regtowrite.indexComp, regtowrite.indexElem, "SFP-Reg");
+        }
+        else{
+          // if (type_toWrite === 32){
+          //   regiMatch[3] = regiMatch[3].slice(8,16);
+          //   writeRegister(hex2float(regiMatch[3]), regtowrite.indexComp, regtowrite.indexElem, "SFP-Reg");
+          // }
+          // else if (type_toWrite === 64)
+          //   writeRegister(hex2double(regiMatch[3]), regtowrite.indexComp, regtowrite.indexElem, "DFP-Reg");
+          // else 
+            writeRegister(hex2double(regiMatch[3]), regtowrite.indexComp, regtowrite.indexElem, "DFP-Reg");
+          // type_to_write = 0;
+        }
+      }
+      else  
         writeRegister(parseInt(regiMatch[3], 16), regtowrite.indexComp, regtowrite.indexElem);
     }
     
@@ -4517,8 +4543,8 @@ var wasmImports = {
 var wasmExports;
 createWasm();
 var ___wasm_call_ctors = createExportWrapper("__wasm_call_ctors", 0);
-var _malloc = createExportWrapper("malloc", 1);
-var _free = createExportWrapper("free", 1);
+var _malloc = (Module["_malloc"] = createExportWrapper("malloc", 1));
+var _free = (Module["_free"] = createExportWrapper("free", 1));
 var _send_int_to_C = (Module["_send_int_to_C"] = createExportWrapper(
   "send_int_to_C",
   1,

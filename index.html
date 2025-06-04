@@ -100,14 +100,14 @@
     </style>
     <!-- Global site tag (gtag.js) - Google Analytics -->
     <!-- Google tag (gtag.js) - GA4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-X30SC9SWE2"></script>
+    <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-X30SC9SWE2"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
 
       gtag('config', 'G-X30SC9SWE2');
-    </script>
+    </script> -->
 
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -477,10 +477,15 @@
                     <b-row class="d-flex justify-content-center align-items-center" style="margin-bottom: 3%; width: 100%;">
                       <b-button @click="newFile()" variant="outline-secondary" >New File +</b-button>
                     </b-row>
+                    <span class="h5">Files</span>
                     <b-row class="d-flex justify-content-center align-items-center" > <!-- Ficheros creados -->
                       <file-menu :files_to_list="files_list"></file-menu>
                     </b-row>
 
+                    <span class="h5">Libraries</span>
+                    <b-row class="d-flex justify-content-center align-items-center" style="margin-top: 5%;" > <!-- Librerias -->
+                      <applied-libs ></applied-libs>
+                    </b-row>
 
                   </b-col>
                   
@@ -488,6 +493,7 @@
                     <div id="editor-container"> 
                       <b-row> <!-- Ficheros abiertos -->
                         <multifile-editor editor_tabs="tabs" TabIndex="activeTabIndex"></multifile-editor>
+
                       </b-row>
 
                       <b-row>  <!-- Area de codificación-->

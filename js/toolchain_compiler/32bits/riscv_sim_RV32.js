@@ -160,8 +160,8 @@ if (ENVIRONMENT_IS_SHELL) {
 }
 
 // const instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+) ([^,]+), ([^,]+)(?:, (.+))?/;
-var instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+)(?: ([^,]+), ([^,]+)(?:, (.+))?)?/;
-var registerExp = /(x\d+) (<-) 0x([0-9A-Fa-f]+)/; // /(x\d+) (<-|->) 0x([0-9A-Fa-f]+)/;
+var instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) ([\w.]+)(?: ([^,]+), ([^,]+)(?:, (.+))?)?/;
+var registerExp = /([xf]\d+) (<-) 0x([0-9A-Fa-f]+)/; // /(x\d+) (<-|->) 0x([0-9A-Fa-f]+)/;
 var vectorExp = /(v\d+) (<-) 0x([0-9A-Fa-f]+)/;
 var memoryExp = /mem\[0x([0-9A-Fa-f]+)\]\s*(<-|->)\s*0x([0-9A-Fa-f]+)/;
 var CSRTypeExp = /(CSR\S*)\s+(\S+)\s+(\S+)\s+(0x)([\dA-Fa-f]{1,8})/;
@@ -175,7 +175,7 @@ var syscall_print_code = -1;
 var prev_add_to_jump;
 
 async function check_call_convention_temp_regs(instMatch) {
-  if(((instMatch[7] != undefined && (instMatch[7].includes("t") || (instMatch[7].includes("s") && !instMatch[7].includes("sp")) ) ) || (instMatch[8] != undefined && (instMatch[8].includes("t") || (instMatch[8].includes("s") && !instMatch[8].includes("sp")) ))) && inside_function) {
+  if(((instMatch[7] != undefined && (instMatch[7].includes("t") || (instMatch[7].includes("s") && !instMatch[7].includes("sp")) ) ) || (instMatch[8] != undefined && (instMatch[8].includes("t") || (instMatch[8].includes("s") && !instMatch[8].includes("sp")) ))) && instMatch[6] !== undefined && inside_function) {
     if((instMatch[5] != "li" && instMatch[5] != "lui" && instMatch[5] != "la") ){
       for (var i = 0; i < callstack_convention[callstack_convention.length - 1].length; i++ ){
         (callstack_convention[callstack_convention.length - 1][i].name === instMatch[7] || callstack_convention[callstack_convention.length - 1][i].name === instMatch[8]) &&
@@ -186,7 +186,7 @@ async function check_call_convention_temp_regs(instMatch) {
 
     }
   }
-  if ((instMatch[6].includes("t") || (instMatch[6].includes("s") && !instMatch[6].includes("sp"))) && inside_function) {
+  if (instMatch[6] !== undefined && (instMatch[6].includes("t") || (instMatch[6].includes("s") && !instMatch[6].includes("sp"))) && inside_function) {
     for (var i = 0; i < callstack_convention[callstack_convention.length - 1].length; i++ ){
       callstack_convention[callstack_convention.length - 1][i].can_operate = (callstack_convention[callstack_convention.length - 1][i].name === instMatch[6]) ? true : callstack_convention[callstack_convention.length - 1][i].can_operate; 
     }
@@ -275,6 +275,7 @@ Module['print'] = function (message) {
     //Actualizamos el pc
     writeRegister(parseInt(instMatch[3], 16), pc_sail.indexComp, pc_sail.indexElem);
     // console.log("PC actual:",pc_sail);
+
 
     userMode = true;
     console.log("Instruccion: ", instMatch);
@@ -459,6 +460,19 @@ Module['print'] = function (message) {
       let regtowrite = crex_findReg(regiMatch[1]);
       // console.log("Registro identificado: ", regtowrite);
       // if (regiMatch[1] !== 'x2')
+      if (regtowrite.indexComp === 2){
+        if (regiMatch[3].startsWith("0x")) regiMatch[3] = regiMatch[3].slice(2).replace(/^0+/, '');
+        else regiMatch[3] = regiMatch[3].replace(/^0+/, '');
+        if (regiMatch[3].length <= 8){
+          regiMatch[3] = regiMatch[3].padStart(8, "0");
+          writeRegister(hex2float(regiMatch[3]), regtowrite.indexComp, regtowrite.indexElem, "SFP-Reg");
+        }
+        else{
+            writeRegister(hex2double(regiMatch[3]), regtowrite.indexComp, regtowrite.indexElem, "DFP-Reg");
+        }
+          
+      }
+      else  
         writeRegister(parseInt(regiMatch[3], 16), regtowrite.indexComp, regtowrite.indexElem);
     }
     

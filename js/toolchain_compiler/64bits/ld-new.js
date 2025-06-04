@@ -15,6 +15,7 @@
 var Module = typeof Module != "undefined" ? Module : {};
 var objfile, linkfile, outputfile, libfile;
 var errld = -1;
+var libnames = [];
 
 // Determine the runtime environment we are in. You can customize this by
 // setting the ENVIRONMENT setting at compile time (see settings.js).
@@ -5208,8 +5209,14 @@ function run(args = arguments_) {
     
     FS.writeFile('input.o' /*'output.o'*/, objfile);
     FS.writeFile('linker.ld', linkfile.toString());
-    if (libfile !== undefined)
-      FS.writeFile('lib.o', libfile);
+    // if (libfile !== undefined)
+    //   FS.writeFile('lib.o', libfile);
+    if (libnames.length !== 0){
+      for(let i = 0; i < libfile.length; i++){
+        if (libfile[i].apply)
+          FS.writeFile(libfile[i].name, libfile[i].lib);
+      }
+    }
     console.log("Ficheros ld: ", FS.readdir("./"));
     preMain();
     Module["onRuntimeInitialized"]?.();
@@ -5246,15 +5253,25 @@ if (Module["preInit"]) {
 // shouldRunNow refers to calling main(), not run().
 var shouldRunNow = false;
 
-function preprocess_ld(objectfile, linkerfile, lib_file = undefined){
+function preprocess_ld(objectfile, linkerfile, lib_file = []){
   
   console.log("Antes");
   outputfile = undefined;
   objfile = objectfile;
   linkfile = linkerfile;
-  if(lib_file !== undefined){
-    libfile = lib_file;
-    run(["-T", "linker.ld", "-o", "output.elf", "input.o", "lib.o"]);
+  libnames.length = 0;
+  if(lib_file.length !== 0 ){
+    for (let i = 0; i < lib_file.length; i++) {
+      if (lib_file[i].apply)
+        libnames.push(lib_file[i].name);
+    }
+    if (libnames.length !== 0) {
+      libfile = lib_file;
+      run(["-T", "linker.ld", "-o", "output.elf", "input.o", ...libnames/*"lib.o"*/]);
+    }
+    else 
+      run(["-T", "linker.ld", "-o", "output.elf", "input.o"]);
+
   }
   else 
     run(["-T", "linker.ld", "-o", "output.elf", "input.o"]);

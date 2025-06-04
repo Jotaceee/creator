@@ -285,7 +285,7 @@ async function waitForFunction(maxAttemps = 50) {
     attemps++;
   }
   if(load_binary)
-    elffile = preprocess_ld(objectcontent, linkercontent, update_binary); 
+    elffile = preprocess_ld(objectcontent, linkercontent, app.update_binary); 
   else 
     elffile = preprocess_ld(objectcontent, linkercontent);
 
@@ -422,13 +422,13 @@ function register_value_serialize(architecture) {
 }
 var is_ga_initialize = false;
 function creator_ga(category, action, label) {
-  if (typeof gtag !== "undefined") {
-    gtag("event", label, {
-      event_category: "creator_" + category,
-      event_action: action,
-      event_label: label,
-    });
-  }
+  // if (typeof gtag !== "undefined") {
+  //   gtag("event", label, {
+  //     event_category: "creator_" + category,
+  //     event_action: action,
+  //     event_label: label,
+  //   });
+  // }
 }
 function preload_load_example(data, url) {
   if (url == null) {
@@ -602,20 +602,16 @@ function hex2char8(hexvalue) {
   return characters;
 }
 function hex2float(hexvalue) {
-  var value = hexvalue.split("x");
-  if (typeof value[1] != "undefined" && value[1].length > 8) {
-    value[1] = value[1].substring(0, 8);
+  if (hexvalue.startsWith("0x")) hexvalue = hexvalue.slice(2);
+  // else hexvalue = hexvalue.slice(8);
+
+  const float_bytes = new Uint8Array(4);
+  for (let i = 0; i < 4; i++){
+    float_bytes[i] = parseInt(hexvalue.slice(i * 2, i * 2 + 2), 16);
   }
-  var value_bit = "";
-  for (var i = 0; i < value[1].length; i++) {
-    var aux = value[1].charAt(i);
-    aux = parseInt(aux, 16).toString(2).padStart(4, "0");
-    value_bit = value_bit + aux;
-  }
-  value_bit = value_bit.padStart(32, "0");
-  var buffer = new ArrayBuffer(4);
-  new Uint8Array(buffer).set(value_bit.match(/.{8}/g).map(binaryStringToInt));
-  return new DataView(buffer).getFloat32(0, false);
+
+  var view = new DataView(float_bytes.buffer);
+  return view.getFloat32(0, false);
 }
 function uint_to_float32(value) {
   var buf = new ArrayBuffer(4);
@@ -701,17 +697,16 @@ function bin2hex(s) {
   return ret;
 }
 function hex2double(hexvalue) {
-  var value = hexvalue.split("x");
-  var value_bit = "";
-  for (var i = 0; i < value[1].length; i++) {
-    var aux = value[1].charAt(i);
-    aux = parseInt(aux, 16).toString(2).padStart(4, "0");
-    value_bit = value_bit + aux;
+  if (hexvalue.startsWith("0x")) hexvalue = hexvalue.slice(2);
+  // else hexvalue = hexvalue.slice(8);
+
+  const double_bytes = new Uint8Array(8);
+  for (let i = 0; i < 8; i++){
+    double_bytes[i] = parseInt(hexvalue.slice(i * 2, i * 2 + 2), 16);
   }
-  value_bit = value_bit.padStart(64, "0");
-  var buffer = new ArrayBuffer(8);
-  new Uint8Array(buffer).set(value_bit.match(/.{8}/g).map(binaryStringToInt));
-  return new DataView(buffer).getFloat64(0, false);
+
+  var view = new DataView(double_bytes.buffer);
+  return view.getFloat64(0, false);
 }
 function float2int_v2(value) {
   return parseInt(float2bin(value), 2);
@@ -1834,6 +1829,8 @@ function writeRegister(value, indexComp, indexElem, register_type, force=0) {
             bi_floatToBigInt(value);
         }
         if (register_type === "DFP-Reg") {
+          console.log(value);
+          console.log(value.toString(16));
           architecture.components[indexComp].elements[indexElem].value =
             bi_doubleToBigInt(value);
         }
@@ -2017,10 +2014,12 @@ function main_memory_read(addr) {
   if (typeof main_memory[addr] !== "undefined") {
     return main_memory[addr];
   }
-  const elem = main_memory.filter(add => add && typeof add.addr !== 'undefined')
-  .find(element => element.addr === addr);
-  if (elem !== null && elem !== undefined)
-    return elem;
+  if (!is_32b_arch) {
+    const elem = main_memory.filter(add => add && typeof add.addr !== 'undefined')
+    .find(element => element.addr === addr);
+    if (elem !== null && elem !== undefined)
+      return elem;
+  }
   return main_memory_packs_forav(addr, "00");
 }
 function main_memory_write(addr, value) {
@@ -2817,8 +2816,9 @@ var tag_instructions = {};
 var instructions_binary = [];
 var data = [];
 var data_tag = [];
-var code_binary = undefined; 
-var update_binary = undefined; 
+// var code_binary = undefined; 
+// var update_binary = undefined; 
+// var update_binary = [];
 var load_binary = false;
 
 function load_arch_select(cfg) {
@@ -3250,11 +3250,12 @@ function assembly_compiler()
               visible: true,
               hide: false,
             });
+            console.log("entrada: ", entry_elf);
             if(is_32b_arch){
               if (dumptextinstructions[i][0] === entry_elf)
                 instructions[i]._rowVariant = 'success';
             } else {
-              if ((dumptextinstructions[i][0].padStart(16, '0')) === entry_elf)
+              if ((dumptextinstructions[i][0]) === entry_elf)
                 instructions[i]._rowVariant = 'success';
             }
           }
@@ -7405,9 +7406,15 @@ function kbd_read_string(keystroke, params) {
   
   stringToUTF8(value, buffer, lengthBytes);
   
-  Module._send_string_to_C(buffer);
+  if (is_32b_arch){
+    Module._send_string_to_C(buffer);
+    Module._free(buffer);
+  }
+  else{
+    Module._send_string_to_C(BigInt(buffer));
+    Module._free(BigInt(buffer));
+  }
   
-  Module._free(buffer);
   execution_mode_run = last_execution_mode_run;
   last_execution_mode_run = -1;
   return value;
@@ -7682,7 +7689,7 @@ var uielto_toolbar_btngroup = {
               
             }
             textarea_assembly_editor.setValue(code_assembly);
-            if (update_binary !== undefined) {
+            if (app.update_binary.length !== 0 ) {
               $("#divAssembly").attr("class", "col-lg-10 col-sm-12");
               $("#divTags").attr("class", "col-lg-2 col-sm-12");
               $("#divTags").show();
@@ -7800,8 +7807,9 @@ var uielto_toolbar_btngroup = {
       }, 75);
     },
     remove_library() {
-      update_binary = undefined; //undefined;
-      code_binary = undefined;
+      // update_binary = undefined; //undefined;
+      app.update_binary.length = 0;
+      // code_binary = undefined;
       load_binary = false;
       $("#divAssembly").attr("class", "col-lg-12 col-sm-12");
       $("#divTags").attr("class", "col-lg-0 col-sm-0");
@@ -10672,7 +10680,7 @@ var uielto_load_library = {
   },
   methods: {
     library_update() {
-      if (update_binary.length !== 0) {
+      if (app.update_binary.length !== 0) {
 
         load_binary = true;
         $("#divAssembly").attr("class", "col-lg-10 col-sm-12");
@@ -10694,11 +10702,13 @@ var uielto_load_library = {
       for (var i = 0; i < files.length; i++) {
         file = files[i];
         reader = new FileReader();
+        var arrayBuffer;
         reader.onload = function (ev) {
-          const arrayBuffer = ev.target.result;
-          update_binary = new Uint8Array(arrayBuffer);
+          arrayBuffer = ev.target.result;
+          console.log("nombre: ", file);
+          app.update_binary.push({name : file.name, lib :new Uint8Array(arrayBuffer), apply: true});
+        
         };
-        // reader.onloadend = onFileLoaded;
         reader.readAsArrayBuffer(file);
         // update_binary = new Uint8Array(code_binary);
       }
@@ -10950,6 +10960,48 @@ var uielto_multifile_editor = {
   "</b-tabs>"
 }
 Vue.component("multifile-editor", uielto_multifile_editor);
+
+var uielto_applied_libs = {
+  // variable de control update_binary
+  data: function (){
+    return {
+      fields: [
+          {key: "Name", label: "Name"},
+          {key: "Apply", label: "Apply"}
+      ]
+    }
+  },
+  methods: {
+    modifyToApply(filename){
+      let lib_index = this.libs_to_list.findIndex(file => file.name === filename);
+      let binary_index = app.update_binary.findIndex(binary => binary.name === filename);
+
+      console.log(binary_index);
+      app.update_binary[binary_index].apply = !app.update_binary[binary_index].apply;
+      this.libs_to_list[lib_index].apply = !this.libs_to_list[lib_index].apply;
+      console.log(app.update_binary);
+    }
+
+  },
+  computed : {
+    libs_to_list() {
+      return app.update_binary;
+    }
+    
+  }, 
+  template:
+  "<div style=\"overflow-x: auto; max-width: 100%;\">"+
+  " <b-table stripped hover :items=\"libs_to_list\" :fields=\"fields\" style=\"width: 100%; table-layout:auto;\">"+
+  "   <template #cell(Name)=\"data\">"+
+  "     <div style=\"margin:2%;\">{{ data.item.name }}</div>"+
+  "   </template>"+
+  "   <template #cell(Apply)=\"data\">"+
+  "      <b-form-checkbox switch v-model=\"data.item.apply\" @change=\"modifyToApply(data.item.name)\"></b-form-checkbox>"+
+  "   </template>"+
+  " </b-table>"+
+  "</div>"
+}
+Vue.component("applied-libs", uielto_applied_libs);
 
 var uielto_file_menu = {  // En cada entrada habra un objeto: {filename (string), assembly_code (string), to_compile (bool)}
   props : {
@@ -13239,6 +13291,7 @@ var uielto_register_popover = {
                         ret = hex2float("0x"+(((register.value).toString(16)).padStart(8, "0")));
                       }
                       else {
+                        console.log(register);
                         ret = bi_BigIntTofloat(register.value);
                       }
                       break;
@@ -14621,11 +14674,12 @@ try {
       stack_total_list: 40,
       notification_time: 1500,
       instruction_help_size: 33,
-      autoscroll: true,
-      font_size: 15,
-      c_debug: false,
-      c_kernel: true,
-      c_sudo: false,
+      autoscroll: true, 
+      font_size: 15, 
+      c_debug: false, 
+      c_kernel: true, 
+      c_sudo: false, 
+      update_binary: [], 
       dark: false,
       arch_available: architecture_available,
       back_card: back_card,
