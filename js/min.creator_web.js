@@ -7839,7 +7839,7 @@ var uielto_toolbar_btngroup = {
           var id =
             "#inst_table__row_" +
             instructions[
-              execution_index + parseInt(architecture.arch_conf[1].value) / 8
+              execution_index + ((is_32b_arch) ?  (parseInt(architecture.arch_conf[1].value) / 8) : (parseInt(architecture.arch_conf[1].value) / 16))
             ].Address;
           var row_pos = $(id).position();
           if (row_pos) {
