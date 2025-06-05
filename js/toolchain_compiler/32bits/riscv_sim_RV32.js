@@ -496,16 +496,16 @@ Module['print'] = function (message) {
         case 'fsd': // Para almacenar un double
         writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'double');
         break;
-        case 'vse8':
+        case 'vse8.v':
         writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'byte');
           break;
-        case 'vse16':
+        case 'vse16.v':
         writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'half');
           break;
-        case 'vse32':
+        case 'vse32.v':
         writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'word');
           break;
-        case 'vse64':
+        case 'vse64.v':
           writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'double');
           break;
         default:
@@ -7130,6 +7130,13 @@ function preprocess_sail(elffile, enablefpd, enablevec, entry_add){
     }
   }
   console.log("Argumentos: ", argumentsToRun);
+
+  //   if (!app.c_kernel){
+  //   for (let i = 0; i < instructions.length; i++){
+  //     if (instructions[i].Label.includes("kernel") && entry_add !== instructions[i].Address)
+  //       entry_add = instructions[i].Address;
+  //   }
+  // }
 
   run(["--entry-address", entry_add, ...argumentsToRun, "-p", "output.elf"]);
 

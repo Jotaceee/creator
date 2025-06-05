@@ -124,9 +124,11 @@ async function check_call_convention_temp_regs(instMatch) {
   }
 }
 
-var no_print_more = false;
+// var no_print_more = false;
 Module['print'] = function (message) {
   // console.log(message);
+  if (message === "Divergence execution detected: Aborted.")
+    crex_show_notification(message, "danger");
   if (message === "err call_convenction"){
     crex_show_notification("Possible failure in the parameter passing convention", "warning");
   }
@@ -194,7 +196,7 @@ Module['print'] = function (message) {
     let regtowrite = crex_findReg(vectorMatch[1]);
     writeRegister(vectorMatch[3], regtowrite.indexComp, regtowrite.indexElem);
   }
-  if (instMatch && instMatch[2] === 'U'){
+  if (instMatch && (instMatch[2] === 'U' || (parseInt(instMatch[3], 16) >= pc_min) && parseInt(instMatch[3], 16) < parseInt("0x20000", 16) )){
     if (inside_function) 
       check_call_convention_temp_regs(instMatch);
 
@@ -217,6 +219,7 @@ Module['print'] = function (message) {
     userMode = true;
     console.log("Instruccion: ", instMatch);
     const current_ins = instructions.findIndex(insn => ( '0x' + (insn.Address.slice(2)).padStart(16, '0')) === ("0x"+instMatch[3].toLowerCase()));
+    if (current_ins !== -1) {
     if(prev_add_to_jump !== undefined){
       instructions[prev_add_to_jump]._rowVariant = "";
       prev_add_to_jump = undefined;
@@ -396,7 +399,9 @@ Module['print'] = function (message) {
     instoper = instMatch[5];
 
   }
-  else if (instMatch && instMatch[2] !== 'U')
+
+  }
+  else if (instMatch /*&& instMatch[2] !== 'U'*/)
     userMode = false;
     // if (parseInt(instMatch[1], 10) > 400)
     //   no_print_more = true;
@@ -430,7 +435,7 @@ Module['print'] = function (message) {
     
   }
 
-  if (memoMatch && userMode === true) {
+  if (memoMatch /*&& userMode === true*/) {
     // En caso de ser escritura '<-' pintamos el valor en la posicion de memoria
     if (memoMatch[2] === '<-'){
       // console.log("Operador: ", instoper);
@@ -453,16 +458,16 @@ Module['print'] = function (message) {
         case 'fsd': // Para almacenar un double
           writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'double');
         break;
-        case 'vse8':
+        case 'vse8.v':
           writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'byte');
           break;
-        case 'vse16':
+        case 'vse16.v':
           writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'half');
           break;
-        case 'vse32':
+        case 'vse32.v':
           writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'word');
           break;
-        case 'vse64':
+        case 'vse64.v':
           writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'double');
           break;
         default:
@@ -518,7 +523,7 @@ Module['print'] = function (message) {
 
 
 
-  if (!no_print_more)
+  // if (!no_print_more)
     console.log(message);
 
 }
@@ -3787,6 +3792,10 @@ var exitJS = (status, implicit) => {
       if(init_index !== undefined)
         instructions[init_index]._rowVariant = 'success';
     }
+    if (status === 0){
+      show_notification('The execution of the program has finished', 'success') ;
+      finished = true;
+    }
     can_reset = true;
   }
   _proc_exit(status);
@@ -5128,6 +5137,13 @@ function preprocess_sail(elffile, enablefpd, enablevec, entry_add){
     }
   }
   console.log("Argumentos: ", argumentsToRun);
+
+  if (!app.c_kernel){
+    for (let i = 0; i < instructions.length; i++){
+      if (instructions[i].Label.includes("kernel") && entry_add !== instructions[i].Address)
+        entry_add = instructions[i].Address;
+    }
+  }
 
   run(["--entry-address", entry_add, ...argumentsToRun, "-p", "output.elf"]);
 
