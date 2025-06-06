@@ -20,7 +20,7 @@ mi_string:
 mi_char:
     #.ascii "C" # O en su defecto puede ser .byte 67 (valor del caracter ascii de 'C')
     .byte 67
-.align 8
+.align 3
 midoble:
     .double 3.141516
 .align 8

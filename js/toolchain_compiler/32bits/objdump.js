@@ -304,7 +304,9 @@ Module['print'] = function (message) {
     exaaa.push(1);
     exaaa.push(labelmatch[2].trim());
     console.log("labelmatch: ", labelmatch);
-    if(labelmatch[2].trim() === "_main"){
+    if (!app.c_kernel && labelmatch[2].trim().includes("kernel"))
+      entry_elf = labelmatch[1].trim();
+    else if(labelmatch[2].trim() === "_main" && app.c_kernel){
       entry_elf = labelmatch[1].trim();
     }
     if (sectionasm === 1){

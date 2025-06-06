@@ -193,6 +193,8 @@ async function check_call_convention_temp_regs(instMatch) {
   }
 }
 
+var to_measure = "";
+var start_m, start_m;
 
 Module['print'] = function (message) {
   if(message === "err call_convenction"){
@@ -265,7 +267,15 @@ Module['print'] = function (message) {
     if (inside_function) 
       check_call_convention_temp_regs(instMatch);
 
-
+    if (to_measure != ""){
+      end_m = performance.now();
+      var measure = end_m - start_m;
+      let string_to_print = "Execution time of " + to_measure + " :" + measure + " ms";
+      console.log(string_to_print);
+      to_measure = "";
+    }
+    start_m = performance.now();
+    to_measure = instMatch[5];
 
     for (var i = 0; i < instructions.length; i++) {
       if (instructions[i]._rowVariant === "info")
@@ -305,7 +315,7 @@ Module['print'] = function (message) {
       var next_add = instructions[current_ins].loaded.split("\t");
 
     }
-    if (instructions[current_ins].loaded.includes("ret")){
+    if (instructions[current_ins].loaded.includes("ret") && !instructions[current_ins].loaded.includes("mret")){
       // Mirar el ra
       var aux_reg = crex_findReg("ra");
       next_add_to_jump = readRegister(aux_reg.indexComp, aux_reg.indexElem).toString(16);
@@ -451,7 +461,17 @@ Module['print'] = function (message) {
 
 
   }
-  else if (instMatch /*&& instMatch[2] !== 'U'*/)
+  else if (instMatch /*&& instMatch[2] !== 'U'*/){
+    if (to_measure != ""){
+      end_m = performance.now();
+      var measure = end_m - start_m;
+      let string_to_print = "Execution time of " + to_measure + " :" + measure + " ms";
+      console.log(string_to_print);
+      to_measure = "";
+    }
+    start_m = performance.now();
+    to_measure = instMatch[5];
+  }
     userMode = false;
 
   if (regiMatch /*&& userMode === true*/) {
@@ -561,9 +581,16 @@ Module['print'] = function (message) {
 
 }
 
+Module['printErr'] = function (message) {
+  if (message.includes("Execution:") || message.includes("Instructions:") || message.includes("Perf:"))
+    crex_show_notification(message, "success");
+  else console.warn(message);
+}
+
+
 var out = Module["print"] /*|| console.log.bind(console)*/;
 // var out = console.log.bind(console);
-var err = Module["printErr"] || console.warn.bind(console);
+var err = Module["printErr"] /*|| console.warn.bind(console)*/;
 Object.assign(Module, moduleOverrides);
 moduleOverrides = null;
 if (Module["arguments"]) arguments_ = Module["arguments"];
@@ -7131,12 +7158,12 @@ function preprocess_sail(elffile, enablefpd, enablevec, entry_add){
   }
   console.log("Argumentos: ", argumentsToRun);
 
-  //   if (!app.c_kernel){
-  //   for (let i = 0; i < instructions.length; i++){
-  //     if (instructions[i].Label.includes("kernel") && entry_add !== instructions[i].Address)
-  //       entry_add = instructions[i].Address;
-  //   }
-  // }
+    if (!app.c_kernel){
+    for (let i = 0; i < instructions.length; i++){
+      if (instructions[i].Label.includes("kernel") && entry_add !== instructions[i].Address)
+        entry_add = instructions[i].Address;
+    }
+  }
 
   run(["--entry-address", entry_add, ...argumentsToRun, "-p", "output.elf"]);
 

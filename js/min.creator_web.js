@@ -3071,6 +3071,7 @@ function assembly_compiler()
   var expvalue = /^\.(\w+)\s+(.+)/;
   var expalign = /^\.align\s+(\d+)/;
   var data_alignment = 0;
+  const start_compile = performance.now();
   if(!assembled && !linked && !dissambled && execution_mode_run === -1){
     var is_text = false;
     var is_data = false;
@@ -3476,7 +3477,8 @@ function assembly_compiler()
                 break;
             }
           }
-          
+          const end_compile = performance.now();
+          show_notification('Compile execution time: ' + (end_compile - start_compile) + 'ms', "warning");
           creator_memory_prereset();
           creator_memory_reset();
 

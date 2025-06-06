@@ -123,6 +123,8 @@ async function check_call_convention_temp_regs(instMatch) {
     }
   }
 }
+var to_measure = "";
+var start_m, start_m;
 
 // var no_print_more = false;
 Module['print'] = function (message) {
@@ -200,7 +202,13 @@ Module['print'] = function (message) {
     if (inside_function) 
       check_call_convention_temp_regs(instMatch);
 
-
+    if (to_measure != ""){
+      end = performance.now();
+      var measure = end_m - start_m;
+      crex_show_notification("Execution time of " + to_measure + " :" + measure + " ms", "warning");
+      to_measure = "";
+    }
+    start = performance.now();
 
     for (var i = 0; i < instructions.length; i++) {
       if (instructions[i]._rowVariant === "info")
@@ -258,7 +266,7 @@ Module['print'] = function (message) {
       console.log("Siguiente direccion del jal: ", next_add);
 
     }
-    if (instructions[current_ins].loaded.includes("ret")){
+    if (instructions[current_ins].loaded.includes("ret") && !instructions[current_ins].loaded.includes("mret")){
       // Mirar el ra
       var aux_reg = crex_findReg("ra");
       next_add_to_jump = readRegister(aux_reg.indexComp, aux_reg.indexElem).toString(16);
@@ -528,8 +536,15 @@ Module['print'] = function (message) {
 
 }
 
+Module['printErr'] = function (message) {
+  if (message.includes("Execution:") || message.includes("Instructions:") || message.includes("Perf:"))
+    crex_show_notification(message, "success");
+  else console.warn(message);
+}
+
+
 var out = Module["print"] /*|| console.log.bind(console)*/;
-var err = Module["printErr"] || console.error.bind(console);
+var err = Module["printErr"] /*|| console.error.bind(console)*/;
 
 Object.assign(Module, moduleOverrides);
 moduleOverrides = null;
