@@ -89,7 +89,8 @@ function clean_environment() {
 // o si ha ido exitoso para volver a utilizarlo sin tener que recargar la página.
 function resetenvironment (value){
   if (can_reset || value === 2) {
-      clean_environment();
+      if (Module !== undefined)
+        clean_environment();
       if (is_32b_arch){
         scriptas = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/32bits/as-new.js"]');
         scriptld = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/32bits/ld-new.js"]');
@@ -124,8 +125,12 @@ function resetenvironment (value){
       enablefpd = false;
       enablevec = false;
       instructions.length = 0;
-      dumpdatainstructions.length = 0;
-      dumptextinstructions.length = 0;
+      if (typeof dumpdatainstructions !== 'undefined')
+        dumpdatainstructions.length = 0;
+      if (typeof dumptextinstructions !== 'undefined')
+        dumptextinstructions.length = 0;
+      if (typeof dumplabels !== 'undefined')
+        dumplabels.length = 0;
       list_user_instructions.length = 0;
       list_data_instructions.length = 0;
       insn_number = undefined;
@@ -3201,22 +3206,33 @@ function assembly_compiler()
     }
 
     if(!preprocess_run(filenames, filecontents, enablefpd, enablevec)){
-      nEnters = parseInt(objectcontent[1], 10)-1;
-      can_reset = true;
-      if(comp_after_run){
-        uielto_toolbar_btngroup.methods.compile_error(
-          "Incorrect instruction syntax for '"+objectcontent[2]+"'",
-          objectcontent[2],
-          parseInt(objectcontent[1], 10)-1,
-        );
-        comp_after_run = false;
+      console.log("objectcontent_err: ", objectcontent);
+      if (objectcontent === undefined){
+        can_reset = true;
+        app.$bvToast.hide();
+        resetenvironment(0);
+        return packCompileError('m0', 'Please enter the assembly code before compiling', 'warning', 'danger') ;
+      }else {
+        nEnters = parseInt(objectcontent[1], 10)-1;
+        can_reset = true;
+        // if(comp_after_run){
+          uielto_toolbar_btngroup.methods.compile_error(
+            "Incorrect instruction syntax for '"+objectcontent[2]+"'",
+            objectcontent[2],
+            parseInt(objectcontent[1], 10)-1,
+          );
+          // comp_after_run = false;
+        // }
+        app.$bvToast.hide();
+        resetenvironment(0);
+        // return packCompileError("m3", 
+        //   objectcontent[2],
+        //   "error",
+        //   "danger"
+        // );
+
       }
-      resetenvironment(0);
-      return packCompileError("m3", 
-        objectcontent[2],
-        "error",
-        "danger"
-      );
+
     }
     
     (async function loop() {
@@ -3236,272 +3252,282 @@ function assembly_compiler()
         (async function loop() {
           do {
             dissambled = await dissamble_binary();
-          } while ((dumptextinstructions.length === 0 && dumpdatainstructions.length === 0) && !dissambled);
+          } while ((dumptextinstructions.length === 0 && dumpdatainstructions.length === 0) && !dissambled && (list_data_instructions.length !== 0 || list_user_instructions.length !== 0));
         })().then(() => {
-          align = 1;
-          for (let i = 0; i < dumptextinstructions.length; i++){
-            creator_insert_instruction(parseInt(dumptextinstructions[i][0], 16), dumptextinstructions[i][2], dumptextinstructions[i][2], false, dumptextinstructions[i][1], "00", dumptextinstructions[i][4]);
-            instructions.push({
-              Break: null,
-              Address: "0x" + dumptextinstructions[i][0],
-              Label: dumptextinstructions[i][4],
-              loaded: dumptextinstructions[i][2],
-              user : list_user_instructions[i],
-              _rowVariant: "",
-              visible: true,
-              hide: false,
-            });
-            console.log("entrada: ", entry_elf);
-            if(is_32b_arch){
-              if (dumptextinstructions[i][0] === entry_elf)
-                instructions[i]._rowVariant = 'success';
-            } else {
-              if ((dumptextinstructions[i][0]) === entry_elf)
-                instructions[i]._rowVariant = 'success';
-            }
+
+          if (dumptextinstructions.length === 0 && dumpdatainstructions.length === 0){
+            show_notification('Please enter code in any file before compiling', 'danger');
+            can_reset = true;
+            resetenvironment(0);
+            can_reset = false;
           }
-          
-  
-  
-          process_data_to_store_memory();
-  
-          for (let i = 0; i < dumpdatainstructions.length; i++){
-            
-            switch(dumpdatainstructions[i][6]){
-              case "half":
-
-              if(dumpdatainstructions[i][1].length > 4){
-                var init_add = parseInt(dumpdatainstructions[i][0], 16);
-                var elements = Math.floor(dumpdatainstructions[i][1].length / 4);
-                if(dumpdatainstructions[i][1].length % 4 !== 0){
-                  elements = elements + 1;
-                  dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*4,"0");
-                }
-                for (var j = 0; j < elements; j++){
-                  var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2) * 2, dumpdatainstructions[i][1].length - (4 * j));
-                  if (j === 0 ) 
-                    creator_memory_data_compiler(init_add, element_to_insert, 2, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
-                  else
-                    creator_memory_data_compiler(init_add + j*2, element_to_insert, 2, null, (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
-                  
-                }
-              }else {
-                creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+            else {
+            align = 1;
+            for (let i = 0; i < dumptextinstructions.length; i++){
+              creator_insert_instruction(parseInt(dumptextinstructions[i][0], 16), dumptextinstructions[i][2], dumptextinstructions[i][2], false, dumptextinstructions[i][1], "00", dumptextinstructions[i][4]);
+              instructions.push({
+                Break: null,
+                Address: "0x" + dumptextinstructions[i][0],
+                Label: dumptextinstructions[i][4],
+                loaded: dumptextinstructions[i][2],
+                user : list_user_instructions[i],
+                _rowVariant: "",
+                visible: true,
+                hide: false,
+              });
+              console.log("entrada: ", entry_elf);
+              if(is_32b_arch){
+                if (dumptextinstructions[i][0] === entry_elf)
+                  instructions[i]._rowVariant = 'success';
+              } else {
+                if ((dumptextinstructions[i][0]) === entry_elf)
+                  instructions[i]._rowVariant = 'success';
               }
-                break;
-              case "byte":
+            }
+            
+    
+    
+            process_data_to_store_memory();
+    
+            for (let i = 0; i < dumpdatainstructions.length; i++){
+              
+              switch(dumpdatainstructions[i][6]){
+                case "half":
 
-                if(dumpdatainstructions[i][1].length > 2){
+                if(dumpdatainstructions[i][1].length > 4){
                   var init_add = parseInt(dumpdatainstructions[i][0], 16);
-                  var elements = Math.floor(dumpdatainstructions[i][1].length / 2); // 4
-                  if(dumpdatainstructions[i][1].length % 2 !== 0){
+                  var elements = Math.floor(dumpdatainstructions[i][1].length / 4);
+                  if(dumpdatainstructions[i][1].length % 4 !== 0){
                     elements = elements + 1;
+                    dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*4,"0");
                   }
-                  dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements * 2,"0");
-
-                  for (var j = 0; j < elements;j++){
-                    var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2), dumpdatainstructions[i][1].length - (2 * j));
-                    if (j === 0 )
-                      creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 24) >> 24, dumpdatainstructions[i][6],);
+                  for (var j = 0; j < elements; j++){
+                    var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2) * 2, dumpdatainstructions[i][1].length - (4 * j));
+                    if (j === 0 ) 
+                      creator_memory_data_compiler(init_add, element_to_insert, 2, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
                     else
-                      creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, null, (parseInt(element_to_insert,16) << 24 ) >> 24, dumpdatainstructions[i][6],);
+                      creator_memory_data_compiler(init_add + j*2, element_to_insert, 2, null, (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
                     
                   }
                 }else {
-                  creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                  creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                 }
-                break;
-              case "word":
-              case "integer":
-                if(dumpdatainstructions[i][1].length > 8){
-                  var init_add = parseInt(dumpdatainstructions[i][0], 16);
-                  var elements = Math.floor(dumpdatainstructions[i][1].length / 8);
-                  if(dumpdatainstructions[i][1].length % 8 !== 0){
-                    elements = elements + 1;
-                    dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*8,"0");
-                  }
-                  for (var j = 0; j < elements; j++){
+                  break;
+                case "byte":
 
-                    var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 8, dumpdatainstructions[i][1].length - (8 * j));
-                    if (j === 0 )
-                      creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], parseInt(element_to_insert, 16) >> 0, dumpdatainstructions[i][6],);
-                    else
-                      creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, null, parseInt(element_to_insert, 16) >> 0, dumpdatainstructions[i][6],);
-                    
+                  if(dumpdatainstructions[i][1].length > 2){
+                    var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                    var elements = Math.floor(dumpdatainstructions[i][1].length / 2); // 4
+                    if(dumpdatainstructions[i][1].length % 2 !== 0){
+                      elements = elements + 1;
+                    }
+                    dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements * 2,"0");
+
+                    for (var j = 0; j < elements;j++){
+                      var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2), dumpdatainstructions[i][1].length - (2 * j));
+                      if (j === 0 )
+                        creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 24) >> 24, dumpdatainstructions[i][6],);
+                      else
+                        creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, null, (parseInt(element_to_insert,16) << 24 ) >> 24, dumpdatainstructions[i][6],);
+                      
+                    }
+                  }else {
+                    creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                   }
-                }else {
-                  creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
-                }
-                
-                break;
-              case "dword":
-                if(dumpdatainstructions[i][1].length > 16){
-                  var init_add = parseInt(dumpdatainstructions[i][0], 16);
-                  var elements = Math.floor(dumpdatainstructions[i][1].length / 16);
-                  if(dumpdatainstructions[i][1].length % 16 !== 0){
-                    elements = elements + 1;
-                    dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*16,"0");
+                  break;
+                case "word":
+                case "integer":
+                  if(dumpdatainstructions[i][1].length > 8){
+                    var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                    var elements = Math.floor(dumpdatainstructions[i][1].length / 8);
+                    if(dumpdatainstructions[i][1].length % 8 !== 0){
+                      elements = elements + 1;
+                      dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*8,"0");
+                    }
+                    for (var j = 0; j < elements; j++){
+
+                      var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 8, dumpdatainstructions[i][1].length - (8 * j));
+                      if (j === 0 )
+                        creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], parseInt(element_to_insert, 16) >> 0, dumpdatainstructions[i][6],);
+                      else
+                        creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, null, parseInt(element_to_insert, 16) >> 0, dumpdatainstructions[i][6],);
+                      
+                    }
+                  }else {
+                    creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                   }
-                  for (var j = 0; j < elements; j++){
-                    var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 16, dumpdatainstructions[i][1].length - (16 * j));
-                    if (j === 0 )
-                      creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, dumpdatainstructions[i][4], element_to_insert >> 0, dumpdatainstructions[i][6],);
-                    else
-                      creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, null, element_to_insert >> 0, dumpdatainstructions[i][6],);
-                    
+                  
+                  break;
+                case "dword":
+                  if(dumpdatainstructions[i][1].length > 16){
+                    var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                    var elements = Math.floor(dumpdatainstructions[i][1].length / 16);
+                    if(dumpdatainstructions[i][1].length % 16 !== 0){
+                      elements = elements + 1;
+                      dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*16,"0");
+                    }
+                    for (var j = 0; j < elements; j++){
+                      var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 16, dumpdatainstructions[i][1].length - (16 * j));
+                      if (j === 0 )
+                        creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, dumpdatainstructions[i][4], element_to_insert >> 0, dumpdatainstructions[i][6],);
+                      else
+                        creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, null, element_to_insert >> 0, dumpdatainstructions[i][6],);
+                      
+                    }
+                  }else {
+                    creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                   }
-                }else {
-                  creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
-                }
-                break;
-  
-              case "float":
+                  break;
+    
+                case "float":
 
 
-                if(dumpdatainstructions[i][1].length > 8){
-                  var init_add = parseInt(dumpdatainstructions[i][0], 16);
-                  var elements = Math.floor(dumpdatainstructions[i][1].length / 8);
-                  if(dumpdatainstructions[i][1].length % 8 !== 0){
-                    elements = elements + 1;
-                    dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*8,"0");
-                  }
-                  for (var j = 0; j < elements; j++){
+                  if(dumpdatainstructions[i][1].length > 8){
+                    var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                    var elements = Math.floor(dumpdatainstructions[i][1].length / 8);
+                    if(dumpdatainstructions[i][1].length % 8 !== 0){
+                      elements = elements + 1;
+                      dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*8,"0");
+                    }
+                    for (var j = 0; j < elements; j++){
+                      let buffer = new ArrayBuffer(4); // 4 bytes para float
+                      let view = new DataView(buffer);
+
+                      var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 8, dumpdatainstructions[i][1].length - (8 * j));
+                      view.setUint32(0, parseInt(element_to_insert, 16), false);
+                      
+                      if (j === 0 )
+                        creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], view.getFloat32(0, false), dumpdatainstructions[i][6],);
+                      else
+                        creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, null, view.getFloat32(0, false), dumpdatainstructions[i][6],);
+                      
+                    }
+                  }else {
                     let buffer = new ArrayBuffer(4); // 4 bytes para float
                     let view = new DataView(buffer);
-
-                    var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 8, dumpdatainstructions[i][1].length - (8 * j));
-                    view.setUint32(0, parseInt(element_to_insert, 16), false);
-                    
-                    if (j === 0 )
-                      creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], view.getFloat32(0, false), dumpdatainstructions[i][6],);
-                    else
-                      creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, null, view.getFloat32(0, false), dumpdatainstructions[i][6],);
-                    
+      
+                    // Convertir hexadecimal a entero
+                    let intVal = parseInt(dumpdatainstructions[i][1], 16);
+      
+                    // Escribir el entero en el buffer como float
+                    view.setUint32(0, intVal, false); 
+                    creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4],view.getFloat32(0, false), dumpdatainstructions[i][6],);
                   }
-                }else {
-                  let buffer = new ArrayBuffer(4); // 4 bytes para float
-                  let view = new DataView(buffer);
-    
-                  // Convertir hexadecimal a entero
-                  let intVal = parseInt(dumpdatainstructions[i][1], 16);
-    
-                  // Escribir el entero en el buffer como float
-                  view.setUint32(0, intVal, false); 
-                  creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4],view.getFloat32(0, false), dumpdatainstructions[i][6],);
-                }
-                break;
-              case "double":
+                  break;
+                case "double":
 
-                if(dumpdatainstructions[i][1].length > 16){
-                  var init_add = parseInt(dumpdatainstructions[i][0], 16);
-                  var elements = Math.floor(dumpdatainstructions[i][1].length / 16);
-                  if(dumpdatainstructions[i][1].length % 16 !== 0){
-                    elements = elements + 1;
-                    dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*16,"0");
-                  }
-                  for (var j = 0; j < elements; j++){
+                  if(dumpdatainstructions[i][1].length > 16){
+                    var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                    var elements = Math.floor(dumpdatainstructions[i][1].length / 16);
+                    if(dumpdatainstructions[i][1].length % 16 !== 0){
+                      elements = elements + 1;
+                      dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*16,"0");
+                    }
+                    for (var j = 0; j < elements; j++){
+                      let bufferd = new ArrayBuffer(8); // 8 bytes para double
+                      let viewd = new DataView(bufferd);
+    
+
+                      var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 16, dumpdatainstructions[i][1].length - (16 * j));
+                      
+                      // Convertir hexadecimal a entero
+                      let high = parseInt(element_to_insert.slice(0, 8), 16); // Parte alta
+                      let low = parseInt(element_to_insert.slice(8, 16), 16); // Parte baja
+        
+                      // Escribir los valores en el buffer
+                      viewd.setUint32(0, high, false); // Parte alta
+                      viewd.setUint32(4, low, false);  // Parte baja
+
+                      if (j === 0 )
+                        creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                      else
+                        creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, null, viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                      
+                    }
+                  }else {
                     let bufferd = new ArrayBuffer(8); // 8 bytes para double
                     let viewd = new DataView(bufferd);
-  
-
-                    var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 16, dumpdatainstructions[i][1].length - (16 * j));
-                    
+      
                     // Convertir hexadecimal a entero
-                    let high = parseInt(element_to_insert.slice(0, 8), 16); // Parte alta
-                    let low = parseInt(element_to_insert.slice(8, 16), 16); // Parte baja
+                    let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
+                    let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
       
                     // Escribir los valores en el buffer
                     viewd.setUint32(0, high, false); // Parte alta
                     viewd.setUint32(4, low, false);  // Parte baja
-
-                    if (j === 0 )
-                      creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
-                    else
-                      creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, null, viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
-                    
+      
+                    // Leer como double de 64 bits
+                    // return viewd.getFloat64(0, false);
+                    creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                    // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                   }
-                }else {
-                  let bufferd = new ArrayBuffer(8); // 8 bytes para double
-                  let viewd = new DataView(bufferd);
+                  break;
+
+
+
+                  // let bufferd = new ArrayBuffer(8); // 8 bytes para double
+                  // let viewd = new DataView(bufferd);
     
-                  // Convertir hexadecimal a entero
-                  let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
-                  let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
+                  // // Convertir hexadecimal a entero
+                  // let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
+                  // let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
     
-                  // Escribir los valores en el buffer
-                  viewd.setUint32(0, high, false); // Parte alta
-                  viewd.setUint32(4, low, false);  // Parte baja
+                  // // Escribir los valores en el buffer
+                  // viewd.setUint32(0, high, false); // Parte alta
+                  // viewd.setUint32(4, low, false);  // Parte baja
     
-                  // Leer como double de 64 bits
-                  // return viewd.getFloat64(0, false);
-                  creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
-                  // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
-                }
-                break;
+                  // // Leer como double de 64 bits
+                  // // return viewd.getFloat64(0, false);
+                  // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                  // break;
 
-
-
-                // let bufferd = new ArrayBuffer(8); // 8 bytes para double
-                // let viewd = new DataView(bufferd);
-  
-                // // Convertir hexadecimal a entero
-                // let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
-                // let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
-  
-                // // Escribir los valores en el buffer
-                // viewd.setUint32(0, high, false); // Parte alta
-                // viewd.setUint32(4, low, false);  // Parte baja
-  
-                // // Leer como double de 64 bits
-                // // return viewd.getFloat64(0, false);
-                // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
-                // break;
-
-              // case "char":
-                
-              // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
-              //   break;
-  
-              case "asciz":
-                // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
-                creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
-                break;
-  
-              case "ascii":
-                creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
-                break;
-  
-              case "space":
-              case "zero":
-                creator_memory_storestring(dumpdatainstructions[i][1], dumpdatainstructions[i][1], parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
-                break;
+                // case "char":
+                  
+                // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                //   break;
+    
+                case "asciz":
+                  // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                  creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
+                  break;
+    
+                case "ascii":
+                  creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
+                  break;
+    
+                case "space":
+                case "zero":
+                  creator_memory_storestring(dumpdatainstructions[i][1], dumpdatainstructions[i][1], parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
+                  break;
+              }
             }
+
+            const end_compile = performance.now();
+            show_notification('Compile execution time: ' + (end_compile - start_compile) + 'ms', "warning");
+            creator_memory_prereset();
+            creator_memory_reset();
+
+            // Initialize stack
+            stack_address = parseInt(architecture.memory_layout[4].value);
+            writeMemory("00", parseInt(stack_address), "word") ;
+            // stack_address = parseInt(architecture.memory_layout[4].value);
+            if (is_32b_arch) {
+              architecture.components[1].elements[2].value = bi_intToBigInt(
+                stack_address,
+                10,
+              );
+              architecture.components[1].elements[2].default_value = bi_intToBigInt(
+                stack_address,
+                10,
+              );
+            }else {
+              architecture.components[1].elements[2].value = stack_address;
+              architecture.components[1].elements[2].default_value = stack_address;
+            }
+
+
+            show_notification("Compilation completed successfully","success");
           }
-          const end_compile = performance.now();
-          show_notification('Compile execution time: ' + (end_compile - start_compile) + 'ms', "warning");
-          creator_memory_prereset();
-          creator_memory_reset();
-
-          // Initialize stack
-          stack_address = parseInt(architecture.memory_layout[4].value);
-          writeMemory("00", parseInt(stack_address), "word") ;
-          // stack_address = parseInt(architecture.memory_layout[4].value);
-          if (is_32b_arch) {
-            architecture.components[1].elements[2].value = bi_intToBigInt(
-              stack_address,
-              10,
-            );
-            architecture.components[1].elements[2].default_value = bi_intToBigInt(
-              stack_address,
-              10,
-            );
-          }else {
-            architecture.components[1].elements[2].value = stack_address;
-            architecture.components[1].elements[2].default_value = stack_address;
-          }
-
-
-          show_notification("Compilation completed successfully","success");
 
 
 
@@ -7806,6 +7832,7 @@ var uielto_toolbar_btngroup = {
           app.modalAssemblyError.code3 = code_assembly_segment[line + 1];
         }
         app.modalAssemblyError.error = msg;
+
       }, 75);
     },
     remove_library() {
@@ -9975,6 +10002,7 @@ var uielto_registers = {
   methods: {
     element_id(name, type, double) {
       var id = 0;
+      console.log(name);
       for (var i = 0; i < architecture.components.length; i++) {
         for (var j = 0; j < architecture.components[i].elements.length; j++) {
           if (architecture.components[i].elements[j].name == name) {
@@ -13804,7 +13832,7 @@ var uielto_csr_register = {
   '     <div class="d-flex align-items-center justify-content-between">'+
   '       <div class="d-flex align-items-center">'+
   '         <span id="assemblyInfo" class="csr-register-icon fas fa-info-circle"></span>'+
-  '         <popover-shortcuts target="assemblyInfo""></popover-shortcuts>'+
+  // '         <popover-shortcuts target="assemblyInfo""></popover-shortcuts>'+
   '         <span class="h5 csr-register-name">{{register.name}}</span>'+
   '       </div>'+
   '       <span class="register-csr">{{show_csr_value(register)}}</span>'+
@@ -15029,9 +15057,9 @@ function openFile(name = ""){
   else 
     filename = name;
   
-  let tabIndex = app.tabs.findIndex(tab => tab.title === filename);
+  let tabIndex_a = app.tabs.findIndex(tab => tab.title === filename);
 
-  if (tabIndex !== -1){
+  if (tabIndex_a !== -1){
     showFile(filename);
   }
   else {

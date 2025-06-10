@@ -22,7 +22,7 @@
       },
       {
         "name": "Main Function",
-        "value": "main"
+        "value": "_main"
       },
       {
         "name": "Passing Convention",
@@ -1358,7 +1358,7 @@
         "double_precision": false,
         "elements": [
           {
-            "name" : "ustatus",
+            "name" : ["ustatus"],
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
@@ -1369,7 +1369,7 @@
             ]
           },
           {
-            "name" : "uie",
+            "name" : ["uie"],
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
@@ -1380,7 +1380,7 @@
             ]
           },
           {
-            "name" : "utvec",
+            "name" : ["utvec"],
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
@@ -1391,7 +1391,7 @@
             ]
           },
           {
-            "name" : "uscratch",
+            "name" : ["uscratch"],
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
@@ -1402,7 +1402,7 @@
             ]
           },
           {
-            "name" : "uepc",
+            "name" : ["uepc"],
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
@@ -1413,7 +1413,7 @@
             ]
           },
           {
-            "name" : "ucause",
+            "name" : ["ucause"],
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
@@ -1424,7 +1424,7 @@
             ]
           },
           {
-            "name" : "utval",
+            "name" : ["utval"],
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
@@ -1435,7 +1435,7 @@
             ]
           },
           {
-            "name" : "uip",
+            "name" : ["uip"],
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
@@ -1446,7 +1446,7 @@
             ]
           },
           {
-            "name" : "sstatus",
+            "name" : ["sstatus"],
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
@@ -1457,7 +1457,7 @@
             ]
           },
           {
-            "name" : "sedeleg",
+            "name" : ["sedeleg"],
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
@@ -1468,7 +1468,7 @@
             ]
           },
           {
-            "name" : "sideleg",
+            "name" : ["sideleg"],
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
@@ -1479,7 +1479,7 @@
             ]
           },
           {
-            "name" : "sie",
+            "name" : ["sie"],
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
@@ -1490,7 +1490,7 @@
             ]
           },
           {
-            "name" : "stvec",
+            "name" : ["stvec"],
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
@@ -1501,7 +1501,7 @@
             ]
           },
           {
-            "name" : "sscratch",
+            "name" : ["sscratch"],
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
@@ -1512,7 +1512,7 @@
             ]
           },
           {
-            "name" : "sepc",
+            "name" : ["sepc"],
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
@@ -1523,7 +1523,7 @@
             ]
           },
           {
-            "name" : "scause",
+            "name" : ["scause"],
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
@@ -1534,7 +1534,7 @@
             ]
           },
           {
-            "name" : "stval",
+            "name" : ["stval"],
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
@@ -1545,7 +1545,7 @@
             ]
           },
           {
-            "name" : "sip",
+            "name" : ["sip"],
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
@@ -1556,7 +1556,7 @@
             ]
           },
           {
-            "name" : "satp",
+            "name" : ["satp"],
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
@@ -1567,7 +1567,7 @@
             ]
           },
           {
-            "name" : "mstatus",
+            "name" : ["mstatus"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1578,7 +1578,7 @@
             ]
           },
           {
-            "name" : "misa",
+            "name" : ["misa"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1589,7 +1589,7 @@
             ]
           },
           {
-            "name" : "medeleg",
+            "name" : ["medeleg"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1600,7 +1600,7 @@
             ]
           },
           {
-            "name" : "mideleg",
+            "name" : ["mideleg"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1611,7 +1611,7 @@
             ]
           },
           {
-            "name" : "mie",
+            "name" : ["mie"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1622,7 +1622,7 @@
             ]
           },
           {
-            "name" : "mstvec",
+            "name" : ["mstvec"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1633,7 +1633,7 @@
             ]
           },
           {
-            "name" : "mscratch",
+            "name" : ["mscratch"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1644,7 +1644,7 @@
             ]
           },
           {
-            "name" : "mepc",
+            "name" : ["mepc"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1655,7 +1655,7 @@
             ]
           },
           {
-            "name" : "mcause",
+            "name" : ["mcause"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1666,7 +1666,7 @@
             ]
           },
           {
-            "name" : "mtval",
+            "name" : ["mtval"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1677,7 +1677,7 @@
             ]
           },
           {
-            "name" : "mip",
+            "name" : ["mip"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1688,7 +1688,7 @@
             ]
           },
           {
-            "name" : "mcycle",
+            "name" : ["mcycle"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1699,7 +1699,7 @@
             ]
           },
           {
-            "name" : "minstret",
+            "name" : ["minstret"],
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
@@ -1710,7 +1710,7 @@
             ]
           }, 
           {
-            "name" : "cycle",
+            "name" : ["cycle"],
             "type" : "common",
             "value": "00000000",
             "default_value": "00000000",
@@ -1721,7 +1721,7 @@
             ]
           },
           {
-            "name" : "time",
+            "name" : ["time"],
             "type" : "common",
             "value": "00000000",
             "default_value": "00000000",
@@ -1732,7 +1732,7 @@
             ]
           },
           {
-            "name" : "instret",
+            "name" : ["instret"],
             "type" : "common",
             "value": "00000000",
             "default_value": "00000000",
@@ -1743,7 +1743,7 @@
             ]
           },
           {
-            "name" : "hpmcounterX",
+            "name" : ["hpmcounterX"],
             "type" : "common",
             "value": "00000000",
             "default_value": "00000000",
@@ -1754,7 +1754,7 @@
             ]
           },
           {
-            "name" : "hpmcounterXh",
+            "name" : ["hpmcounterXh"],
             "type" : "common",
             "value": "00000000",
             "default_value": "00000000",
@@ -1765,7 +1765,7 @@
             ]
           },
           {
-            "name" : "mhartid",
+            "name" : ["mhartid"],
             "type" : "common",
             "value": "00000000",
             "default_value": "00000000",

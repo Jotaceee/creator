@@ -3,101 +3,6 @@
 
   <!-- Head -->
   <head>
-    <style>
-      body { font-family: Arial, sans-serif; margin: 0; background-color: #f5f5f5; }
-
-      .container { display: flex; height: 100vh; }
-
-      /* Estilo de la Tabla de Archivos */
-      .files-container { /*flex: 1;*/ padding: 10px; width: 10%; background: #fff; overflow-y: auto; display: block; transition: width 0.3s ease-in-out; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { padding: 12px; /*border: 1px solid #ccc;*/ text-align: left; cursor: pointer; }
-      th { background: #ddd; text-align: center; }
-      tr:hover { background: #e0e0e0; }
-      .checkbox-container { display: flex; justify-content: center; }
-
-      #editor-container {
-        flex: 2;
-        padding: 10px;
-        /* border-right: 2px solid rgb(108, 117, 125); */
-        background: white;
-      }
-
-      #editor {
-        height: calc(100% - 40px);
-        /* border: 1px solid rgb(108, 117, 125); */
-        width: 100%;
-      }
-
-      .toggle-button {
-            position: block;
-            margin-top: 0.55%;
-            top: 10px;
-            height: 7.5%;
-            /* right: 10px; */
-            padding: 8px 12px;
-            background: #ffffff;
-            
-            /* color: white; */
-            border: gray 1px solid;
-            border-radius: 5px;
-            cursor: pointer;
-            z-index: 1001;
-        }
-        .toggle-button img{
-            width: 1.2em;
-            height: auto;
-        }
-        .toggle-button:hover {
-            position: block;
-            margin-top: 0.55%;
-            height: 7.5%;
-            top: 10px;
-            /* right: 10px; */
-            padding: 8px 12px;
-            background: #a7aaad;
-            /* color: white; */
-            border: gray 1px solid;
-            
-            border-radius: 5px;
-            cursor: pointer;
-            z-index: 1001;
-        }
-
-      /* ==== MENÚ CONTEXTUAL ==== */
-      .context-menu {
-          position: absolute;
-          background: #2b2b2b;
-          border-radius: 8px;
-          box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
-          display: none;
-          z-index: 1000;
-          min-width: 200px;
-          padding: 8px 0;
-          font-size: 14px;
-      }
-
-      .context-menu ul {
-          list-style: none;
-          margin: 0;
-          padding: 0;
-      }
-
-      .context-menu ul li {
-          padding: 12px 16px;
-          color: white;
-          cursor: pointer;
-          transition: background 0.2s ease-in-out;
-      }
-
-      .context-menu ul li:hover {
-          background: rgba(255, 255, 255, 0.1);
-      }
-
-      .context-menu ul li span {
-          margin-right: 10px;
-      }
-    </style>
     <!-- Global site tag (gtag.js) - Google Analytics -->
     <!-- Google tag (gtag.js) - GA4 -->
     <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-X30SC9SWE2"></script>
@@ -492,7 +397,7 @@
                   <b-col cols="10"> <!-- Editor -->
                     <div id="editor-container"> 
                       <b-row> <!-- Ficheros abiertos -->
-                        <multifile-editor editor_tabs="tabs" TabIndex="activeTabIndex"></multifile-editor>
+                        <multifile-editor></multifile-editor>
 
                       </b-row>
 
@@ -511,7 +416,7 @@
 
 
               <!-- Compile error modal -->
-              <assembly-error id="modalAssemblyError" ref="errorAssembly" :modal_assembly_error="modalAssemblyError"></assembly-error>
+              <assembly-error style="max-height: 10vh;" id="modalAssemblyError" ref="errorAssembly" :modal_assembly_error="modalAssemblyError"></assembly-error>
 
             </b-col>
           </b-row>
@@ -645,10 +550,11 @@
                           <keyboard :keyboard="keyboard" :enter="enter"></keyboard>
                         </b-col>
             
-                      </b-col>
-                    </b-row>
-                  </b-container>
+                      </b-row>
+                    <!-- </b-row> -->
+                    </b-container>
 
+                  </b-col>
                 </b-row>
               </b-container>
 
