@@ -582,9 +582,10 @@ Module['print'] = function (message) {
 }
 
 Module['printErr'] = function (message) {
-  if (message.includes("Execution:") || message.includes("Instructions:") || message.includes("Perf:"))
-    crex_show_notification(message, "success");
-  else console.warn(message);
+  // if (message.includes("Execution:") || message.includes("Instructions:") || message.includes("Perf:"))
+    // crex_show_notification(message, "success");
+  // else 
+  console.warn(message);
 }
 
 
@@ -784,9 +785,6 @@ function updateTableMap(offset, count) {
   }
 }
 var tempRet0 = 0;
-var setTempRet0 = (value) => {
-  tempRet0 = value;
-};
 var wasmBinary;
 if (Module["wasmBinary"]) wasmBinary = Module["wasmBinary"];
 if (!Object.getOwnPropertyDescriptor(Module, "wasmBinary")) {
@@ -1021,7 +1019,17 @@ function alignUp(x, multiple) {
   }
   return x;
 }
-var buffer, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAP32, HEAPU32, HEAPF32, HEAPF64;
+var buffer,
+  HEAP8,
+  HEAPU8,
+  HEAP16,
+  HEAPU16,
+  HEAP32,
+  HEAPU32,
+  HEAPF32,
+  HEAP64,
+  HEAPU64,
+  HEAPF64;
 function updateGlobalBufferAndViews(buf) {
   buffer = buf;
   Module["HEAP8"] = HEAP8 = new Int8Array(buf);
@@ -1032,6 +1040,8 @@ function updateGlobalBufferAndViews(buf) {
   Module["HEAPU32"] = HEAPU32 = new Uint32Array(buf);
   Module["HEAPF32"] = HEAPF32 = new Float32Array(buf);
   Module["HEAPF64"] = HEAPF64 = new Float64Array(buf);
+  Module["HEAP64"] = HEAP64 = new BigInt64Array(buf);
+  Module["HEAPU64"] = HEAPU64 = new BigUint64Array(buf);
 }
 var TOTAL_STACK = 5242880;
 if (Module["TOTAL_STACK"])
@@ -1412,8 +1422,6 @@ function createWasm() {
   instantiateAsync();
   return {};
 }
-var tempDouble;
-var tempI64;
 function callRuntimeCallbacks(callbacks) {
   while (callbacks.length > 0) {
     var callback = callbacks.shift();
@@ -3905,19 +3913,7 @@ var SYSCALLS = {
     HEAP32[(buf + 24) >> 2] = stat.gid;
     HEAP32[(buf + 28) >> 2] = stat.rdev;
     HEAP32[(buf + 32) >> 2] = 0;
-    (tempI64 = [
-      stat.size >>> 0,
-      ((tempDouble = stat.size),
-      +Math.abs(tempDouble) >= 1
-        ? tempDouble > 0
-          ? (Math.min(+Math.floor(tempDouble / 4294967296), 4294967295) | 0) >>>
-            0
-          : ~~+Math.ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>>
-            0
-        : 0),
-    ]),
-      (HEAP32[(buf + 40) >> 2] = tempI64[0]),
-      (HEAP32[(buf + 44) >> 2] = tempI64[1]);
+    HEAP64[(buf + 40) >> 3] = BigInt(stat.size);
     HEAP32[(buf + 48) >> 2] = 4096;
     HEAP32[(buf + 52) >> 2] = stat.blocks;
     HEAP32[(buf + 56) >> 2] = (stat.atime.getTime() / 1e3) | 0;
@@ -3926,19 +3922,7 @@ var SYSCALLS = {
     HEAP32[(buf + 68) >> 2] = 0;
     HEAP32[(buf + 72) >> 2] = (stat.ctime.getTime() / 1e3) | 0;
     HEAP32[(buf + 76) >> 2] = 0;
-    (tempI64 = [
-      stat.ino >>> 0,
-      ((tempDouble = stat.ino),
-      +Math.abs(tempDouble) >= 1
-        ? tempDouble > 0
-          ? (Math.min(+Math.floor(tempDouble / 4294967296), 4294967295) | 0) >>>
-            0
-          : ~~+Math.ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>>
-            0
-        : 0),
-    ]),
-      (HEAP32[(buf + 80) >> 2] = tempI64[0]),
-      (HEAP32[(buf + 84) >> 2] = tempI64[1]);
+    HEAP64[(buf + 80) >> 3] = BigInt(stat.ino);
     return 0;
   },
   doMsync: function (addr, stream, len, flags, offset) {
@@ -5078,14 +5062,6 @@ var Browser = {
     }
   },
 };
-function _emscripten_force_exit(status) {
-    warnOnce(
-      "emscripten_force_exit cannot actually shut down the runtime, as the build does not have EXIT_RUNTIME set",
-    );
-    noExitRuntime = false;
-    runtimeKeepaliveCounter = 0;
-    exit(status);
-}
 function _emscripten_memcpy_big(dest, src, num) {
   HEAPU8.copyWithin(dest, src, src + num);
 }
@@ -5171,8 +5147,10 @@ function _fd_read(fd, iov, iovcnt, pnum) {
     return e.errno;
   }
 }
-function _fd_seek(fd, offset_low, offset_high, whence, newOffset) {
+function _fd_seek(fd, offset_bigint, whence, newOffset) {
   try {
+    var offset_low = Number(offset_bigint & BigInt(4294967295)) | 0,
+      offset_high = Number(offset_bigint >> BigInt(32)) | 0;
     var stream = SYSCALLS.getStreamFromFD(fd);
     var HIGH_OFFSET = 4294967296;
     var offset = offset_high * HIGH_OFFSET + (offset_low >>> 0);
@@ -5181,19 +5159,7 @@ function _fd_seek(fd, offset_low, offset_high, whence, newOffset) {
       return -61;
     }
     FS.llseek(stream, offset, whence);
-    (tempI64 = [
-      stream.position >>> 0,
-      ((tempDouble = stream.position),
-      +Math.abs(tempDouble) >= 1
-        ? tempDouble > 0
-          ? (Math.min(+Math.floor(tempDouble / 4294967296), 4294967295) | 0) >>>
-            0
-          : ~~+Math.ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>>
-            0
-        : 0),
-    ]),
-      (HEAP32[newOffset >> 2] = tempI64[0]),
-      (HEAP32[(newOffset + 4) >> 2] = tempI64[1]);
+    HEAP64[newOffset >> 3] = BigInt(stream.position);
     if (stream.getdents && offset === 0 && whence === 0) stream.getdents = null;
     return 0;
   } catch (e) {
@@ -5217,9 +5183,6 @@ function _gettimeofday(ptr) {
   HEAP32[ptr >> 2] = (now / 1e3) | 0;
   HEAP32[(ptr + 4) >> 2] = ((now % 1e3) * 1e3) | 0;
   return 0;
-}
-function _setTempRet0(val) {
-  setTempRet0(val);
 }
 function runAndAbortIfError(func) {
   try {
@@ -5690,7 +5653,6 @@ var asmLibraryArg = {
   _mmap_js: __mmap_js,
   _munmap_js: __munmap_js,
   abort: _abort,
-  emscripten_force_exit: _emscripten_force_exit,
   emscripten_memcpy_big: _emscripten_memcpy_big,
   emscripten_resize_heap: _emscripten_resize_heap,
   emscripten_run_script_int: _emscripten_run_script_int,
@@ -5701,7 +5663,6 @@ var asmLibraryArg = {
   fd_seek: _fd_seek,
   fd_write: _fd_write,
   gettimeofday: _gettimeofday,
-  setTempRet0: _setTempRet0,
 };
 Asyncify.instrumentWasmImports(asmLibraryArg);
 var asm = createWasm();

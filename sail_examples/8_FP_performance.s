@@ -1,6 +1,6 @@
     .section .data
-a:  .float 3.5       
-b:  .float 1.4       
+a:  .double 3.5       # .float 3.5 
+b:  .double 1.4       # .float 1.4
 
 .section .bss
 .align 8
@@ -12,10 +12,10 @@ tohost:
 
 _main:
     la   t0, a         
-    flw  f1, 0(t0)    
+    fld  f1, 0(t0)    # flw f1, 0(t0)
 
     la   t0, b        
-    flw  f2, 0(t0)    
+    fld  f2, 0(t0)    # flw f2, 0(t0)
 
     fadd.s f3, f1, f2
 

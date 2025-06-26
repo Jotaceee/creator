@@ -153,6 +153,7 @@ Module['print'] = function (message) {
 
   if (jumpMatch){
     jumpMatch[1] = "0x" + jumpMatch[1].replace(/^0+/, '');
+    if (jumpMatch[1] === "0x") jumpMatch[1] = "0x0";
     console.log(jumpMatch);
     const current_ins = instructions.findIndex(insn => insn.Address === (jumpMatch[1].toLowerCase()));
     
@@ -537,9 +538,10 @@ Module['print'] = function (message) {
 }
 
 Module['printErr'] = function (message) {
-  if (message.includes("Execution:") || message.includes("Instructions:") || message.includes("Perf:"))
-    crex_show_notification(message, "success");
-  else console.warn(message);
+  // if (message.includes("Execution:") || message.includes("Instructions:") || message.includes("Perf:"))
+  //   crex_show_notification(message, "success");
+  // else 
+  console.warn(message);
 }
 
 

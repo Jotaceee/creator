@@ -70,6 +70,7 @@ function clean_environment() {
   delete window.ccall;
   delete window.safeSetTimeout;
   delete window.runAndAbortIfError;
+  delete window.ExitStatus;
   wasmBinaryFile = undefined;
   if ( typeof preprocess_as === "function")
     preprocess_as = undefined;
@@ -13492,7 +13493,7 @@ template:     '<b-popover :target="target" ' +
               '    </tbody>' +
               '  </table>' +
               '' +
-              '   <b-container fluid align-h="center" class="mx-0">' +
+              '   <b-container fluid align-h="center">' +
               '     <b-row align-h="center" :cols="get_cols(component.index)">' +
               ' ' +
               '       <b-col class="popoverFooter">' +
@@ -13560,7 +13561,7 @@ var uielto_register_popover_vec = {
     closePopover() {
       this.$root.$emit("bv::hide::popover");
     },
-
+    
     show_value_vec(register, view="hex") {
       this.result.length = 0;
       for (var i = 0; i < architecture.components[3].total_elements; i++){
@@ -13595,6 +13596,37 @@ var uielto_register_popover_vec = {
             var ret = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
             this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : BigInt("0x"+ret)});
             break;
+          case "ieee32":
+            var ret_val = (512 / length_vext) - i - 1;
+            var reg_value = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
+            switch(length_vext){
+              case 8:
+              case 16:
+              case 32:
+                reg_value = reg_value.padStart(8, "0");
+                reg_value = hex2float(reg_value).toString();
+                break;
+              case 64:
+                reg_value = hex2float(reg_value.slice(0,8)) + " | " + hex2float(reg_value.slice(8));
+                break;
+            }
+            this.result.push({"Vector index": register.name[0] + " ["+i+"]", 'value':reg_value});
+            break;
+          case "ieee64":
+            var ret_val = (512 / length_vext) - i - 1;
+            var reg_value = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
+            switch(length_vext){
+              case 8:
+              case 16:
+              case 32:
+              case 64:
+                reg_value = reg_value.padStart(16, "0");
+                reg_value = hex2double(reg_value).toString();
+                break;
+            }
+            this.result.push({"Vector index": register.name[0] + " ["+i+"]", 'value':reg_value});
+            break;
+
         }
       }
       
@@ -13613,7 +13645,7 @@ var uielto_register_popover_vec = {
     '<b-popover :target="target" ' +
     '           triggers="click blur" ' +
     '           @show="onPopoverShow"'+
-    '           class="popover">' +
+    '           class="popover m-0 p-0" custom-class="wide-popover">' +
     "  <template v-slot:title>" +
     '    <b-button @click="closePopover" class="close" aria-label="Close">' +
     '      <span class="d-inline-block" aria-hidden="true">&times;</span>' +
@@ -13630,10 +13662,12 @@ var uielto_register_popover_vec = {
     '         <b-button variant="outline-secondary" :pressed="activeView === \'hex\'" value="hex" class="button_vec" @click="show_value_vec(register, \'hex\')">Hex</b-button>' +
     '         <b-button variant="outline-secondary" :pressed="activeView === \'signed\'" value="signed" class="button_vec" @click="show_value_vec(register, \'signed\')">Signed</b-button>' +
     '         <b-button variant="outline-secondary" :pressed="activeView === \'unsigned\'" value="unsigned" class="button_vec" @click="show_value_vec(register, \'unsigned\')">Unsigned</b-button>' +
+    '         <b-button variant="outline-secondary" :pressed="activeView === \'ieee32\'" value="ieee32" class="button_vec" @click="show_value_vec(register, \'ieee32\')" >IEEE32</b-button>'+
+    '         <b-button variant="outline-secondary" :pressed="activeView === \'ieee64\'" value="ieee64" class="button_vec" @click="show_value_vec(register, \'ieee64\')" >IEEE64</b-button>'+
     '       </b-button-group>'+
     '     </b-col>'+
-    '     <b-col align-self="baseline" cols="8" class="center">'+
-    '       <b-table ref="vectorTable" striped  responsive :items="result" class="table-borderless custom-text" sticky-header style="max-height: 250px; overflow-x:auto; width: 30ch;" head-variant="light"></b-table>'+
+    '     <b-col align-self="baseline" cols="8" class="center p-0 m-0">'+
+    '       <b-table ref="vectorTable" striped  responsive :items="result" class="table-borderless custom-text w-100" sticky-header style="max-height: 250px; overflow-x:auto; width: 30ch;" head-variant="light"></b-table>'+
     '     </b-col>'+
     '   </b-row>'+
     '  </b-container>'+
