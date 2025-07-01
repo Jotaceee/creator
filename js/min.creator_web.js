@@ -222,7 +222,7 @@ async function dissamble_binary(maxAttemps = 50) {
   let attempsdis = 0;
   
   while ((typeof preprocess_dissamble !== "function" || typeof preprocess_ld === "function" ) && attempsdis < maxAttemps ) {
-    await new Promise(resolve => setTimeout(resolve, 200)); // Espera 100 ms antes de volver a verificar
+    await new Promise(resolve => setTimeout(resolve, 300)); // Espera 100 ms antes de volver a verificar
     attempsdis++;
   }
   if (!preprocess_dissamble(elffile)){
@@ -237,7 +237,7 @@ async function dissamble_binary(maxAttemps = 50) {
     scriptdump.id = 'objdump';
     scriptdump.type = 'text/javascript';
     document.head.appendChild(scriptdump);
-    return new Promise(resolve => setTimeout(resolve(false), 200));
+    return new Promise(resolve => setTimeout(resolve(false), 300));
   }
   else{
     scriptdump.parentNode.removeChild(scriptdump);
@@ -255,7 +255,7 @@ async function dissamble_binary(maxAttemps = 50) {
     
     scriptsail.type = 'text/javascript';
     document.head.appendChild(scriptsail);
-    return new Promise(resolve => setTimeout(resolve(true), 200));
+    return new Promise(resolve => setTimeout(resolve(true), 300));
   }
 
 
@@ -287,7 +287,7 @@ function preprocess_run(asfilen, ascode, fpd, vec){
 async function waitForFunction(maxAttemps = 50) {
   let attemps = 0;
   while (typeof preprocess_ld === 'undefined' && attemps < maxAttemps) {
-    await new Promise(resolve => setTimeout(resolve, 200)); // Espera 100 ms antes de volver a verificar
+    await new Promise(resolve => setTimeout(resolve, 300)); // Espera 100 ms antes de volver a verificar
     attemps++;
   }
   if(load_binary)
@@ -309,7 +309,7 @@ async function waitForFunction(maxAttemps = 50) {
     scriptld.id = 'ld-new';
     scriptld.type = 'text/javascript';
     document.head.appendChild(scriptld);
-    return new Promise(resolve => setTimeout(resolve(false), 200));
+    return new Promise(resolve => setTimeout(resolve(false), 300));
   }
   else {
     scriptdump = document.createElement('script');
