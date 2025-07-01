@@ -123,7 +123,7 @@ async function check_call_convention_temp_regs(instMatch) {
     }
   }
 }
-var to_measure = "";
+// var to_measure = "";
 var start_m, start_m;
 
 // var no_print_more = false;
@@ -203,13 +203,13 @@ Module['print'] = function (message) {
     if (inside_function) 
       check_call_convention_temp_regs(instMatch);
 
-    if (to_measure != ""){
-      end = performance.now();
-      var measure = end_m - start_m;
-      crex_show_notification("Execution time of " + to_measure + " :" + measure + " ms", "warning");
-      to_measure = "";
-    }
-    start = performance.now();
+    // if (to_measure != ""){
+    //   end = performance.now();
+    //   var measure = end_m - start_m;
+    //   crex_show_notification("Execution time of " + to_measure + " :" + measure + " ms", "warning");
+    //   to_measure = "";
+    // }
+    // start = performance.now();
 
     for (var i = 0; i < instructions.length; i++) {
       if (instructions[i]._rowVariant === "info")

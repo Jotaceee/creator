@@ -193,7 +193,7 @@ async function check_call_convention_temp_regs(instMatch) {
   }
 }
 
-var to_measure = "";
+// var to_measure = "";
 var start_m, start_m;
 
 Module['print'] = function (message) {
@@ -267,15 +267,15 @@ Module['print'] = function (message) {
     if (inside_function) 
       check_call_convention_temp_regs(instMatch);
 
-    if (to_measure != ""){
-      end_m = performance.now();
-      var measure = end_m - start_m;
-      let string_to_print = "Execution time of " + to_measure + " :" + measure + " ms";
-      console.log(string_to_print);
-      to_measure = "";
-    }
-    start_m = performance.now();
-    to_measure = instMatch[5];
+    // if (to_measure != ""){
+    //   end_m = performance.now();
+    //   var measure = end_m - start_m;
+    //   let string_to_print = "Execution time of " + to_measure + " :" + measure + " ms";
+    //   console.log(string_to_print);
+    //   to_measure = "";
+    // }
+    // start_m = performance.now();
+    // to_measure = instMatch[5];
 
     for (var i = 0; i < instructions.length; i++) {
       if (instructions[i]._rowVariant === "info")
@@ -461,18 +461,18 @@ Module['print'] = function (message) {
 
 
   }
-  else if (instMatch /*&& instMatch[2] !== 'U'*/){
-    if (to_measure != ""){
-      end_m = performance.now();
-      var measure = end_m - start_m;
-      let string_to_print = "Execution time of " + to_measure + " :" + measure + " ms";
-      console.log(string_to_print);
-      to_measure = "";
-    }
-    start_m = performance.now();
-    to_measure = instMatch[5];
-  }
-    userMode = false;
+  // else if (instMatch /*&& instMatch[2] !== 'U'*/){
+  //   // if (to_measure != ""){
+  //   //   end_m = performance.now();
+  //   //   var measure = end_m - start_m;
+  //   //   let string_to_print = "Execution time of " + to_measure + " :" + measure + " ms";
+  //   //   console.log(string_to_print);
+  //   //   to_measure = "";
+  //   // }
+  //   // start_m = performance.now();
+  //   // to_measure = instMatch[5];
+  // }
+  //   userMode = false;
 
   if (regiMatch /*&& userMode === true*/) {
     // En caso de ser escritura '<-' pintamos el valor en el registro que corresponde
