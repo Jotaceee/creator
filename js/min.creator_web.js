@@ -3074,7 +3074,7 @@ function process_data_to_store_memory(){
 function assembly_compiler()
 { 
   var explabel = /^(\w+):/;
-  var expvalue = /^\.(\w+)\s+(.+)/;
+  var expvalue = /\.(\w+)\s+(.+)/;
   var expalign = /^\.align\s+(\d+)/;
   var data_alignment = 0;
   const start_compile = performance.now();
@@ -3116,6 +3116,9 @@ function assembly_compiler()
             let matchlabel = code_assembly_array[i].match(explabel);
             let matchalign = code_assembly_array[i].match(expalign);
             let matchvalue = code_assembly_array[i].match(expvalue);
+            // console.log("label:", matchlabel);
+            // console.log("align:", matchalign);
+            // console.log("value:", matchvalue);
             if (matchlabel){
               
               data_to_store.label = matchlabel[1];
@@ -3525,6 +3528,7 @@ function assembly_compiler()
               architecture.components[1].elements[2].value = stack_address;
               architecture.components[1].elements[2].default_value = stack_address;
             }
+            track_stack_reset();
 
 
             show_notification("Compilation completed successfully","success");
@@ -10597,16 +10601,23 @@ var uielto_examples = {
     load_example(url, compile) {
       this.$root.$emit("bv::hide::modal", this._props.modal, "#closeExample");
       $.get(url, function (data) {
-        code_assembly = data;
+        let name = url.split("/");
+        newFile(name[2]);
+        let index = assembly_files.findIndex(asm => asm.filename === name[2]);
+        assembly_files[index].code = data;
+        code_assembly = assembly_files[index].code;
         if (compile == "false") {
           textarea_assembly_editor.setValue(code_assembly);
         } else {
-          uielto_toolbar_btngroup.methods.assembly_compiler(code_assembly);
+          let file_index = app.files_list.findIndex(asm => asm.filename === name[2]);
+          app.files_list[file_index].to_compile = true;
+          assembly_files[index].to_compile = true;
+          assembly_compiler();
         }
-        show_notification(
-          " The selected example has been loaded correctly",
-          "success",
-        );
+        // show_notification(
+        //   " The selected example has been loaded correctly",
+        //   "success",
+        // );
         creator_ga(
           "send",
           "event",
@@ -10906,10 +10917,6 @@ var uielto_multifile_editor = {
       let tabind = app.tabs.find(tab => tab.id === index);
       if (tabind === undefined) return;
       let tabid = tabind.id;
-      
-
-      
-
       closeFile(app.tabs[tabid].title);
       app.tabs.splice(tabid, 1);
       for (let i = 0; i < app.tabs.length; i++){
@@ -11022,7 +11029,7 @@ var uielto_applied_libs = {
   }, 
   template:
   "<div style=\"overflow-x: auto; max-width: 100%;\">"+
-  " <b-table stripped hover :items=\"libs_to_list\" :fields=\"fields\" style=\"width: 100%; table-layout:auto;\">"+
+  " <b-table stripped hover :items=\"libs_to_list\" :fields=\"fields\" thead-class=\"theadg\" style=\"width: 100%; table-layout:auto;\">"+
   "   <template #cell(Name)=\"data\">"+
   "     <div style=\"margin:2%;\">{{ data.item.name }}</div>"+
   "   </template>"+
@@ -11103,7 +11110,7 @@ var uielto_file_menu = {  // En cada entrada habra un objeto: {filename (string)
   template: 
 
   "<div style=\"overflow-x: auto; max-width: 100%;\">"+
-  " <b-table stripped hover :items=\"files\" :fields=\"fields\" style=\"width: 100%; table-layout:auto;\">"+
+  " <b-table stripped hover :items=\"files\" :fields=\"fields\" thead-class=\"theadg\" style=\"width: 100%; table-layout:auto;\">"+
   "   <template #cell(Name)=\"data\">"+
   "     <div style=\"margin:2%;\" @contextmenu.prevent=\"(event) => showContextMenu(event, data.item.Name)\">{{ data.item.Name }}</div>"+
   "   </template>"+
@@ -13854,20 +13861,20 @@ var uielto_csr_register = {
       register: {type: Object, required: true}
   },
   methods:{
-      show_csr_value(register){ 
-          return "0x"+register.value;
-      },
-      update_csr_value(register){
-      }
+    show_csr_value(register){ 
+        return "0x"+register.value;
+    },
+    update_csr_value(register){
+    }
   },
   template: 
   '<div>'+
   '   <b-col>'+
   '     <div class="d-flex align-items-center justify-content-between">'+
   '       <div class="d-flex align-items-center">'+
-  '         <span id="assemblyInfo" class="csr-register-icon fas fa-info-circle"></span>'+
-  // '         <popover-shortcuts target="assemblyInfo""></popover-shortcuts>'+
-  '         <span class="h5 csr-register-name">{{register.name}}</span>'+
+  '         <span :id="register.name[0]" class="csr-register-icon fas fa-info-circle"></span>'+
+  '         <csr-info :target="register.name[0]" :register="register"></csr-info>'+
+  '         <span class="h5 csr-register-name">{{register.name[0]}}</span>'+
   '       </div>'+
   '       <span class="register-csr">{{show_csr_value(register)}}</span>'+
   '     </div>'+
@@ -13876,6 +13883,22 @@ var uielto_csr_register = {
 }
 Vue.component("csr-register", uielto_csr_register);
 
+var uielto_csr_popover_info = {
+  props: {
+    target: {type: String, required: true},
+    register: {type: Object, required: true}
+  },
+  template:
+  "<b-popover :target=\"target\""  +
+  "triggers=\"hover focus\" placement=\"bottom\" html>"+
+  "  <template #title>"+
+  "   <strong>{{ register.name[0] }}</strong>"+
+  "  </template>"+
+  "  <span :style=\"{ whiteSpace: 'pre-line' }\">{{register.info}}</span>"    +
+  "</b-popover>"
+
+};
+Vue.component('csr-info', uielto_csr_popover_info);
 
 var uielto_memory = {
   props: {
@@ -14039,19 +14062,19 @@ var uielto_memory = {
     get_classes(row) {
       return {
         "h6Sm                ":
-          row.item.addr >= parseInt(architecture.memory_layout[0].value) &&
-          row.item.addr <= architecture.memory_layout[3].value,
+          row.item.addr >= parseInt(architecture.memory_layout[3].value) &&
+          row.item.addr <= parseInt(architecture.memory_layout[5].value),
         "h6Sm text-secondary ":
           row.item.addr < app._data.end_callee &&
           Math.abs(row.item.addr - app._data.end_callee) <
             this._props.stack_total_list * 4,
         "h6Sm text-success   ":
-          row.item.addr < app._data.begin_callee &&
-          row.item.addr >= app._data.end_callee,
+          row.item.addr < app._data.begin_callee && app._data.begin_callee !== 0 &&
+          row.item.addr >= app._data.end_callee && app._data.end_callee !== 0 ,
         "h6Sm text-blue-funny":
-          row.item.addr < app._data.begin_caller &&
-          row.item.addr >= app._data.end_caller,
-        "h6Sm                ": row.item.addr >= app._data.begin_caller,
+          row.item.addr < app._data.begin_caller && app._data.begin_caller !== 0 &&
+          row.item.addr >= app._data.end_caller && app._data.end_caller !== 0,
+        "h6Sm                ": row.item.addr >= app._data.begin_caller && app._data.begin_caller !== 0,
       };
     },
   },
@@ -14969,47 +14992,25 @@ function toCompile(_checkbox, filename){
 
 function displayAssemblyFiles(asmfiles){
   for(let i = 0; i < asmfiles.length; i++){
-    // let myFileTable = document.getElementById("files").getElementsByTagName('tbody')[0];
-    // let newRow = document.createElement('tr');
-    // newRow.setAttribute("id", "row-" + asmfiles[i].filename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, ''));
-    // newRow.setAttribute("oncontextmenu", `showContextMenu(event, '${myFileTable}')`);
-    // let cellName = document.createElement("td");
-    // cellName.textContent = asmfiles[i].filename;
-    // let cellCompile = document.createElement("td");
-    // cellCompile.classList.add("checkbox-container");
-
-    // let checkbox = document.createElement("input");
-    // checkbox.type = "checkbox";
-    // checkbox.classList.add("compile-checkbox");
-    // checkbox.onchange = function() {
-    //   toCompile(this, asmfiles[i].filename);
-    // };
-    // if(asmfiles[i].to_compile)
-    //   checkbox.checked = true;
-
-    // cellCompile.appendChild(checkbox);
-
-    // newRow.appendChild(cellName);
-    // newRow.appendChild(cellCompile);
-
-    // myFileTable.appendChild(newRow);
-
     if(asmfiles[i].editing_now){
       openFile(asmfiles[i].filename);
     }
   }
 }
 
-function newFile(){
-
+function newFile(filename = ""){
+  var filename_prompt;
   /* GENERACION DEL NUEVO FICHERO */
-
-  let filename_prompt = prompt("Nombre del nuevo fichero");
+  if (filename === "") {
+  filename_prompt = prompt("Nombre del nuevo fichero");
   if(filename_prompt === null || filename_prompt === "") //Checkeamos que hay un nombre
     return;
   filename_prompt = filename_prompt.replaceAll(" ", "");
   if(!filename_prompt.endsWith(".s"))
     filename_prompt = filename_prompt + ".s";
+  }
+  else 
+    filename_prompt = filename;
   
   /* ACTUALIZACION DEL EDITOR DE CÓDIGO */
 
@@ -15119,8 +15120,9 @@ function showFile(filename){
   }
   for(let i  = 0;i < assembly_files.length; i++){
     if(assembly_files[i].filename === filename){
-      textarea_assembly_editor.setValue(assembly_files[i].code);
       assembly_files[i].editing_now = true;
+      if (textarea_assembly_editor !== undefined) 
+      textarea_assembly_editor.setValue(assembly_files[i].code);
     }
   }
 }

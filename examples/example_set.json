@@ -26,5 +26,19 @@
     "architecture":"RISC-V (RV32IMFD)",
     "url":"examples/ag-uc3m-ec/list.json",
     "description": "RISC-V examples for Aula Global at UC3M"
+  },
+  {
+    "name": "RISC-V from UC3M-AG",
+    "id": "uc3m-ec-ag",
+    "architecture":"RISC-V SAIL (RV32)",
+    "url":"examples/SAIL-RISCV/list.json",
+    "description": "RISC-V examples for Aula Global at UC3M"
+  },
+  {
+    "name": "RISC-V from UC3M-AG",
+    "id": "uc3m-ec-ag",
+    "architecture":"RISC-V SAIL (RV64)",
+    "url":"examples/SAIL-RISCV/list.json",
+    "description": "RISC-V examples for Aula Global at UC3M"
   }
 ]
