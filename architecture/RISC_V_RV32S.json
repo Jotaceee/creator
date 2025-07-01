@@ -1362,7 +1362,7 @@
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla user1",
+            "info" : "User mode status register.\n Subset of 'mstatus'. It contains if \n User interrupts are enabled and \n if previus user interrupts are enabled.",
             "properties": [
               "read",
               "write"
@@ -1373,7 +1373,7 @@
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla user2",
+            "info" : "User interrupt enable. \nEnables user-level interrupts.",
             "properties": [
               "read",
               "write"
@@ -1384,7 +1384,7 @@
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla user3",
+            "info" : "User trap vector. Defines the base address for trap/interrupt \nhandler. Mode encoded in low bits.",
             "properties": [
               "read",
               "write"
@@ -1395,7 +1395,7 @@
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla user4",
+            "info" : "Temporary scratch register for use \nin trap handlers. Swappable with \n'x1' or 'x2' register",
             "properties": [
               "read",
               "write"
@@ -1406,7 +1406,7 @@
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla user4",
+            "info" : "Holds the PC of the instruction that caused the trap when in user mode.",
             "properties": [
               "read",
               "write"
@@ -1417,7 +1417,7 @@
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla user4",
+            "info" : "Indicates the reason for the last user-level trap.",
             "properties": [
               "read",
               "write"
@@ -1428,7 +1428,7 @@
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla user4",
+            "info" : "Trap value. Additional context such as \n faulting virtual address or instruction.",
             "properties": [
               "read",
               "write"
@@ -1439,7 +1439,7 @@
             "type" : "user",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla user4",
+            "info" : "User interrupt pending. Shows which\n user-level interrupts are pending.",
             "properties": [
               "read",
               "write"
@@ -1450,7 +1450,7 @@
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla supervisor1",
+            "info" : "Subset of 'mstatus'. Indicates if supervisors interrupts\n are enabled, the previous privileged mode are \nbefore the interruption.",
             "properties": [
               "read",
               "write"
@@ -1461,7 +1461,7 @@
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla supervisor2",
+            "info" : "Supervisor exception delegation.\n Bitmask where 1 means the associated exception\n is delegated from Machine mode to Supervisor mode.",
             "properties": [
               "read",
               "write"
@@ -1472,7 +1472,7 @@
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla supervisor3",
+            "info" : "Supervisor interrupt delegation.\n Bitmask where 1 means interrupt is handled in Supervisor mode.",
             "properties": [
               "read",
               "write"
@@ -1483,7 +1483,7 @@
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla supervisor4",
+            "info" : "Supervisor interrupt enable. \nSame layout as 'mie', but for Supervisor mode.",
             "properties": [
               "read",
               "write"
@@ -1494,7 +1494,7 @@
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla supervisor2",
+            "info" : "Supervisor trap vector base address. \nSimilar to utvec, defines trap handling \nbase address and mode.",
             "properties": [
               "read",
               "write"
@@ -1505,7 +1505,7 @@
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla supervisor2",
+            "info" : "Scratch register used by\n Supervisor mode trap handler.",
             "properties": [
               "read",
               "write"
@@ -1516,7 +1516,7 @@
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla supervisor2",
+            "info" : "Exception program counter. \nStores the PC at time of trap/exception",
             "properties": [
               "read",
               "write"
@@ -1527,7 +1527,7 @@
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla supervisor2",
+            "info" : "Cause of exception or interrup in Supervisor mode.",
             "properties": [
               "read",
               "write"
@@ -1538,7 +1538,7 @@
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla supervisor2",
+            "info" : "Trap value, simular to 'utval' register. \nCould be bad address or illegal instruction.",
             "properties": [
               "read",
               "write"
@@ -1549,7 +1549,7 @@
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla supervisor2",
+            "info" : "Supervisor interrupt pending. \nIndicates pending Supervisor mode interrupts.",
             "properties": [
               "read",
               "write"
@@ -1560,7 +1560,7 @@
             "type" : "supervisor",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla supervisor2",
+            "info" : "Supervisor Address Translation and Protection. \nUsed for virtual memory.",
             "properties": [
               "read",
               "write"
@@ -1571,7 +1571,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine1",
+            "info" : "Machine mode status. \nFull privilege version of 'sstatus' and 'ustatus' registers.",
             "properties": [
               "read",
               "write"
@@ -1582,7 +1582,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine2",
+            "info" : "Specifies the base ISA width and supported extensions.",
             "properties": [
               "read",
               "write"
@@ -1593,7 +1593,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine3",
+            "info" : "Exception delegation from Machine mode to lower levels.",
             "properties": [
               "read",
               "write"
@@ -1604,7 +1604,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine3",
+            "info" : "Interrupt delegation from Machine mode to lower levels",
             "properties": [
               "read",
               "write"
@@ -1615,7 +1615,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine3",
+            "info" : "Interrupt enable for Machine mode.",
             "properties": [
               "read",
               "write"
@@ -1626,7 +1626,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine3",
+            "info" : "Machine trap-vector base address. \nLike 'stvec', but for Machine mode.",
             "properties": [
               "read",
               "write"
@@ -1637,7 +1637,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine3",
+            "info" : "Temporary scratch register used by Machine mode trap handler.",
             "properties": [
               "read",
               "write"
@@ -1648,7 +1648,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine3",
+            "info" : "PC of the instrucion that caused the last exception in Machine mode.",
             "properties": [
               "read",
               "write"
@@ -1659,7 +1659,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine3",
+            "info" : "Cause of exception of interupt in Machine mode. \nExpecify the privilege mode where is caused the interrupt.",
             "properties": [
               "read",
               "write"
@@ -1670,7 +1670,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine3",
+            "info" : "Additional context for exception in Machine mode.",
             "properties": [
               "read",
               "write"
@@ -1681,7 +1681,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine3",
+            "info" : "Interrupt pending in Machine mode. \nThis register matches 'mie' register layout.",
             "properties": [
               "read",
               "write"
@@ -1692,7 +1692,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine3",
+            "info" : "Counts the number of clock cycles executed.",
             "properties": [
               "read",
               "write"
@@ -1703,7 +1703,7 @@
             "type" : "machine",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla machine3",
+            "info" : "Counts the number of instrucions retired.",
             "properties": [
               "read",
               "write"
@@ -1714,7 +1714,7 @@
             "type" : "common",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla Common1",
+            "info" : "User-level read-only access to 'mcycle' register. ",
             "properties": [
               "read",
               "write"
@@ -1725,7 +1725,7 @@
             "type" : "common",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla Common2",
+            "info" : "User-level access to a platform-specific time counter.",
             "properties": [
               "read",
               "write"
@@ -1736,7 +1736,7 @@
             "type" : "common",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla Common3",
+            "info" : "User-level access to 'minstret' register.",
             "properties": [
               "read",
               "write"
@@ -1747,7 +1747,7 @@
             "type" : "common",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla common4",
+            "info" : "User-level hardware performance counters (event-selectable).",
             "properties": [
               "read",
               "write"
@@ -1758,7 +1758,7 @@
             "type" : "common",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla common4",
+            "info" : "High 32 bits of HPM counters on 32-bit platforms.",
             "properties": [
               "read",
               "write"
@@ -1769,7 +1769,7 @@
             "type" : "common",
             "value": "00000000",
             "default_value": "00000000",
-            "info" : "Blablabla common4",
+            "info" : "Returns the current hardware thread ID.",
             "properties": [
               "read",
               "write"
