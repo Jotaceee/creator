@@ -225,6 +225,9 @@ async function dissamble_binary(maxAttemps = 50) {
     await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100 ms antes de volver a verificar
     attempsdis++;
   }
+  while ((typeof runDependencies === 'undefined' || runDependencies !== 0)) {
+    await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100 ms antes de volver a verificar
+  }
   if (!preprocess_dissamble(elffile)){
     scriptdump.parentNode.removeChild(scriptdump);
     clean_environment();
@@ -289,6 +292,9 @@ async function waitForFunction(maxAttemps = 50) {
   while (typeof preprocess_ld === 'undefined' && attemps < maxAttemps) {
     await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100 ms antes de volver a verificar
     attemps++;
+  }
+  while ((typeof runDependencies === 'undefined' || runDependencies !== 0)) {
+    await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100 ms antes de volver a verificar
   }
   if(load_binary)
     elffile = preprocess_ld(objectcontent, linkercontent, app.update_binary); 
