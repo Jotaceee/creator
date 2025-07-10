@@ -24,6 +24,8 @@ _main:
 
     lw ra, 0(sp)
     addi sp, sp, 4
+    # li a7, 10
+    # ecall
     jr ra
 
 sum:

@@ -42,4 +42,6 @@ _main:
     sh t5, 0(t0)      # t5 -> Memory[h2]
    
     # return 
+    # li a7, 10
+    # ecall
     jr ra

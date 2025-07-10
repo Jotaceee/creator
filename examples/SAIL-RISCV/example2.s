@@ -27,6 +27,7 @@ main:
     ecall
    
     # return 
-    li a7, 10
-    ecall # jr ra
+    # li a7, 10
+    # ecall
+    jr ra
 

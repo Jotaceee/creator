@@ -29,4 +29,6 @@ tohost: .dword 0
 		ecall # print_int
 
 		#return
+		# li a7, 10
+		# ecall 
 		jr ra

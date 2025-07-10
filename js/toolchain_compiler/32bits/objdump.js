@@ -199,30 +199,46 @@ Module['print'] = function (message) {
   // console.log(typeof message);
 
   // console.log("En que seccion estoy: ", sectionasm);
-  var exaaa = [];
+  var auxinsn = [];
   const auxiliar = message.trim();
   const insnmatch = auxiliar.match(/^(\w+):\s+((?:fnmadd\.s|\w+|\.\w+))\s+([^\#]*)(?:#(.*))?$/); // /^(\w+):\s+(\w+)\s+([^\#]*)(?:#(.*))?$/
+  const datamatch = auxiliar.match(/^([0-9a-fA-F]+):.*?0x([0-9a-fA-F]+)/);
   const labelmatch = auxiliar.match(/^([0-9a-f]{8})\s+<(.+?)>:$/);
-  if (insnmatch && sectionasm != 0) {
+  if (insnmatch !== null && sectionasm === 1) {
     const address = insnmatch[1].trim();                       // Parte 1: dirección
     const hexInstruction = insnmatch[2].trim();                // Parte 2: instrucción hexadecimal
     const asmInstruction = (insnmatch[3].trim()).replace(/\\t/g, ' ');                // Parte 3: instrucción ensamblador (sin el comentario)
     // const comment = match[4] ? insnmatchmatch[4].trim() : null;  // Parte 4: comentario (opcional)
-    let axx = dumpdatainstructions.findIndex(sublist => sublist.includes(address)); 
+    axx = dumptextinstructions.findIndex(sublist => sublist.includes(address));
+    if (axx != -1 && sectionasm === 1) {
+      dumptextinstructions[axx][1] = hexInstruction;
+      dumptextinstructions[axx][2] = asmInstruction.replace(/\\t/g, ' ');
+    }
+    else if (sectionasm === 1){
+      auxinsn.push(address);
+      auxinsn.push(hexInstruction);
+      auxinsn.push(asmInstruction.replace(/\\t/g, ' '));
+      auxinsn.push(0);
+      auxinsn.push("");
+      dumptextinstructions.push(auxinsn);
+    }
+  }
+  else if (datamatch !== null && sectionasm === 2){
+    let axx = dumpdatainstructions.findIndex(sublist => sublist.includes(datamatch[1])); 
     if (axx !== -1 && sectionasm === 2) {
-        dumpdatainstructions[axx][1] = hexInstruction;
-        dumpdatainstructions[axx][2] = asmInstruction.replace(/\\t/g, ' ');
+        dumpdatainstructions[axx][1] = datamatch[2];
+        dumpdatainstructions[axx][2] = ""; // asmInstruction.replace(/\\t/g, ' ');
     }
     else if (sectionasm === 2) {
-      exaaa.push(address);
-      exaaa.push(hexInstruction);
-      exaaa.push(asmInstruction.replace(/\\t/g, ' '));
-      exaaa.push(0);
-      exaaa.push("");
-      if(exaaa[3] === 0){
-        console.log("Exaa que se va a insertar en un dumpdata anterior: ", exaaa);
-        console.log("Que es esto: ", /[^0-9a-fA-F]/.test(exaaa[1]));
-        if(/[^0-9a-fA-F]/.test(exaaa[1])/*   exaaa[1].includes("madd.s")*/){
+      auxinsn.push(datamatch[1]);
+      auxinsn.push(datamatch[2]);
+      auxinsn.push(""/*asmInstruction.replace(/\\t/g, ' ')*/);
+      auxinsn.push(0);
+      auxinsn.push("");
+      if(auxinsn[3] === 0){
+        // console.log("Exaa que se va a insertar en un dumpdata anterior: ", auxinsn);
+        // console.log("Que es esto: ", /[^0-9a-fA-F]/.test(auxinsn[1]));
+        if(/[^0-9a-fA-F]/.test(auxinsn[1])/*   auxinsn[1].includes("madd.s")*/){
           //buscamos la palabra completa almacenada por el list_data_instructions
           var auxda = list_data_instructions.findIndex(data => data.label === dumpdatainstructions[dumpdatainstructions.length -1][4]);
           var list_data_elem;
@@ -264,45 +280,20 @@ Module['print'] = function (message) {
               dumpdatainstructions[dumpdatainstructions.length -1][1] = list_data_instructions[auxda].value[aux_index_value - 1].toString(16) + dumpdatainstructions[dumpdatainstructions.length -1][1];
             }
           }
-          // if (list_data_instructions[auxda].value.length % 2 !== 0){
-          //   let sd =  list_data_instructions[auxda].value.slice(-2);
-          //   let sd1 = sd.charCodeAt(0).toString(16).padStart(2, '0');
-          //   console.log("Resultado: ", sd1);
-          //   dumpdatainstructions[dumpdatainstructions.length -1][1] = String(sd1) + dumpdatainstructions[dumpdatainstructions.length -1][1];
-          // }else {
-          //   let sd =  list_data_instructions[auxda].value.slice(-3);
-          //   let sd1 = sd.charCodeAt(0).toString(16).padStart(2, '0');
-          //   let sd2 = sd.charCodeAt(1).toString(16).padStart(2, '0'); 
-          //   console.log("Resultado: ", sd1, sd2);
-          //   dumpdatainstructions[dumpdatainstructions.length -1][1] = String(sd2) + String(sd1) + dumpdatainstructions[dumpdatainstructions.length -1][1];
-          // }
         }
-        else dumpdatainstructions[dumpdatainstructions.length -1][1] = exaaa[1] + dumpdatainstructions[dumpdatainstructions.length -1][1];
+        else dumpdatainstructions[dumpdatainstructions.length -1][1] = auxinsn[1] + dumpdatainstructions[dumpdatainstructions.length -1][1];
         inside_label += 1;
       }else 
-        dumpdatainstructions.push(exaaa);
-    }
-    axx = dumptextinstructions.findIndex(sublist => sublist.includes(address));
-    if (axx != -1 && sectionasm === 1) {
-      dumptextinstructions[axx][1] = hexInstruction;
-      dumptextinstructions[axx][2] = asmInstruction.replace(/\\t/g, ' ');
-    }
-    else if (sectionasm === 1){
-      exaaa.push(address);
-      exaaa.push(hexInstruction);
-      exaaa.push(asmInstruction.replace(/\\t/g, ' '));
-      exaaa.push(0);
-      exaaa.push("");
-      dumptextinstructions.push(exaaa);
+        dumpdatainstructions.push(auxinsn);
     }
   }
   else if(labelmatch && sectionasm != 0){
     // console.log("Identificado:", labelmatch);
-    exaaa.push(labelmatch[1].trim());
-    exaaa.push("");
-    exaaa.push("");
-    exaaa.push(1);
-    exaaa.push(labelmatch[2].trim());
+    auxinsn.push(labelmatch[1].trim());
+    auxinsn.push("");
+    auxinsn.push("");
+    auxinsn.push(1);
+    auxinsn.push(labelmatch[2].trim());
     console.log("labelmatch: ", labelmatch);
     if (!app.c_kernel && labelmatch[2].trim().includes("kernel"))
       entry_elf = labelmatch[1].trim();
@@ -310,18 +301,17 @@ Module['print'] = function (message) {
       entry_elf = labelmatch[1].trim();
     }
     if (sectionasm === 1){
-      dumptextinstructions.push(exaaa);
+      dumptextinstructions.push(auxinsn);
     }else if (sectionasm === 2){
-      dumpdatainstructions.push(exaaa);
+      dumpdatainstructions.push(auxinsn);
       inside_label = 0;
-      
     }
 
   }
 
-  else {
-    // console.log("objdump: 1", message);
-  }
+  // else {
+  //   // console.log("objdump: 1", message);
+  // }
 
   // identificacion de que seccion de codigo entramos.
   if (message.search(".text") != -1)

@@ -48,5 +48,7 @@ _main:
     ecall
 
     # return 
+    # li a7, 10
+    # ecall
     jr ra
 

@@ -28,5 +28,7 @@ tohost: .dword 0
       beq x0, x0, jump2
 
       #return
+      # li a7, 10
+      # ecall
       jr ra
 

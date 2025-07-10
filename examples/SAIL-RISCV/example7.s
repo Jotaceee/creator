@@ -38,6 +38,8 @@ loop1: beq t1, t2, end1      # if(t1 == t2) --> jump to fin1
   # loop end
 end1: 
   #return
+  # li a7, 10
+  # ecall
   jr ra
 
 

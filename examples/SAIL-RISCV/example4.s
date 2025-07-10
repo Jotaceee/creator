@@ -38,5 +38,7 @@ _main:
     fsd  f12, 0(x28)
 
     #return 
+    # li a7, 10
+    # ecall
     jr ra
 

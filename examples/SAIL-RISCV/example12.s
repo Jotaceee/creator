@@ -26,7 +26,9 @@ tohost: .dword 0
 
            # return
            lw ra, 0(sp)
-           addi sp, sp, 4
+           addi sp, sp, 4 
+           # li a7, 10
+           # ecall
            jr ra
 
 
@@ -57,4 +59,5 @@ factorial:
            addi sp, sp, 12
 
            # return t0
+
            jr ra

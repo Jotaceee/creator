@@ -199,7 +199,7 @@ Module['print'] = function (message) {
     let regtowrite = crex_findReg(vectorMatch[1]);
     writeRegister(vectorMatch[3], regtowrite.indexComp, regtowrite.indexElem);
   }
-  if (instMatch && (instMatch[2] === 'U' || (parseInt(instMatch[3], 16) >= pc_min) && parseInt(instMatch[3], 16) < parseInt("0x20000", 16) )){
+  if (instMatch && /*(instMatch[2] === 'U' ||*/ ((parseInt(instMatch[3], 16) >= pc_min) && parseInt(instMatch[3], 16) < parseInt("0x20000", 16) )){
     if (inside_function) 
       check_call_convention_temp_regs(instMatch);
 
@@ -272,11 +272,15 @@ Module['print'] = function (message) {
       var aux_reg = crex_findReg("ra");
       next_add_to_jump = readRegister(aux_reg.indexComp, aux_reg.indexElem).toString(16);
       next_add_to_jump = instructions.findIndex(insn => ( '0x' + (insn.Address.slice(2))) === ("0x"+next_add_to_jump.toLowerCase()));
-      prev_add_to_jump = current_ins;
-      track_stack_leave();
-      creator_callstack_leave();
-      callstack_convention.pop();
-      inside_function = (callstack_convention.length > 0); 
+      if (next_add_to_jump !== -1) {
+        prev_add_to_jump = current_ins;
+        track_stack_leave();
+        creator_callstack_leave();
+        callstack_convention.pop();
+        inside_function = (callstack_convention.length > 0); 
+      } else {
+        next_add_to_jump = undefined;
+      }
     }
 
 
@@ -3806,8 +3810,13 @@ var exitJS = (status, implicit) => {
     }
     if (status === 1){
       let init_index = instructions.findIndex(insn => insn.Address === "0x" + entry_elf);
-      if(init_index !== undefined)
+      if(init_index !== -1)
         instructions[init_index]._rowVariant = 'success';
+      else {
+        let init_index2 = instructions.findIndex(insn => insn.Address === entry_elf);
+        if(init_index2 !== -1)
+        instructions[init_index2]._rowVariant = 'success';
+      }
     }
     if (status === 0){
       show_notification('The execution of the program has finished', 'success') ;
