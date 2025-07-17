@@ -2491,46 +2491,49 @@ function creator_memory_updaterow(addr) {
     }
     
   }
-  elto.addr_begin =
-    "0x" +
-    main_memory[addr_base].addr
-      .toString(16)
-      .padStart((is_32b_arch) ? word_size_bytes * 2 : word_size_bytes * 2, "0")
-      .toUpperCase();
-  var addr_end = main_memory[addr_base].addr  + ((is_32b_arch) ? word_size_bytes : word_size_bytes / 2) - 1;
-  elto.addr_end =
-    "0x" +
-    addr_end
-      .toString(16)
-      .padStart((is_32b_arch) ? word_size_bytes * 2 : word_size_bytes * 2, "0")
-      .toUpperCase();
-  elto.addr = addr_end;
-  var v1 = {};
-  elto.hex_packed = "";
-  var aux_for = (is_32b_arch) ? word_size_bytes : (word_size_bytes / 2);
-  for (var i = 0; i < aux_for; i++) {
-    v1 = main_memory_read(addr_base + i);
-    elto.hex[i].byte = v1.bin;
-    elto.hex[i].tag = v1.tag;
-    if (v1.tag == "") {
-      elto.hex[i].tag = null;
+  if (main_memory[addr_base] !== undefined) {
+    elto.addr_begin =
+      "0x" +
+      main_memory[addr_base].addr
+        .toString(16)
+        .padStart((is_32b_arch) ? word_size_bytes * 2 : word_size_bytes * 2, "0")
+        .toUpperCase();
+    var addr_end = main_memory[addr_base].addr  + ((is_32b_arch) ? word_size_bytes : word_size_bytes / 2) - 1;
+    elto.addr_end =
+      "0x" +
+      addr_end
+        .toString(16)
+        .padStart((is_32b_arch) ? word_size_bytes * 2 : word_size_bytes * 2, "0")
+        .toUpperCase();
+    elto.addr = addr_end;
+    var v1 = {};
+    elto.hex_packed = "";
+    var aux_for = (is_32b_arch) ? word_size_bytes : (word_size_bytes / 2);
+    for (var i = 0; i < aux_for; i++) {
+      v1 = main_memory_read(addr_base + i);
+      elto.hex[i].byte = v1.bin;
+      elto.hex[i].tag = v1.tag;
+      if (v1.tag == "") {
+        elto.hex[i].tag = null;
+      }
+      elto.hex_packed += v1.bin;
     }
-    elto.hex_packed += v1.bin;
+    elto.value = "";
+    elto.size = 0;
+    for (var i = 0; i < aux_for; i++) {
+      if (typeof main_memory_datatypes[addr_base + i] == "undefined") {
+        continue;
+      }
+      elto.size = elto.size + main_memory_datatypes[addr_base + i].size;
+      if (main_memory_datatypes[addr_base + i].type != "space" && main_memory_datatypes[addr_base + i].type != "zero") {
+        if (elto.value != "") elto.value += ", ";
+        elto.value += main_memory_datatypes[addr_base + i].value;
+      } else {
+        elto.eye = true;
+      }
+    }
   }
-  elto.value = "";
-  elto.size = 0;
-  for (var i = 0; i < aux_for; i++) {
-    if (typeof main_memory_datatypes[addr_base + i] == "undefined") {
-      continue;
-    }
-    elto.size = elto.size + main_memory_datatypes[addr_base + i].size;
-    if (main_memory_datatypes[addr_base + i].type != "space" && main_memory_datatypes[addr_base + i].type != "zero") {
-      if (elto.value != "") elto.value += ", ";
-      elto.value += main_memory_datatypes[addr_base + i].value;
-    } else {
-      elto.eye = true;
-    }
-  }
+  
 }
 function creator_memory_updateall() {
   if (
@@ -3078,7 +3081,7 @@ function process_data_to_store_memory(){
 }
 
 function assembly_compiler()
-{ 
+{ creator_memory_clear();
   var explabel = /^(\w+):/;
   var expvalue = /\.(\w+)\s+(.+)/;
   var expalign = /^\.align\s+(\d+)/;
@@ -3287,10 +3290,10 @@ function assembly_compiler()
               });
               console.log("entrada: ", entry_elf);
               if(is_32b_arch){
-                if (dumptextinstructions[i][0] === entry_elf)
+                if (dumptextinstructions[i][0] === entry_elf || ("0x"+dumptextinstructions[i][0]) === entry_elf )
                   instructions[i]._rowVariant = 'success';
               } else {
-                if ((dumptextinstructions[i][0]) === entry_elf)
+                if ((dumptextinstructions[i][0]) === entry_elf || ("0x"+dumptextinstructions[i][0]) === entry_elf)
                   instructions[i]._rowVariant = 'success';
               }
             }
@@ -3390,7 +3393,7 @@ function assembly_compiler()
                   break;
     
                 case "float":
-
+                  align = 2;
 
                   if(dumpdatainstructions[i][1].length > 8){
                     var init_add = parseInt(dumpdatainstructions[i][0], 16);
@@ -3425,7 +3428,11 @@ function assembly_compiler()
                   }
                   break;
                 case "double":
-
+                  if (dumpdatainstructions[i][5] === 0){
+                    align = 2;
+                  } else {
+                    align = dumpdatainstructions[i][5];
+                  }
                   if(dumpdatainstructions[i][1].length > 16){
                     var init_add = parseInt(dumpdatainstructions[i][0], 16);
                     var elements = Math.floor(dumpdatainstructions[i][1].length / 16);
@@ -3471,6 +3478,7 @@ function assembly_compiler()
                     creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
                     // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                   }
+                  align = 1;
                   break;
 
 
@@ -7923,9 +7931,17 @@ var uielto_toolbar_btngroup = {
       draw.success = [];
       draw.info = [];
       for (var i = 0; i < instructions.length; i++) {
-        if (instructions[i].Label == "_main") {
-          draw.success.push(i);
+        if (instructions[i].Address === entry_elf || instructions[i].Address === ("0x" + entry_elf))
+        // if (instructions[i].Label == "_main") {
+          {
+            draw.success.push(i);
+            break;
+          }
+        else {
+          if (entry_elf === undefined && instructions[i].Label == "_main")
+            draw.success.push(i);
         }
+        // }
       }
       var ret = packExecute(false, null, null, draw);
       this.execution_UI_update(ret);
@@ -12571,6 +12587,26 @@ function getDebounceTime() {
     return 1e3;
   }
 }
+
+function changeEntry(value){
+  console.log("Inicio: ", entry_elf);
+  if (execution_mode_run !== -1) {
+    // show error
+    show_notification("You cannot change the entry binary value during the execution. Please stop or reset the simulation environment", "danger");
+  } else {
+    for (let i = 0; i < instructions.length; i++) {
+      if (i !== value)
+        instructions[i]._rowVariant = '';
+      else 
+        instructions[i]._rowVariant = "success";
+    }
+    entry_elf = instructions[value].Address;
+    if (!entry_elf.startsWith("0x"))
+      entry_elf = "0x" + entry_elf;
+  }
+  console.log("Cambia el entry: ", entry_elf);
+}
+
 var uielto_execution = {
   props: {
     instructions: { type: Array, required: true },
@@ -12578,6 +12614,7 @@ var uielto_execution = {
   },
   data: function () {
     return {
+      selectedItem : null,
       archInstructions: [
         "Break",
         "Address",
@@ -12618,8 +12655,66 @@ var uielto_execution = {
         app._data.instructions[index].Break = null;
       }
     },
+    hideEntryPoint(){
+      if (document.getElementById("entryMenu") !== null){
+        document.getElementById("entryMenu").style.display = "none";
+        this.selectedItem = null;
+      }
+    },
+    handleRowEntry(item, index, event){
+      
+      event.preventDefault();
+      // selectedFile = event.target.textContent;
+
+      // let menu = document.getElementById("entryMenu");
+      
+      let menu = this.$refs.entryMenu;
+      console.log(document);
+      console.log(menu);
+      console.log(event);
+      console.log(item);
+      console.log(index); 
+      this.selectedItem = index;
+      
+
+      this.$nextTick(() => {
+      const menu = this.$refs.entryMenu;
+      if (!menu) return;
+      
+
+      let x = event.pageX / 2.5;
+      let y = event.pageY / 2.5;
+      const menuWidth = menu.offsetWidth;
+      const menuHeight = menu.offsetHeight;
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+
+      if (x + menuWidth > windowWidth) x = windowWidth - menuWidth - 5;
+      if (y + menuHeight > windowHeight) y = windowHeight - menuHeight - 5;
+
+      menu.style.left = `${x}px`;
+      menu.style.top = `${y}px`;
+      menu.style.display = "block";
+    });
+    }
+    // ,
+    // changeEntry() {
+    // if (this.selectedItem !== null) {
+    //   console.log("Nuevo punto de entrada:", this.selectedItem);
+    //   // Tu lógica aquí
+    // }
+    // // selectEntryPoint(record, index) {
+      
+    // }
+  },
+  mounted() {
+      document.addEventListener("click", () => {
+      const menu = this.$refs.entryMenu;
+      if (menu) menu.style.display = "none";
+    });
   },
   template:
+    '<div>'+
     ' <b-container fluid align-h="between" class="mx-0 px-1">' +
     '   <b-row cols="1" >' +
     '     <b-col align-h="center">' +
@@ -12633,6 +12728,7 @@ var uielto_execution = {
     '                :fields="archInstructions" ' +
     '                class="instructions_table responsive" ' +
     '                @row-clicked="breakPoint" ' +
+    '                @row-contextmenu="handleRowEntry"' +
     "                :filter-function=filter " +
     '                filter=" " ' +
     '                primary-key="Address">' +
@@ -12708,10 +12804,17 @@ var uielto_execution = {
     '           <span class="h6" v-if="row.item.visible == true">{{row.item.loaded}}</span>' +
     '           <span class="h6" v-if="row.item.visible == false">&lt;&lt;Hidden&gt;&gt;</span>' +
     "         </template> " +
+
     "       </b-table>" +
     "     </b-col>" +
     "   </b-row>" +
-    " </b-container>",
+    " </b-container>"+
+    ' <div ref="entryMenu" class="context-menu">'+ 
+    '   <ul>'+ 
+    '     <li @click="changeEntry(selectedItem)">Select as new entry program</li>'+ 
+    '   </ul>'+ 
+    ' </div>'+
+    '</div>'
 };
 Vue.component("table-execution", uielto_execution);
 var uielto_data_view_selector = {

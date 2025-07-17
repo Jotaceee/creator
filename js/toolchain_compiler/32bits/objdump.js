@@ -201,8 +201,8 @@ Module['print'] = function (message) {
   // console.log("En que seccion estoy: ", sectionasm);
   var auxinsn = [];
   const auxiliar = message.trim();
+  const datamatch = auxiliar.match(/^([0-9a-fA-F]+):\s+((?:[0-9a-fA-F]{2,8}(?:\s+[0-9a-fA-F]{2,8})*))(?:.*?0x([0-9a-fA-F]+))?/); //  /^([0-9a-fA-F]+):.*?0x([0-9a-fA-F]+)/
   const insnmatch = auxiliar.match(/^(\w+):\s+((?:fnmadd\.s|\w+|\.\w+))\s+([^\#]*)(?:#(.*))?$/); // /^(\w+):\s+(\w+)\s+([^\#]*)(?:#(.*))?$/
-  const datamatch = auxiliar.match(/^([0-9a-fA-F]+):.*?0x([0-9a-fA-F]+)/);
   const labelmatch = auxiliar.match(/^([0-9a-f]{8})\s+<(.+?)>:$/);
   if (insnmatch !== null && sectionasm === 1) {
     const address = insnmatch[1].trim();                       // Parte 1: dirección
@@ -300,6 +300,10 @@ Module['print'] = function (message) {
     else if(labelmatch[2].trim() === "_main" && app.c_kernel){
       entry_elf = labelmatch[1].trim();
     }
+
+    if (!entry_elf.startsWith("0x"))
+      entry_elf = "0x" + entry_elf;
+    
     if (sectionasm === 1){
       dumptextinstructions.push(auxinsn);
     }else if (sectionasm === 2){
@@ -322,6 +326,7 @@ Module['print'] = function (message) {
     sectionasm = 0;
 
   console.log(message);
+  // console.log(dumpdatainstructions); 
 }
 
 var out = Module["print"] || console.log.bind(console);
