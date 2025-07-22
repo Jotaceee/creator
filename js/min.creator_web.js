@@ -10074,8 +10074,8 @@ var uielto_instructions = {
     return {
       instructions_fields: [
         "name",
-        "co",
         "cop",
+        "Extended",
         "nwords",
         "signatureRaw",
         "properties",
@@ -10105,7 +10105,7 @@ var uielto_instructions = {
     '             sticky-header="60vh"> ' +
     "" +
     "      \x3c!-- Change the title of each column --\x3e" +
-    '      <template v-slot:head(cop)="row">' +
+    '      <template v-slot:head(Extended)="row">' +
     "        Extended CO" +
     "      </template>" +
     "" +
@@ -10213,7 +10213,7 @@ var uielto_instructions_fields = {
     '                              title="Field name">' +
     "                </b-form-input>" +
     '                <b-form-input type="text" ' +
-    '                              v-model="instruction.fields[field_index].name = instruction.name" ' +
+    '                              v-model="instruction.fields[field_index].name" ' + // instruction.fields[field_index].name = instruction.name
     "                              required " +
     '                              size="sm" ' +
     '                              v-if="(field_index) == 0"  ' +
@@ -10306,7 +10306,8 @@ var uielto_instructions_fields = {
     "                </b-form-input>" +
     "              </b-form-group>" +
     "            </div>" +
-    '            <div class="col-lg-2 col-2 fields" v-if="instruction.fields[field_index].type == \'cop\'">' +
+    // '            <div class="col-lg-2 col-2 fields" v-if="instruction.fields[field_index].type == \'cop\'">' +
+    '            <div class="col-lg-2 col-2 fields" v-if="instruction.fields[field_index].valueField != \'\'">' +
     "              <b-form-group>" +
     '                <b-form-input type="text" ' +
     "                              v-on:input=\"debounce('instruction.fields[field_index].valueField', $event)\" " +

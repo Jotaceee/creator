@@ -36048,40 +36048,47 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 28,
                 "valueField": "1000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 27,
                 "stopbit": 24,
                 "valueField": "0011"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 23,
                 "stopbit": 20,
                 "valueField": "0011"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fence.tso",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0001111"
@@ -36111,42 +36118,49 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 28,
                 "valueField": "0000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 27,
                 "stopbit": 24,
                 "valueField": "0001"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 23,
                 "stopbit": 20,
                 "valueField": "0000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 11,
                 "stopbit": 7,
                 "valueField": "00000"
             },
             {
-                "name": "cop",
+                "name": "pause",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0001111"
@@ -36176,30 +36190,35 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 11,
                 "stopbit": 7,
                 "valueField": "00000"
             },
             {
-                "name": "cop",
+                "name": "scall",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
@@ -36227,30 +36246,35 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000001"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 11,
                 "stopbit": 7,
                 "valueField": "00000"
             },
             {
-                "name": "cop",
+                "name": "sbreak",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
@@ -36278,28 +36302,33 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000000"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "mv",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0010011"
@@ -36327,34 +36356,40 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 25,
                 "valueField": "0100000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "00000"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "neg",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0110011"
@@ -36383,30 +36418,35 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 11,
                 "stopbit": 7,
                 "valueField": "00000"
             },
             {
-                "name": "cop",
+                "name": "nop",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0010011"
@@ -36434,28 +36474,33 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000000"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "111"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "zext.b",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0010011"
@@ -36483,30 +36528,35 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00001"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 11,
                 "stopbit": 7,
                 "valueField": "00000"
             },
             {
-                "name": "cop",
+                "name": "ret",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100111"
@@ -36534,32 +36584,38 @@
         "fields": [
             {
                 "name": "bimm12hi",
+                "type": "imm",
                 "startbit": 31,
                 "stopbit": 25
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "111"
             },
             {
                 "name": "bimm12lo",
+                "type": "imm",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "bleu",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100011"
@@ -36588,32 +36644,38 @@
         "fields": [
             {
                 "name": "bimm12hi",
+                "type": "imm",
                 "startbit": 31,
                 "stopbit": 25
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "110"
             },
             {
                 "name": "bimm12lo",
+                "type": "imm",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "bgtu",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100011"
@@ -36642,32 +36704,38 @@
         "fields": [
             {
                 "name": "bimm12hi",
+                "type": "imm",
                 "startbit": 31,
                 "stopbit": 25
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "101"
             },
             {
                 "name": "bimm12lo",
+                "type": "imm",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "ble",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100011"
@@ -36696,33 +36764,39 @@
         "fields": [
             {
                 "name": "bimm12hi",
+                "type": "imm",
                 "startbit": 31,
                 "stopbit": 25
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "00000"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "101"
             },
             {
                 "name": "bimm12lo",
+                "type": "imm",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "bgez",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100011"
@@ -36751,33 +36825,39 @@
         "fields": [
             {
                 "name": "bimm12hi",
+                "type": "imm",
                 "startbit": 31,
                 "stopbit": 25
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "101"
             },
             {
                 "name": "bimm12lo",
+                "type": "imm",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "blez",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100011"
@@ -36806,32 +36886,38 @@
         "fields": [
             {
                 "name": "bimm12hi",
+                "type": "imm",
                 "startbit": 31,
                 "stopbit": 25
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "100"
             },
             {
                 "name": "bimm12lo",
+                "type": "imm",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "bgt",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100011"
@@ -36860,33 +36946,39 @@
         "fields": [
             {
                 "name": "bimm12hi",
+                "type": "imm",
                 "startbit": 31,
                 "stopbit": 25
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "100"
             },
             {
                 "name": "bimm12lo",
+                "type": "imm",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "bgtz",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100011"
@@ -36915,33 +37007,39 @@
         "fields": [
             {
                 "name": "bimm12hi",
+                "type": "imm",
                 "startbit": 31,
                 "stopbit": 25
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "00000"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "100"
             },
             {
                 "name": "bimm12lo",
+                "type": "imm",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "bltz",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100011"
@@ -36970,33 +37068,39 @@
         "fields": [
             {
                 "name": "bimm12hi",
+                "type": "imm",
                 "startbit": 31,
                 "stopbit": 25
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "00000"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "001"
             },
             {
                 "name": "bimm12lo",
+                "type": "imm",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "bnez",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100011"
@@ -37025,33 +37129,39 @@
         "fields": [
             {
                 "name": "bimm12hi",
+                "type": "imm",
                 "startbit": 31,
                 "stopbit": 25
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "00000"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "bimm12lo",
+                "type": "imm",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "beqz",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100011"
@@ -37080,28 +37190,33 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000001"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "011"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "seqz",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0010011"
@@ -37129,34 +37244,40 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 25,
                 "valueField": "0000000"
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "011"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "snez",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0110011"
@@ -37185,34 +37306,40 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 25,
                 "valueField": "0000000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "00000"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "010"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "sltz",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0110011"
@@ -37241,34 +37368,40 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 25,
                 "valueField": "0000000"
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "010"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "sgtz",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0110011"
@@ -37297,29 +37430,34 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000000"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 11,
                 "stopbit": 7,
                 "valueField": "00001"
             },
             {
-                "name": "cop",
+                "name": "jalr",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100111"
@@ -37347,29 +37485,34 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000000"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 11,
                 "stopbit": 7,
                 "valueField": "00000"
             },
             {
-                "name": "cop",
+                "name": "jr",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1100111"
@@ -37397,17 +37540,20 @@
         "fields": [
             {
                 "name": "jimm20",
+                "type": "imm",
                 "startbit": 31,
                 "stopbit": 12
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 11,
                 "stopbit": 7,
                 "valueField": "00001"
             },
             {
-                "name": "cop",
+                "name": "jal",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1101111"
@@ -37433,12 +37579,14 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 11,
                 "stopbit": 7,
                 "valueField": "00000"
             },
             {
-                "name": "cop",
+                "name": "j",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1101111"
@@ -37463,40 +37611,47 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 27,
                 "valueField": "00100"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 26,
                 "stopbit": 25,
                 "valueField": "01"
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "rs1"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fmv.d",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1010011"
@@ -37526,40 +37681,47 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 27,
                 "valueField": "00100"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 26,
                 "stopbit": 25,
                 "valueField": "01"
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "rs1"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "010"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fabs.d",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1010011"
@@ -37589,40 +37751,47 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 27,
                 "valueField": "00100"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 26,
                 "stopbit": 25,
                 "valueField": "01"
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "rs1"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "001"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fneg.d",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1010011"
@@ -37652,40 +37821,47 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 27,
                 "valueField": "11100"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 26,
                 "stopbit": 25,
                 "valueField": "00"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "00000"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fmv.x.s",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1010011"
@@ -37715,40 +37891,47 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 27,
                 "valueField": "11110"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 26,
                 "stopbit": 25,
                 "valueField": "00"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "00000"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fmv.s.x",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1010011"
@@ -37778,40 +37961,47 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 27,
                 "valueField": "00100"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 26,
                 "stopbit": 25,
                 "valueField": "00"
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "rs1"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "000"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fmv.s",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1010011"
@@ -37841,40 +38031,47 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 27,
                 "valueField": "00100"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 26,
                 "stopbit": 25,
                 "valueField": "00"
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "rs1"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "010"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fabs.s",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1010011"
@@ -37904,40 +38101,47 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 27,
                 "valueField": "00100"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 26,
                 "stopbit": 25,
                 "valueField": "00"
             },
             {
                 "name": "rs2",
+                "type": "Reg",
                 "startbit": 24,
                 "stopbit": 20,
                 "valueField": "rs1"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "001"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fneg.s",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1010011"
@@ -37967,29 +38171,34 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000001"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "010"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "frflags",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
@@ -38017,28 +38226,33 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000001"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "001"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fsflags",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
@@ -38066,28 +38280,33 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000001"
             },
             {
                 "name": "zimm",
+                "type": "imm",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "101"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fsflagsi",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
@@ -38115,29 +38334,34 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000010"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "010"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "frrm",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
@@ -38165,28 +38389,33 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000010"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "001"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fsrm",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
@@ -38214,28 +38443,33 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000010"
             },
             {
                 "name": "zimm",
+                "type": "imm",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "101"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fsrmi",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
@@ -38263,28 +38497,33 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000011"
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "001"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "fscsr",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
@@ -38312,29 +38551,34 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "000000000011"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "010"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "frcsr",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
@@ -38362,33 +38606,39 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 25,
                 "valueField": "0000000"
             },
             {
                 "name": "shamtw",
+                "type": "shamt",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "001"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "slli",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0010011"
@@ -38417,33 +38667,39 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 25,
                 "valueField": "0000000"
             },
             {
                 "name": "shamtw",
+                "type": "shamt",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "101"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "srli",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0010011"
@@ -38472,33 +38728,39 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 25,
                 "valueField": "0100000"
             },
             {
                 "name": "shamtw",
+                "type": "shamt",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "101"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "srai",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0010011"
@@ -38527,33 +38789,39 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 25,
                 "valueField": "0000000"
             },
             {
                 "name": "shamtw",
+                "type": "shamt",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "001"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "slli_rv32",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0010011"
@@ -38582,33 +38850,39 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 25,
                 "valueField": "0000000"
             },
             {
                 "name": "shamtw",
+                "type": "shamt",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "101"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "srli_rv32",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0010011"
@@ -38637,33 +38911,39 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 25,
                 "valueField": "0100000"
             },
             {
                 "name": "shamtw",
+                "type": "shamt",
                 "startbit": 24,
                 "stopbit": 20
             },
             {
                 "name": "rs1",
+                "type": "Reg",
                 "startbit": 19,
                 "stopbit": 15
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "101"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "srai_rv32",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "0010011"
@@ -38692,28 +38972,33 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 15,
                 "stopbit": 13,
                 "valueField": "100"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 12,
                 "stopbit": 10,
                 "valueField": "000"
             },
             {
                 "name": "rd_rs1_p",
+                "type": "Reg",
                 "startbit": 9,
                 "stopbit": 7
             },
             {
                 "name": "c_nzuimm5",
+                "type": "imm",
                 "startbit": 6,
                 "stopbit": 2
             },
             {
-                "name": "cop",
+                "name": "c.srli",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "01"
@@ -38741,28 +39026,33 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 15,
                 "stopbit": 13,
                 "valueField": "100"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 12,
                 "stopbit": 10,
                 "valueField": "001"
             },
             {
                 "name": "rd_rs1_p",
+                "type": "Reg",
                 "startbit": 9,
                 "stopbit": 7
             },
             {
                 "name": "c_nzuimm5",
+                "type": "imm",
                 "startbit": 6,
                 "stopbit": 2
             },
             {
-                "name": "cop",
+                "name": "c.srai",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "01"
@@ -38790,22 +39080,26 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 15,
                 "stopbit": 12,
                 "valueField": "0000"
             },
             {
                 "name": "rd_rs1_n0",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
                 "name": "c_nzuimm6lo",
+                "type": "imm",
                 "startbit": 6,
                 "stopbit": 2
             },
             {
-                "name": "cop",
+                "name": "c.slli",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "10"
@@ -38832,28 +39126,33 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 15,
                 "stopbit": 13,
                 "valueField": "100"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 12,
                 "stopbit": 10,
                 "valueField": "000"
             },
             {
                 "name": "rd_rs1_p",
+                "type": "Reg",
                 "startbit": 9,
                 "stopbit": 7
             },
             {
                 "name": "c_nzuimm5",
+                "type": "imm",
                 "startbit": 6,
                 "stopbit": 2
             },
             {
-                "name": "cop",
+                "name": "c.srli_rv32",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "01"
@@ -38881,28 +39180,33 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 15,
                 "stopbit": 13,
                 "valueField": "100"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 12,
                 "stopbit": 10,
                 "valueField": "001"
             },
             {
                 "name": "rd_rs1_p",
+                "type": "Reg",
                 "startbit": 9,
                 "stopbit": 7
             },
             {
                 "name": "c_nzuimm5",
+                "type": "imm",
                 "startbit": 6,
                 "stopbit": 2
             },
             {
-                "name": "cop",
+                "name": "c.srai_rv32",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "01"
@@ -38930,22 +39234,26 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 15,
                 "stopbit": 12,
                 "valueField": "0000"
             },
             {
                 "name": "rd_rs1_n0",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
                 "name": "c_nzuimm6lo",
+                "type": "imm",
                 "startbit": 6,
                 "stopbit": 2
             },
             {
-                "name": "cop",
+                "name": "c.slli_rv32",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "10"
@@ -38972,29 +39280,34 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "110010000000"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "010"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "rdcycleh",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
@@ -39022,29 +39335,34 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "110010000001"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "010"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "rdtimeh",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
@@ -39072,29 +39390,34 @@
         "fields": [
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 31,
                 "stopbit": 20,
                 "valueField": "110010000010"
             },
             {
                 "name": "pad",
+                "type": "pad",
                 "startbit": 19,
                 "stopbit": 15,
                 "valueField": "00000"
             },
             {
                 "name": "Extended_cop",
+                "type": "Extended_cop",
                 "startbit": 14,
                 "stopbit": 12,
                 "valueField": "010"
             },
             {
                 "name": "rd",
+                "type": "Reg",
                 "startbit": 11,
                 "stopbit": 7
             },
             {
-                "name": "cop",
+                "name": "rdinstreth",
+                "type": "cop",
                 "startbit": 6,
                 "stopbit": 0,
                 "valueField": "1110011"
