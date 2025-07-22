@@ -9,7 +9,7 @@ tohost: .dword 0
 
 .section .text.init
 .globl _main
-main:
+_main:
 
     li t0, 10
     li t1, 13
