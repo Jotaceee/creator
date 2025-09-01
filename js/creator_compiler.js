@@ -48,12 +48,17 @@ var architecture_json = ""
 /*Codemirror*/
 var textarea_assembly_editor;
 var codemirrorHistory = null;
+var assembly_files = []; // [{filename: "void", assembly_code: "nada", to_compile: false}]; // En cada entrada habra un objeto: {filename (string), assembly_code (string), to_compile (bool)}
 /*Assembly code textarea*/
 var code_assembly = '';
 /*Compilation index*/
 var tokenIndex = 0 ;
 var nEnters = 0 ;
-var pc = 4; //PRUEBA
+// var pc = 4; //PRUEBA
+var pc = 80000000;
+if (!is_32b_arch)
+  pc = 0;
+
 /*Instructions memory address*/
 var address;
 /*Data memory address*/
@@ -119,8 +124,8 @@ var instructions_binary = [];
 var data = [];
 var data_tag = [];
 /*Binary*/
-var code_binary = '';
-var update_binary = '';
+// var code_binary = '';
+// var update_binary = '';
 var load_binary = false;
 
 
@@ -363,80 +368,580 @@ function packCompileError(err_code, err_token, err_ti, err_bgcolor )
 // }
 
 // Primera version de compilacion
-function assembly_compiler()
-{
-  var ret = {
-          errorcode: "",
-          token: "",
-          type: "",
-          update: "",
-          status: "ok"
-        } ;
 
-        /* Google Analytics */
-        creator_ga('compile', 'compile.assembly');
-  filecontents.push(code_assembly);
-  filenames.push("input.s");
-  for (let i = 0; i < filecontents.length; i++){
-    if(filecontents[i].match(regexfpd))
-    enablefpd = true;
-    if(filecontents[i].match(regexvec))
-    enablevec = true;
-    }
-    console.log("post comprobacion del flag", enablefpd, enablevec);
-    objectcontent = preprocess_run(filenames, filecontents, enablefpd, enablevec);
-    console.log("salida ensamblador", objectcontent);
+var list_user_instructions = [];
+var list_data_instructions = [];
+function identify_pseudo(instruction_assembly){
+  if(instruction_assembly.search("li") != -1 && instruction_assembly.search("vsetvli") === -1 && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init"))){
+    list_user_instructions.push(instruction_assembly);
+    let parts = instruction_assembly.split(',');
     
-    // console.log(window.location.href);
-    // scriptas = document.querySelector('script[src="'+ window.location.href +'js/toolchain_compiler/as-new.js"]');
-    scriptas = document.getElementById('as-new');
-    if(scriptas){
-    clean_environment();
-    scriptas.parentNode.removeChild(scriptas);
+    if (!(-2048 >= parseInt(parts[1]?.trim(), 16)) && !(parseInt(parts[1]?.trim(), 16) <= 2047)){
+      if (!is_32b_arch) {
+        list_user_instructions.push("");
+      }
+      list_user_instructions.push("");
+    }else if(!(-2048 >= parseInt(parts[1]?.trim(), 10)) && !(parseInt(parts[1]?.trim(), 10) <= 2047)){
+      if (!is_32b_arch)
+        list_user_instructions.push("");
+      list_user_instructions.push("");
+    }
+  }
+  else if (instruction_assembly.search("la") != -1 && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
+    {
+      list_user_instructions.push(instruction_assembly);
+      list_user_instructions.push("");
+    } 
+  else if (instruction_assembly.search("ecall") != -1 && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
+    list_user_instructions.push(instruction_assembly);
+  else if (instruction_assembly.search("call") != -1 && !(instruction_assembly.search("ecall") != -1) && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
+  {
+    list_user_instructions.push(instruction_assembly);
+    if (is_32b_arch)
+      list_user_instructions.push("");
+  } 
+  else if (instruction_assembly.search("lw") != -1 && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
+    {
+      list_user_instructions.push(instruction_assembly);
+      let parts = instruction_assembly.split(',');
+      if( isNaN(parts[1]?.trim()) && !(parts[1]?.trim()).includes("(") ){
+
+        list_user_instructions.push("");
+        return;
+      }
+    } 
+  else if(!(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
+    list_user_instructions.push(instruction_assembly);
+
+}
+
+function process_data_to_store_memory(){
+  for (let i = 0; i < list_data_instructions.length; i++) {
+    const dump_ins = dumpdatainstructions.findIndex(insn => insn[4] === list_data_instructions[i].label)
+    if (dumpdatainstructions[dump_ins] !== undefined){
+      dumpdatainstructions[dump_ins].push(list_data_instructions[i].align);
+      dumpdatainstructions[dump_ins].push(list_data_instructions[i].type);
+
+      if(list_data_instructions[i].type === "asciz" || list_data_instructions[i].type === "ascii"){
+        if (dumpdatainstructions[dump_ins][1].length % 2 !== 0) {
+          console.warn("Dealineamiento de memoria en string.");
+      }
+
+      let bytes = dumpdatainstructions[dump_ins][1].match(/.{1,2}/g);
+
+      let reversedBytes = bytes.reverse().join('');
+
+
+      if (reversedBytes.endsWith("00") && list_data_instructions[i].type === "ascii")
+        reversedBytes = reversedBytes.slice(0, -2);
+
+      dumpdatainstructions[dump_ins][1] = reversedBytes.match(/.{1,2}/g)
+          .map(byte => String.fromCharCode(parseInt(byte, 16)))
+          .join('');
+      }
+      else if (list_data_instructions[i].type === "space" || list_data_instructions[i].type === "zero"){
+        dumpdatainstructions[dump_ins][1] = parseInt(list_data_instructions[i].value,10);
+      }
+    }
+  }
+}
+
+
+function assembly_compiler()
+{ creator_memory_clear();
+  var explabel = /^(\w+):/;
+  var expvalue = /\.(\w+)\s+(.+)/;
+  var expalign = /^\.align\s+(\d+)/;
+  var data_alignment = 0;
+  // const start_compile = performance.now();
+  if(!assembled && !linked && !dissambled && execution_mode_run === -1){
+    var is_text = false;
+    var is_data = false;
+    var labeltext = "";
+    var data_to_store = {
+      align: 0,
+      value: 0,
+      label: "",
+      type: ""
+    }
+    var ret = {
+            errorcode: "",
+            token: "",
+            type: "",
+            update: "",
+            status: "ok"
+          } ;
+
+          /* Google Analytics */
+          creator_ga('compile', 'compile.assembly');
+    for(let j = 0; j < assembly_files.length; j++){
+      if(assembly_files[j].to_compile){
+        filecontents.push(assembly_files[j].code);
+        var code_assembly_array = assembly_files[j].code.split('\n').map(line => line.split('#')[0].trim()).filter(line => line !== '');
+        for (let i = 0; i < code_assembly_array.length; i++){
+          if (code_assembly_array[i].search(".text") != -1){
+            is_data = false;
+            is_text = true;
+          }
+          else if(code_assembly_array[i].search(".data") != -1){
+            is_data = true;
+            is_text = false;
+          }
+
+          if (is_data){
+            let matchlabel = code_assembly_array[i].match(explabel);
+            let matchalign = code_assembly_array[i].match(expalign);
+            let matchvalue = code_assembly_array[i].match(expvalue);
+            // console.log("label:", matchlabel);
+            // console.log("align:", matchalign);
+            // console.log("value:", matchvalue);
+            if (matchlabel){
+              
+              data_to_store.label = matchlabel[1];
+            }
+            if (matchalign){
+
+              data_to_store.align = parseInt(matchalign[1], 10);
+            }
+            if (matchvalue && !(code_assembly_array[i].includes(".align") || code_assembly_array[i].includes("section") || code_assembly_array[i].includes("data") )){
+              data_to_store.type = matchvalue[1];
+              switch(data_to_store.type){
+                case "half":
+                  if(matchvalue[2].includes(","))
+                    data_to_store.value = matchvalue[2].trim().split(",");
+                  else
+                    data_to_store.value = matchvalue[2];
+                  break;
+                case "byte":
+                  if (matchvalue[2].includes(","))
+                    data_to_store.value = matchvalue[2].trim().split(",");
+                  else
+                    data_to_store.value = parseInt(matchvalue[2]).toString(16);
+                  break;
+                case "word":
+                case "dword":
+                case "integer":
+                  if (matchvalue[2].includes(","))
+                    data_to_store.value = matchvalue[2].trim().split(",");
+                  else
+                    data_to_store.value = parseInt(matchvalue[2]).toString(16);
+                  break;
+
+                case "float":
+                  if (matchvalue[2].includes(","))
+                    data_to_store.value = matchvalue[2].trim().split(",");
+                  else
+                    data_to_store.value = parseFloat(matchvalue[2]);
+                  break;
+                case "double":
+                  if (matchvalue[2].includes(","))
+                    data_to_store.value = matchvalue[2].trim().split(",");
+                  else
+                    data_to_store.value = parseFloat(matchvalue[2]).toString(16);
+                  break;
+
+                case "asciz":
+                  data_to_store.value = matchvalue[2];
+                  break;
+
+                case "ascii":
+                  data_to_store.value = matchvalue[2];
+                  break;
+
+                case "space":
+                case "zero":
+                  data_to_store.value = matchvalue[2];
+                  break;
+              }
+              list_data_instructions.push(data_to_store);
+              data_to_store = Object.assign({}, {
+                align: 0,
+                value: 0,
+                label: "",
+                type: ""
+              });
+            }
+          }
+            
+          if (is_text && code_assembly_array[i].endsWith(':'))
+            labeltext = code_assembly_array[i].slice(0, -1);
+          else if (is_text && labeltext !== ""){
+            identify_pseudo(code_assembly_array[i]);
+          }
+        }
+        filenames.push(assembly_files[j].filename);
+      }
+      is_data = false;
+      is_text = false;
+    }
+    if(filecontents.length !== 0){
+      for (let i = 0; i < filecontents.length; i++){
+        if(filecontents[i].match(regexfpd))
+        enablefpd = true;
+        if(filecontents[i].match(regexvec))
+        enablevec = true;
+      }
+    } else {
+      return packCompileError('m0', 'Please enter the assembly code or select files before compiling', 'warning', 'danger') ;
     }
 
-    // Se carga el script ld.js para ejecutar el enlazador.
-    scriptld = document.createElement('script');
-    scriptld.src = window.location.href +'js/toolchain_compiler/ld-new.js';
-    scriptld.async = true;
-    scriptld.id = 'ld-new';
-    scriptld.type = 'text/javascript';
-    document.head.appendChild(scriptld);
-
-    waitForFunction();
-
-        // // TODO: fill ret with the "thing" returned by SAIL, navy SAIL
-
-        // /* Enter the compilated instructions in the text segment */
-        // for (var i = 0; i < IMAGEN_MEMORIA_DE_sAIl.length; i++)
-        //   {
-        //     var hex = bin2hex(instructions_binary[i].loaded);
-        //     var auxAddr = parseInt(instructions_binary[i].Address, 16);
-        //     var label = instructions_binary[i].Label;
-        //     var binNum = 0;
-  
-        //     if (update_binary.instructions_binary != null) {
-        //         binNum = update_binary.instructions_binary.length
-        //     }
-  
-        //     auxAddr = creator_insert_instruction(auxAddr, instructions[i + binNum].loaded, instructions[i + binNum].loaded, false, hex, "00", label);
-        //   }
-
-        // if (typeof app != "undefined") {
-        //     app._data.instructions = instructions;
+    if(!preprocess_run(filenames, filecontents, enablefpd, enablevec)){
+      console.log("objectcontent_err: ", objectcontent);
+      if (objectcontent === undefined){
+        can_reset = true;
+        app.$bvToast.hide();
+        resetenvironment(0);
+        return packCompileError('m0', 'Please enter the assembly code before compiling', 'warning', 'danger') ;
+      }else {
+        nEnters = parseInt(objectcontent[1], 10)-1;
+        can_reset = true;
+        // if(comp_after_run){
+          uielto_toolbar_btngroup.methods.compile_error(
+            "Incorrect instruction syntax for '"+objectcontent[2]+"'",
+            objectcontent[2],
+            parseInt(objectcontent[1], 10)-1,
+          );
+          // comp_after_run = false;
         // }
+        app.$bvToast.hide();
+        resetenvironment(0);
+        // return packCompileError("m3", 
+        //   objectcontent[2],
+        //   "error",
+        //   "danger"
+        // );
 
-        // /* Initialize stack */
-        // writeMemory("00", parseInt(stack_address), "word") ;
+      }
 
-        // address = parseInt(architecture.memory_layout[0].value);
-        // data_address = parseInt(architecture.memory_layout[2].value);
-        // stack_address = parseInt(architecture.memory_layout[4].value);
+    }
+    
+    (async function loop() {
+      do {
+        linked = await waitForFunction();
+      } while (elffile === undefined && !linked);
+    })().then(() => {
+      if (elffile.from !== undefined){
+        show_notification(
+          "undefined reference to '"+elffile.ref+"' in function: "+elffile.from,
+          "danger"
+        );
+        resetenvironment(0);
+        return;
+      }
+      else {
+        (async function loop() {
+          do {
+            dissambled = await dissamble_binary();
+          } while ((dumptextinstructions.length === 0 && dumpdatainstructions.length === 0) && !dissambled && (list_data_instructions.length !== 0 || list_user_instructions.length !== 0));
+        })().then(() => {
 
-        // // save current value as default values for reset()...
-        // creator_memory_prereset() ;
+          if (dumptextinstructions.length === 0 && dumpdatainstructions.length === 0){
+            show_notification('Please enter code in any file before compiling', 'danger');
+            can_reset = true;
+            resetenvironment(0);
+            can_reset = false;
+          }
+            else {
+            align = 1;
+            for (let i = 0; i < dumptextinstructions.length; i++){
+              creator_insert_instruction(parseInt(dumptextinstructions[i][0], 16), dumptextinstructions[i][2], dumptextinstructions[i][2], false, dumptextinstructions[i][1], "00", dumptextinstructions[i][4]);
+              instructions.push({
+                Break: null,
+                Address: "0x" + dumptextinstructions[i][0],
+                Label: dumptextinstructions[i][4],
+                loaded: dumptextinstructions[i][2],
+                user : list_user_instructions[i],
+                _rowVariant: "",
+                visible: true,
+                hide: false,
+              });
+              console.log("entrada: ", entry_elf);
+              if(is_32b_arch){
+                if (dumptextinstructions[i][0] === entry_elf || ("0x"+dumptextinstructions[i][0]) === entry_elf )
+                  instructions[i]._rowVariant = 'success';
+              } else {
+                if ((dumptextinstructions[i][0]) === entry_elf || ("0x"+dumptextinstructions[i][0]) === entry_elf)
+                  instructions[i]._rowVariant = 'success';
+              }
+            }
+            
+    
+    
+            process_data_to_store_memory();
+    
+            for (let i = 0; i < dumpdatainstructions.length; i++){
+              
+              switch(dumpdatainstructions[i][6]){
+                case "half":
 
-        return ret;
+                if(dumpdatainstructions[i][1].length > 4){
+                  var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                  var elements = Math.floor(dumpdatainstructions[i][1].length / 4);
+                  if(dumpdatainstructions[i][1].length % 4 !== 0){
+                    elements = elements + 1;
+                    dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*4,"0");
+                  }
+                  for (var j = 0; j < elements; j++){
+                    var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2) * 2, dumpdatainstructions[i][1].length - (4 * j));
+                    if (j === 0 ) 
+                      creator_memory_data_compiler(init_add, element_to_insert, 2, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
+                    else
+                      creator_memory_data_compiler(init_add + j*2, element_to_insert, 2, null, (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
+                    
+                  }
+                }else {
+                  creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                }
+                  break;
+                case "byte":
+
+                  if(dumpdatainstructions[i][1].length > 2){
+                    var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                    var elements = Math.floor(dumpdatainstructions[i][1].length / 2); // 4
+                    if(dumpdatainstructions[i][1].length % 2 !== 0){
+                      elements = elements + 1;
+                    }
+                    dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements * 2,"0");
+
+                    for (var j = 0; j < elements;j++){
+                      var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2), dumpdatainstructions[i][1].length - (2 * j));
+                      if (j === 0 )
+                        creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 24) >> 24, dumpdatainstructions[i][6],);
+                      else
+                        creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, null, (parseInt(element_to_insert,16) << 24 ) >> 24, dumpdatainstructions[i][6],);
+                      
+                    }
+                  }else {
+                    creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                  }
+                  break;
+                case "word":
+                case "integer":
+                  if(dumpdatainstructions[i][1].length > 8){
+                    var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                    var elements = Math.floor(dumpdatainstructions[i][1].length / 8);
+                    if(dumpdatainstructions[i][1].length % 8 !== 0){
+                      elements = elements + 1;
+                      dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*8,"0");
+                    }
+                    for (var j = 0; j < elements; j++){
+
+                      var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 8, dumpdatainstructions[i][1].length - (8 * j));
+                      if (j === 0 )
+                        creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], parseInt(element_to_insert, 16) >> 0, dumpdatainstructions[i][6],);
+                      else
+                        creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, null, parseInt(element_to_insert, 16) >> 0, dumpdatainstructions[i][6],);
+                      
+                    }
+                  }else {
+                    creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                  }
+                  
+                  break;
+                case "dword":
+                  if(dumpdatainstructions[i][1].length > 16){
+                    var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                    var elements = Math.floor(dumpdatainstructions[i][1].length / 16);
+                    if(dumpdatainstructions[i][1].length % 16 !== 0){
+                      elements = elements + 1;
+                      dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*16,"0");
+                    }
+                    for (var j = 0; j < elements; j++){
+                      var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 16, dumpdatainstructions[i][1].length - (16 * j));
+                      if (j === 0 )
+                        creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, dumpdatainstructions[i][4], element_to_insert >> 0, dumpdatainstructions[i][6],);
+                      else
+                        creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, null, element_to_insert >> 0, dumpdatainstructions[i][6],);
+                      
+                    }
+                  }else {
+                    creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                  }
+                  break;
+    
+                case "float":
+                  align = 2;
+
+                  if(dumpdatainstructions[i][1].length > 8){
+                    var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                    var elements = Math.floor(dumpdatainstructions[i][1].length / 8);
+                    if(dumpdatainstructions[i][1].length % 8 !== 0){
+                      elements = elements + 1;
+                      dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*8,"0");
+                    }
+                    for (var j = 0; j < elements; j++){
+                      let buffer = new ArrayBuffer(4); // 4 bytes para float
+                      let view = new DataView(buffer);
+
+                      var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 8, dumpdatainstructions[i][1].length - (8 * j));
+                      view.setUint32(0, parseInt(element_to_insert, 16), false);
+                      
+                      if (j === 0 )
+                        creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], view.getFloat32(0, false), dumpdatainstructions[i][6],);
+                      else
+                        creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, null, view.getFloat32(0, false), dumpdatainstructions[i][6],);
+                      
+                    }
+                  }else {
+                    let buffer = new ArrayBuffer(4); // 4 bytes para float
+                    let view = new DataView(buffer);
+      
+                    // Convertir hexadecimal a entero
+                    let intVal = parseInt(dumpdatainstructions[i][1], 16);
+      
+                    // Escribir el entero en el buffer como float
+                    view.setUint32(0, intVal, false); 
+                    creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4],view.getFloat32(0, false), dumpdatainstructions[i][6],);
+                  }
+                  break;
+                case "double":
+                  if (dumpdatainstructions[i][5] === 0){
+                    align = 2;
+                  } else {
+                    align = dumpdatainstructions[i][5];
+                  }
+                  if(dumpdatainstructions[i][1].length > 16){
+                    var init_add = parseInt(dumpdatainstructions[i][0], 16);
+                    var elements = Math.floor(dumpdatainstructions[i][1].length / 16);
+                    if(dumpdatainstructions[i][1].length % 16 !== 0){
+                      elements = elements + 1;
+                      dumpdatainstructions[i][1] = dumpdatainstructions[i][1].padStart(elements*16,"0");
+                    }
+                    for (var j = 0; j < elements; j++){
+                      let bufferd = new ArrayBuffer(8); // 8 bytes para double
+                      let viewd = new DataView(bufferd);
+    
+
+                      var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 16, dumpdatainstructions[i][1].length - (16 * j));
+                      
+                      // Convertir hexadecimal a entero
+                      let high = parseInt(element_to_insert.slice(0, 8), 16); // Parte alta
+                      let low = parseInt(element_to_insert.slice(8, 16), 16); // Parte baja
+        
+                      // Escribir los valores en el buffer
+                      viewd.setUint32(0, high, false); // Parte alta
+                      viewd.setUint32(4, low, false);  // Parte baja
+
+                      if (j === 0 )
+                        creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                      else
+                        creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, null, viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                      
+                    }
+                  }else {
+                    let bufferd = new ArrayBuffer(8); // 8 bytes para double
+                    let viewd = new DataView(bufferd);
+      
+                    // Convertir hexadecimal a entero
+                    let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
+                    let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
+      
+                    // Escribir los valores en el buffer
+                    viewd.setUint32(0, high, false); // Parte alta
+                    viewd.setUint32(4, low, false);  // Parte baja
+      
+                    // Leer como double de 64 bits
+                    // return viewd.getFloat64(0, false);
+                    creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                    // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                  }
+                  align = 1;
+                  break;
+
+
+
+                  // let bufferd = new ArrayBuffer(8); // 8 bytes para double
+                  // let viewd = new DataView(bufferd);
+    
+                  // // Convertir hexadecimal a entero
+                  // let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
+                  // let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
+    
+                  // // Escribir los valores en el buffer
+                  // viewd.setUint32(0, high, false); // Parte alta
+                  // viewd.setUint32(4, low, false);  // Parte baja
+    
+                  // // Leer como double de 64 bits
+                  // // return viewd.getFloat64(0, false);
+                  // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
+                  // break;
+
+                // case "char":
+                  
+                // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                //   break;
+    
+                case "asciz":
+                  // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
+                  creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
+                  break;
+    
+                case "ascii":
+                  creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
+                  break;
+    
+                case "space":
+                case "zero":
+                  creator_memory_storestring(dumpdatainstructions[i][1], dumpdatainstructions[i][1], parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
+                  break;
+              }
+            }
+
+            // const end_compile = performance.now();
+            // show_notification('Compile execution time: ' + (end_compile - start_compile) + 'ms', "warning");
+            creator_memory_prereset();
+            creator_memory_reset();
+
+            // Initialize stack
+            stack_address = parseInt(architecture.memory_layout[4].value);
+            writeMemory("00", parseInt(stack_address), "word") ;
+            // stack_address = parseInt(architecture.memory_layout[4].value);
+            if (is_32b_arch) {
+              architecture.components[1].elements[2].value = bi_intToBigInt(
+                stack_address,
+                10,
+              );
+              architecture.components[1].elements[2].default_value = bi_intToBigInt(
+                stack_address,
+                10,
+              );
+            }else {
+              architecture.components[1].elements[2].value = stack_address;
+              architecture.components[1].elements[2].default_value = stack_address;
+            }
+            track_stack_reset();
+
+
+            show_notification("Compilation completed successfully","success");
+          }
+
+
+
+        }); 
+      }
+      
+
+
+
+    }); 
+    
+  }
+  else {
+    // reestablecemos al estado inicial para volver a compilar 
+    if(execution_mode_run !== -1 && !can_reset){
+      Module._reanudar_ejecucion(parseInt(5,10));
+      setTimeout(assembly_compiler, 100);
+    } else if (execution_mode_run !== -1 && can_reset)
+      setTimeout(assembly_compiler, 100);
+    else{
+      last_execution_mode_run = -1;
+      execution_mode_run = -1;
+      resetenvironment(2);
+      setTimeout(assembly_compiler, 200);
+    }
+  }
+  
+  return /*ret (mirar si puedo hacer el */ ;
 }
 
 

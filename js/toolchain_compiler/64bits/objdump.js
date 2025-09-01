@@ -249,10 +249,15 @@ Module['print'] = function (message) {
     auxinsn.push(1);
     auxinsn.push(labelmatch[2].trim());
     // console.log("labelmatch: ", labelmatch);
-    if (!app.c_kernel && labelmatch[2].trim().includes("kernel"))
+    if (!app.c_kernel && labelmatch[2].trim().includes("kernel")){
       entry_elf = labelmatch[1].trim();
+      if (!entry_elf.startsWith("0x"))
+        entry_elf = "0x" + entry_elf
+    }
     else if(labelmatch[2].trim() === "_main" && app.c_kernel){
       entry_elf = labelmatch[1].trim();
+      if (!entry_elf.startsWith("0x"))
+        entry_elf = "0x" + entry_elf
     }
     if (sectionasm === 1){
       dumptextinstructions.push(auxinsn);

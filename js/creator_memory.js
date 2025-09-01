@@ -25,6 +25,8 @@
  ********************/
 
 var word_size_bits  = 32 ;
+if (!is_32b_arch)
+  word_size_bits = 64;
     // TODO: load from architecture
 
 var word_size_bytes = word_size_bits / 8 ;
@@ -137,13 +139,17 @@ function main_memory_clear ( )
 
 //// Read/write (1/3): object level (compilation)
 
-function main_memory_read ( addr )
-{
-        if (typeof main_memory[addr] !== "undefined") {
-            return main_memory[addr] ;
-        }
-
-        return main_memory_packs_forav(addr, '00') ;
+function main_memory_read(addr) {
+  if (typeof main_memory[addr] !== "undefined") {
+    return main_memory[addr];
+  }
+  if (!is_32b_arch) {
+    const elem = main_memory.filter(add => add && typeof add.addr !== 'undefined')
+    .find(element => element.addr === addr);
+    if (elem !== null && elem !== undefined)
+      return elem;
+  }
+  return main_memory_packs_forav(addr, "00");
 }
 
 function main_memory_write ( addr, value )
@@ -254,70 +260,75 @@ function create_memory_read_string ( addr )
         return ret_msg + '... (string length greater than ' + string_length_limit + ' chars)' ;
 }
 
-function main_memory_read_bydatatype ( addr, type )
-{
-        var ret = 0x0 ;
+function main_memory_read_bydatatype(addr, type) {
+  var ret = 0;
+  switch (type) {
+    case "b":
+    case "bu":
+    case "byte":
+      ret = "0x" + main_memory_read_value(addr);
+      ret = parseInt(ret, 16);
+      break;
+    case "h":
+    case "hu":
+    case "half":
+    case "half_word":
+      if (is_32b_arch)
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes / 2);
+      else
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes / 4);
+      ret = parseInt(ret, 16);
+      break;
+    case "w":
+    case "integer":
+    case "word":
+      if (is_32b_arch)
 
-        switch (type)
-        {
-          case 'b':
-          case 'bu':
-          case 'byte':
-               ret = "0x" + main_memory_read_value(addr) ;
-               ret = parseInt(ret, 16) ;
-               break;
-
-          case 'h':
-          case 'hu':
-          case 'half':
-          case 'half_word':
-               ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes/2) ;
-               ret = parseInt(ret, 16) ;
-               break;
-
-          case 'w':
-          case 'integer':
-          case 'word':
-               ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes) ;
-               ret = parseInt(ret, 16) ;
-               break;
-
-          case 'float':
-               ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes) ;
-               ret = hex2float(ret) ;
-               break;
-
-          case 'd':
-          case 'double':
-          case 'double_word':
-               ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes*2) ;
-               ret = hex2double(ret) ;
-               break;
-
-          case 'c':
-          case 'cu':
-          case 'char':
-               ch = main_memory_read_value(addr) ;
-               ret = String.fromCharCode(parseInt(ch, 16));
-               break;
-
-          case 'asciiz':
-          case 'string':
-          case 'ascii_null_end':
-               ret = create_memory_read_string(addr) ;
-               break;
-
-          case 'ascii':
-          case 'ascii_not_null_end':
-               // TODO
-               break;
-
-          case 'space':
-               // TODO
-               break;
-        }
-
-        return ret ;
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes);
+      else
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes / 2);
+      ret = parseInt(ret, 16);
+      break;
+    case "dword":
+      if (!is_32b_arch)
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes);
+      ret = parseInt(ret, 16);
+      break;
+    case "float":
+      if (is_32b_arch)
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes);
+      else 
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes / 2);
+      ret = hex2float(ret);
+      break;
+    case "d":
+    case "double":
+    case "double_word":
+      if (is_32b_arch)
+        ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes * 2);
+      else
+        ret = "0x" + main_memory_read_nbytes(addr,  word_size_bytes);
+      ret = hex2double(ret);
+      break;
+    case "c":
+    case "cu":
+    case "char":
+      ch = main_memory_read_value(addr);
+      ret = String.fromCharCode(parseInt(ch, 16));
+      break;
+    case "asciz":
+    case "string":
+    case "ascii_null_end":
+      ret = create_memory_read_string(addr);
+      break;
+    case "ascii":
+    case "ascii_not_null_end":
+      break;
+    case "space":
+    case "zero":
+      break;
+  }
+  return ret;
 }
 
 function main_memory_datatypes_update ( addr )
@@ -365,89 +376,98 @@ function main_memory_datatypes_update_or_create ( addr, value_human, size, type 
 }
 
 
-function main_memory_write_bydatatype ( addr, value, type, value_human )
-{
-        var ret  = 0x0 ;
-        var size = 0 ;
-
-        // store byte to byte...
-        switch (type)
-        {
-                case 'b':
-                case 'byte':
-                     size = 1 ;
-                     var value2 = creator_memory_value_by_type(value, type) ;
-                     ret = main_memory_write_nbytes(addr, value2, size, type) ;
-                     main_memory_datatypes_update_or_create(addr, value_human, size, type);
-                     break;
-
-                case 'h':
-                case 'half':
-                case 'half_word':
-                     size = word_size_bytes / 2 ;
-                     var value2 = creator_memory_value_by_type(value, type) ;
-                     ret = main_memory_write_nbytes(addr, value2, size, type) ;
-                     main_memory_datatypes_update_or_create(addr, value_human, size, type);
-                     break;
-
-                case 'w':
-                case 'integer':
-                case 'float':
-                case 'word':
-                     size = word_size_bytes ;
-                     ret = main_memory_write_nbytes(addr, value, size, type) ;
-                     main_memory_datatypes_update_or_create(addr, value_human, size, type);
-                     break;
-
-                case 'd':
-                case 'double':
-                case 'double_word':
-                     size = word_size_bytes * 2 ;
-                     ret = main_memory_write_nbytes(addr, value, size, type) ;
-                     main_memory_datatypes_update_or_create(addr, value_human, size, type);
-                     break;
-
-                case 'string':
-                case 'ascii_null_end':
-                case 'asciiz':
-                case 'ascii_not_null_end':
-                case 'ascii':
-                     var ch   = 0 ;
-                     var ch_h = '';
-                     for (var i=0; i<value.length; i++) {
-                          ch = value.charCodeAt(i);
-                          ch_h = value.charAt(i);
-                          main_memory_write_nbytes(addr+i, ch.toString(16), 1, type) ;
-                          main_memory_datatypes_update_or_create(addr+i, ch_h, 1, 'char');
-                          size++ ;
-                     }
-
-                     if ( (type != 'ascii') && (type != 'ascii_not_null_end') ) {
-                           main_memory_write_nbytes(addr+value.length, "00", 1, type) ;
-                           main_memory_datatypes_update_or_create(addr+value.length, "0", 1, 'char');
-                           size++ ;
-                     }
-                     break;
-
-                case 'space':
-                     for (var i=0; i<parseInt(value); i++) {
-                          main_memory_write_nbytes(addr+i, "00", 1, type) ;
-                          size++ ;
-                     }
-                     main_memory_datatypes_update_or_create(addr, value_human, size, type);
-                     break;
-
-                case 'instruction':
-                     size = Math.ceil(value.toString().length / 2) ;
-                     ret = main_memory_write_nbytes(addr, value, size, type) ;
-                     main_memory_datatypes_update_or_create(addr, value_human, size, type);
-                     break;
-        }
-
-        // update view
-        creator_memory_updateall();
-
-        return ret ;
+function main_memory_write_bydatatype(addr, value, type, value_human) {
+  var ret = 0;
+  var size = 0;
+  switch (type) {
+    case "b":
+    case "byte":
+      size = 1;
+      var value2 = creator_memory_value_by_type(value, type);
+      ret = main_memory_write_nbytes(addr, value2, size, type);
+      main_memory_datatypes_update_or_create(addr, value_human, size, type);
+      break;
+    case "h":
+    case "half":
+    case "half_word":
+      if (is_32b_arch)
+        size = word_size_bytes / 2;
+      else
+        size = word_size_bytes / 4;
+      var value2 = creator_memory_value_by_type(value, type);
+      ret = main_memory_write_nbytes(addr, value2, size, type);
+      main_memory_datatypes_update_or_create(addr, value_human, size, type);
+      break;
+    case "w":
+    case "integer":
+    case "float":
+    case "word":
+      if (is_32b_arch)
+        size = word_size_bytes;
+      else 
+        size = word_size_bytes / 2;
+      ret = main_memory_write_nbytes(addr, value, size, type);
+      main_memory_datatypes_update_or_create(addr, value_human, size, type);
+      break;
+    case "dword": 
+      if (is_32b_arch)
+        size = word_size_bytes * 2;
+      else
+        size = word_size_bytes;
+      ret = main_memory_write_nbytes(addr, value, size, type);
+      main_memory_datatypes_update_or_create(addr, value_human, size, type);
+      break;
+    case "d":
+    case "double":
+    case "double_word":
+      if (is_32b_arch)
+        size = word_size_bytes * 2;
+      else
+        size = word_size_bytes;
+      ret = main_memory_write_nbytes(addr, value, size, type);
+      main_memory_datatypes_update_or_create(addr, value_human, size, type);
+      break;
+    case "string":
+    case "ascii_null_end":
+    case "asciz":
+    case "ascii_not_null_end":
+    case "ascii":
+      var ch = 0;
+      var ch_h = "";
+      for (var i = 0; i < value.length; i++) {
+        ch = value.charCodeAt(i);
+        ch_h = value.charAt(i);
+        main_memory_write_nbytes(addr + i, ch.toString(16), 1, type);
+        main_memory_datatypes_update_or_create(addr + i, ch_h, 1, "char");
+        size++;
+      }
+      if (type != "ascii" && type != "ascii_not_null_end") {
+        main_memory_write_nbytes(addr + value.length, "00", 1, type);
+        main_memory_datatypes_update_or_create(
+          addr + value.length,
+          "0",
+          1,
+          "char",
+        );
+        size++;
+      }
+      break;
+    case "space":
+    case "zero":
+      for (var i = 0; i < parseInt(value); i++) {
+        main_memory_write_nbytes(addr + i, "00", 1, type);
+        size++;
+      }
+      main_memory_datatypes_update_or_create(addr, value_human, size, type);
+      break;
+    case "instruction":
+      size = Math.ceil(value.toString().length / 2);
+      ret = main_memory_write_nbytes(addr, value, size, type);
+      main_memory_datatypes_update_or_create(addr, value_human, size, type);
+      break;
+  }
+  creator_memory_updateall();
+  return ret;
 }
 
 
@@ -457,80 +477,72 @@ function main_memory_write_bydatatype ( addr, value, type, value_human )
 
 // Type, size and address...
 
-function creator_memory_type2size ( type )
-{
-        var size = 4;
-
-        switch (type)
-        {
-                case 'b':
-                case 'bu':
-                case 'byte':
-                     size = 1 ;
-                     break;
-
-                case 'h':
-                case 'hu':
-                case 'half':
-                case 'half_word':
-                     size = word_size_bytes / 2 ;
-                     break;
-
-                case 'w':
-                case 'wu':
-                case 'word':
-                case 'float':
-                case 'integer':
-                case 'instruction':
-                     size = word_size_bytes ;
-                     break;
-
-                case 'd':
-                case 'du':
-                case 'double':
-                case 'double_word':
-                      size = word_size_bytes * 2 ;
-                      break;
-        }
-
-        return size ;
+function creator_memory_type2size(type) {
+  var size = 4;
+  switch (type) {
+    case "b":
+    case "bu":
+    case "byte":
+      size = 1;
+      break;
+    case "h":
+    case "hu":
+    case "half":
+    case "half_word":
+      if (is_32b_arch)
+        size = word_size_bytes / 2;
+      else
+        size = word_size_bytes / 4;
+      break;
+    case "w":
+    case "wu":
+    case "word":
+    case "float":
+    case "integer":
+    case "instruction":
+      if (is_32b_arch)
+        size = word_size_bytes;
+      else 
+        size = word_size_bytes / 2;
+      break;
+    case "d":
+    case "du":
+    case "double":
+    case "double_word":
+      if (is_32b_arch)
+        size = word_size_bytes * 2;
+      else
+        size = word_size_bytes;
+      break;
+  }
+  return size;
 }
-
-function creator_memory_value_by_type ( val, type )
-{
-        switch (type)
-        {
-                case 'b':
-                 val = val & 0xFF ;
-                 if (val & 0x80)
-                 {
-                         val = 0xFFFFFF00 | val ;
-                         val = (val >>> 0)
-                 }
-                 break;
-
-                case 'bu':
-                 val = ((val << 24) >>> 24) ;
-                 break;
-
-                case 'h':
-                 val = val & 0xFFFF ;
-                 if (val & 0x8000)
-                 {
-                         val = 0xFFFF0000 | val ;
-                         val = (val >>> 0)
-                 }
-                 break;
-
-                case 'hu':
-                 val = ((val << 16) >>> 16) ;
-                 break;
-
-                default:
-                 break;
-        }
-
-        return val ;
+function creator_memory_value_by_type(val, type) {
+  switch (type) {
+    case "b":
+      val = val & 255;
+      if (val & 128) {
+        val = 4294967040 | val;
+        val = val >>> 0;
+      }
+      break;
+    case "bu":
+      val = (val << 24) >>> 24;
+      break;
+    case "h":
+      val = val & 65535;
+      if (val & 32768) {
+        val = 4294901760 | val;
+        val = val >>> 0;
+      }
+      break;
+    case "hu":
+      val = (val << 16) >>> 16;
+      break;
+    default:
+      break;
+  }
+  return val;
 }
 
 function creator_memory_alignelto ( new_addr, new_size )
@@ -674,101 +686,104 @@ function creator_memory_consolelog ( )
 //           value: "1000", size: 4, eye: true, hex_packed: "1A000000" },
 //  ...
 
-function creator_memory_updaterow ( addr )
-{
-    // skip if app.data does not exit...
-    if ((typeof app == "undefined") || (typeof app._data.main_memory == "undefined") ) {
-        return ;
+function creator_memory_updaterow(addr) {
+  if (
+    typeof app == "undefined" ||
+    typeof app._data.main_memory == "undefined"
+  ) {
+    return;
+  }
+  var addr_base = parseInt(addr);
+  if (is_32b_arch)
+    addr_base = addr_base - (addr_base % word_size_bytes);
+  else 
+    addr_base = addr_base - (addr_base % (word_size_bytes /2));
+  var elto = {
+    addr: 0,
+    addr_begin: "",
+    addr_end: "",
+    value: "",
+    size: 0,
+    hex: [],
+    eye: true,
+  };
+  if (typeof app._data.main_memory[addr_base] != "undefined") {
+    elto = app._data.main_memory[addr_base];
+  } else {
+    Vue.set(app._data.main_memory, addr_base, elto);
+    if (is_32b_arch) {
+      for (var i = 0; i < word_size_bytes; i++) {
+        elto.hex[i] = { byte: "00", tag: null };
+      }
+    }else {
+      for (var i = 0; i < (word_size_bytes / 2); i++) {
+        elto.hex[i] = { byte: "00", tag: null };
+      }
     }
-
-    // base address
-    var addr_base = parseInt(addr) ;
-        addr_base = addr_base - (addr_base % word_size_bytes) ; // get word aligned address
-
-    // get_or_create...
-    var elto = { addr:0, addr_begin:'', addr_end:'', value:'', size:0, hex:[], eye:true } ;
-    if (typeof app._data.main_memory[addr_base] != "undefined")
-    { // reuse the existing element...
-        elto = app._data.main_memory[addr_base] ;
+    
+  }
+  if (main_memory[addr_base] !== undefined) {
+    elto.addr_begin =
+      "0x" +
+      main_memory[addr_base].addr
+        .toString(16)
+        .padStart((is_32b_arch) ? word_size_bytes * 2 : word_size_bytes * 2, "0")
+        .toUpperCase();
+    var addr_end = main_memory[addr_base].addr  + ((is_32b_arch) ? word_size_bytes : word_size_bytes / 2) - 1;
+    elto.addr_end =
+      "0x" +
+      addr_end
+        .toString(16)
+        .padStart((is_32b_arch) ? word_size_bytes * 2 : word_size_bytes * 2, "0")
+        .toUpperCase();
+    elto.addr = addr_end;
+    var v1 = {};
+    elto.hex_packed = "";
+    var aux_for = (is_32b_arch) ? word_size_bytes : (word_size_bytes / 2);
+    for (var i = 0; i < aux_for; i++) {
+      v1 = main_memory_read(addr_base + i);
+      elto.hex[i].byte = v1.bin;
+      elto.hex[i].tag = v1.tag;
+      if (v1.tag == "") {
+        elto.hex[i].tag = null;
+      }
+      elto.hex_packed += v1.bin;
     }
-    else
-    { // set a new element, and set the initial values...
-        Vue.set(app._data.main_memory, addr_base, elto) ;
-
-        for (var i=0; i<word_size_bytes; i++) {
-             elto.hex[i] = { byte: "00", tag: null } ;
-        }
+    elto.value = "";
+    elto.size = 0;
+    for (var i = 0; i < aux_for; i++) {
+      if (typeof main_memory_datatypes[addr_base + i] == "undefined") {
+        continue;
+      }
+      elto.size = elto.size + main_memory_datatypes[addr_base + i].size;
+      if (main_memory_datatypes[addr_base + i].type != "space" && main_memory_datatypes[addr_base + i].type != "zero") {
+        if (elto.value != "") elto.value += ", ";
+        elto.value += main_memory_datatypes[addr_base + i].value;
+      } else {
+        elto.eye = true;
+      }
     }
-
-    // addr_begin
-    elto.addr_begin = "0x" + addr_base.toString(16).padStart(word_size_bytes * 2, "0").toUpperCase() ;
-
-    // addr_end
-    var addr_end  = addr_base + word_size_bytes - 1 ;
-    elto.addr_end = "0x" + addr_end.toString(16).padStart(word_size_bytes * 2, "0").toUpperCase() ;
-
-    // addr
-    elto.addr = addr_end ;
-
-    // hex, hex_packed
-    var v1 = {} ;
-    elto.hex_packed = '' ;
-    for (var i=0; i<word_size_bytes; i++)
-    {
-         v1 = main_memory_read(addr_base + i) ;
-
-         elto.hex[i].byte = v1.bin;
-         elto.hex[i].tag  = v1.tag;
-         if (v1.tag == "") {
-             elto.hex[i].tag  = null;
-         }
-
-         elto.hex_packed += v1.bin ;
-    }
-
-    // value, size and eye
-    elto.value = '' ;
-    elto.size  = 0 ;
-    for (var i=0; i<word_size_bytes; i++)
-    {
-         if (typeof main_memory_datatypes[addr_base+i] == "undefined") {
-             continue ;
-         }
-
-         elto.size = elto.size + main_memory_datatypes[addr_base+i].size ;
-         if (main_memory_datatypes[addr_base+i].type != "space")
-         {
-             if (elto.value != '')
-                 elto.value += ', ' ;
-             elto.value += main_memory_datatypes[addr_base+i].value ;
-         }
-         else { // (main_memory_datatypes[addr_base+i].type == "space")
-             elto.eye   = true ;
-         }
-    }
+  }
+  
 }
 
-function creator_memory_updateall ( )
-{
-    // skip if app.data does not exit...
-    if ((typeof app == "undefined") || (typeof app._data.main_memory == "undefined") ) {
-        return ;
+function creator_memory_updateall() {
+  if (
+    typeof app == "undefined" ||
+    typeof app._data.main_memory == "undefined"
+  ) {
+    return;
+  }
+  var addrs = main_memory_get_addresses();
+  var last_addr = -1;
+  var curr_addr = -1;
+  for (var i = 0; i < addrs.length; i++) {
+    curr_addr = parseInt(addrs[i]);
+    if (Math.abs(curr_addr - last_addr) > (is_32b_arch) ? word_size_bytes : word_size_bytes / 2 - 1) {
+      creator_memory_updaterow(addrs[i]);
+      last_addr = curr_addr;
     }
-
-    // update all rows in app._data.main_memory...
-    var addrs = main_memory_get_addresses() ;
-
-    var last_addr = -1;
-    var curr_addr = -1;
-    for (var i=0; i<addrs.length; i++)
-    {
-        curr_addr = parseInt(addrs[i]) ;
-        if (Math.abs(curr_addr - last_addr) > (word_size_bytes - 1)) // if (|curr - last| > 3)
-        {
-            creator_memory_updaterow(addrs[i]);
-            last_addr = curr_addr ;
-        }
-    }
+  }
 }
 
 function creator_memory_clearall ( )

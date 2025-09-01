@@ -32,18 +32,20 @@
                   notification_time:      { type: Number,  required: true },
                   instruction_help_size:  { type: Number,  required: true },
                   dark:                   { type: Boolean, required: true },
-                  c_debug:                { type: Boolean, required: true }
+                  c_debug:                { type: Boolean, required: true },
+                  c_kernel: { type: Boolean, required: true, default: true }
                 },
 
     data:       function () {
                   return {
-                    architectures = [
-                                      { text: 'None',  value: 'none' },
-                                      { text: 'RISC-V (RV32IMFD)',  value: 'RISC-V (RV32IMFD)' },
-                                      { text: 'MIPS-32',            value: 'MIPS-32' },
-                                    ]
-
-                  }
+                    architectures: (architectures = [
+                      { text: "None", value: "none" },
+                      { text: "RISC-V SAIL (RV32)", value: "RISC-V SAIL (RV32)"},
+                      { text: "RISC-V SAIL (RV64)", value: "RISC-V SAIL (RV64)"},
+                      // { text: "RISC-V (RV32IMFD)", value: "RISC-V (RV32IMFD)" },
+                      // { text: "MIPS-32", value: "MIPS-32" },
+                    ]),
+                  };
                 },
 
     methods:    {
@@ -261,6 +263,15 @@
                     //Google Analytics
                     creator_ga('configuration', 'configuration.debug_mode', 'configuration.debug_mode.' + this._props.c_debug);
                   },
+                  change_kernel_simulator() {
+                    this._props.c_kernel = !this._props.c_kernel;
+                    app._data.c_kernel = this._props.c_kernel;
+                    creator_ga(
+                      "configuration",
+                      "configuration.kernel_simulator",
+                      "configuration.kernel_simulator." + this._props.c_kernel,
+                    );
+                  }
                 },
 
     template:     ' <b-modal  :id ="id" ' +
@@ -393,7 +404,17 @@
                   '       </b-form-checkbox>' +
                   '     </b-list-group-item>' +
                   ' ' +
-                  ' </b-modal>'
+                  '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
+                  '       <label for="range-6">Kernel Simulator:</label>' +
+                  '       <b-form-checkbox id="range-7"' +
+                  '                        v-model="c_kernel"' +
+                  '                        name="check-button"' +
+                  '                        switch size="lg"' +
+                  '                        @change="change_kernel_simulator">' +
+                  "       </b-form-checkbox>" +
+                  "     </b-list-group-item>" +
+                  " " +
+                  " </b-modal>"
 
   }
 

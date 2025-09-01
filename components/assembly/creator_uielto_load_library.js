@@ -37,16 +37,17 @@
 
         methods:    {
                       library_update(){
-                        if (code_binary.length !== 0){
-                            update_binary = JSON.parse(code_binary);
-                            load_binary = true;
-                            $("#divAssembly").attr("class", "col-lg-10 col-sm-12");
-                            $("#divTags").attr("class", "col-lg-2 col-sm-12");
-                            $("#divTags").show();
-                            show_notification("The selected library has been loaded correctly", 'success');
-                        }
-                        else{
-                            show_notification("Please select one library", 'danger');
+                        if (app.update_binary.length !== 0) {
+                          load_binary = true;
+                          $("#divAssembly").attr("class", "col-lg-10 col-sm-12");
+                          $("#divTags").attr("class", "col-lg-2 col-sm-12");
+                          $("#divTags").show();
+                          show_notification(
+                            "The selected library has been loaded correctly",
+                            "success",
+                          );
+                        } else {
+                          show_notification("Please select one library", "danger");
                         }
                       },
 
@@ -54,18 +55,25 @@
                       library_load(e){
                         var file;
                         var reader;
-                        var files = document.getElementById('binary_file').files;
-
+                        var files = document.getElementById("binary_file").files;
+                        
                         for (var i = 0; i < files.length; i++) {
-                             file = files[i];
-                             reader = new FileReader();
-                             reader.onloadend = onFileLoaded;
-                             reader.readAsBinaryString(file);
+                          file = files[i];
+                          reader = new FileReader();
+                          var arrayBuffer;
+                          reader.onload = function (ev) {
+                            arrayBuffer = ev.target.result;
+                            console.log("nombre: ", file);
+                            app.update_binary.push({name : file.name, lib :new Uint8Array(arrayBuffer), apply: true});
+                          
+                          };
+                          reader.readAsArrayBuffer(file);
+                          // update_binary = new Uint8Array(code_binary);
                         }
+                        // function onFileLoaded(event) {
+                        //   code_binary = event.target.result;
 
-                        function onFileLoaded(event) {
-                           code_binary = event.currentTarget.result;
-                        }
+                        // }
                       },
                     },
 

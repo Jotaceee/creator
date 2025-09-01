@@ -3006,7 +3006,7 @@ function next_token() {
 var list_user_instructions = [];
 var list_data_instructions = [];
 function identify_pseudo(instruction_assembly){
-  if(instruction_assembly.search("li") != -1 && instruction_assembly.search("vsetvli") === -1){
+  if(instruction_assembly.search("li") != -1 && instruction_assembly.search("vsetvli") === -1 && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init"))){
     list_user_instructions.push(instruction_assembly);
     let parts = instruction_assembly.split(',');
     
@@ -3021,20 +3021,20 @@ function identify_pseudo(instruction_assembly){
       list_user_instructions.push("");
     }
   }
-  else if (instruction_assembly.search("la") != -1)
+  else if (instruction_assembly.search("la") != -1 && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
     {
       list_user_instructions.push(instruction_assembly);
       list_user_instructions.push("");
     } 
-  else if (instruction_assembly.search("ecall") != -1)
+  else if (instruction_assembly.search("ecall") != -1 && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
     list_user_instructions.push(instruction_assembly);
-  else if (instruction_assembly.search("call") != -1 && !(instruction_assembly.search("ecall") != -1))
+  else if (instruction_assembly.search("call") != -1 && !(instruction_assembly.search("ecall") != -1) && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
   {
     list_user_instructions.push(instruction_assembly);
     if (is_32b_arch)
       list_user_instructions.push("");
   } 
-  else if (instruction_assembly.search("lw") != -1)
+  else if (instruction_assembly.search("lw") != -1 && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
     {
       list_user_instructions.push(instruction_assembly);
       let parts = instruction_assembly.split(',');

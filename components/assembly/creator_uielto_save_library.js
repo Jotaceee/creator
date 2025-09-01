@@ -38,61 +38,85 @@
         methods:    {
                       //Save a binary in a local file
                       library_save ()
-                      {
-                        if (assembly_compiler() == -1) {
-                          return;
+                      { 
+                        if (instructions.find(obj => obj.Label.includes("main")) !== undefined)
+                        show_notification(
+                          'You can not use the "main" tag in a library',
+                          "danger",
+                        );
+
+                        else {
+                            const blob = new Blob([objectcontent], {type: "application/octet-stream"});
+
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+
+                            a.href = url;
+
+                            if (this.name_binary_save == "")
+                              a.download = "library.o";
+                            else 
+                              a.download = this.name_binary_save +".o";
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                            show_notification("Save binary", "success");
                         }
+                        // if (assembly_compiler() == -1) {
+                        //   return;
+                        // }
 
-                        promise.then((message) => 
-                        {
-                          if (message == "-1") {
-                            return;
-                          }
+                        // promise.then((message) => 
+                        // {
+                        //   if (message == "-1") {
+                        //     return;
+                        //   }
 
-                          if (creator_memory_is_segment_empty(memory_hash[0]) === false) {
-                            show_notification('You can not enter data in a library', 'danger') ;
-                            return;
-                          }
+                        //   if (creator_memory_is_segment_empty(memory_hash[0]) === false) {
+                        //     show_notification('You can not enter data in a library', 'danger') ;
+                        //     return;
+                        //   }
 
-                          for (var i = 0; i < instructions_binary.length; i++)
-                          {
-                            console_log(instructions_binary[i].Label)
-                            if (instructions_binary[i].Label == "main_symbol") {
-                              show_notification('You can not use the "main" tag in a library', 'danger') ;
-                              return;
-                            }
-                          }
+                        //   for (var i = 0; i < instructions_binary.length; i++)
+                        //   {
+                        //     console_log(instructions_binary[i].Label)
+                        //     if (instructions_binary[i].Label == "main_symbol") {
+                        //       show_notification('You can not use the "main" tag in a library', 'danger') ;
+                        //       return;
+                        //     }
+                        //   }
 
-                          var aux = {instructions_binary: instructions_binary, instructions_tag: instructions_tag};
+                        //   var aux = {instructions_binary: instructions_binary, instructions_tag: instructions_tag};
 
-                          var textToWrite = JSON.stringify(aux, null, 2);
-                          var textFileAsBlob = new Blob([textToWrite], { type: 'text/json' });
-                          var fileNameToSaveAs;
+                        //   var textToWrite = JSON.stringify(aux, null, 2);
+                        //   var textFileAsBlob = new Blob([textToWrite], { type: 'text/json' });
+                        //   var fileNameToSaveAs;
 
-                          if (this.name_binary_save == '') {
-                            fileNameToSaveAs = "binary.o";
-                          }
-                          else {
-                            fileNameToSaveAs = this.name_binary_save + ".o";
-                          }
+                        //   if (this.name_binary_save == '') {
+                        //     fileNameToSaveAs = "binary.o";
+                        //   }
+                        //   else {
+                        //     fileNameToSaveAs = this.name_binary_save + ".o";
+                        //   }
 
-                          var downloadLink = document.createElement("a");
-                          downloadLink.download = fileNameToSaveAs;
-                          downloadLink.innerHTML = "My Hidden Link";
+                        //   var downloadLink = document.createElement("a");
+                        //   downloadLink.download = fileNameToSaveAs;
+                        //   downloadLink.innerHTML = "My Hidden Link";
 
-                          window.URL = window.URL || window.webkitURL;
+                        //   window.URL = window.URL || window.webkitURL;
 
-                          downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
-                          downloadLink.onclick = destroyClickedElement;
-                          downloadLink.style.display = "none";
-                          document.body.appendChild(downloadLink);
+                        //   downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
+                        //   downloadLink.onclick = destroyClickedElement;
+                        //   downloadLink.style.display = "none";
+                        //   document.body.appendChild(downloadLink);
 
-                          downloadLink.click();
+                        //   downloadLink.click();
 
-                          this.name_binary_save = '';
+                        //   this.name_binary_save = '';
 
-                          show_notification('Save binary', 'success') ;
-                        });
+                        //   show_notification('Save binary', 'success') ;
+                        // });
                       },
 
                       //Stop user interface refresh

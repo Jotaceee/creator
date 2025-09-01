@@ -301,7 +301,7 @@ Module['print'] = function (message) {
       entry_elf = labelmatch[1].trim();
     }
 
-    if (!entry_elf.startsWith("0x"))
+    if (entry_elf !== undefined && !entry_elf.startsWith("0x"))
       entry_elf = "0x" + entry_elf;
     
     if (sectionasm === 1){

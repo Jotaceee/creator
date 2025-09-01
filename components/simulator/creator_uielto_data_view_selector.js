@@ -36,7 +36,8 @@
 
                   reg_representation_options: [
                                                 { text: 'INT/Ctrl Registers', value: 'int_registers' },
-                                                { text: 'FP Registers',       value: 'fp_registers'  }
+                                                { text: 'FP Registers',       value: 'fp_registers'  },
+                                                { text: 'V Registers',        value: 'v_registers'   }
                                               ]
                 }
               },
@@ -55,6 +56,10 @@
                   {
                     this.current_reg_type = "fp_registers";
                   }
+                  else if(e == "v_registers"){
+                    this.current_reg_type = "v_registers";
+                  }
+                    
 
                   /* Google Analytics */
                   creator_ga('send', 'event', 'data', 'data.view', 'data.view.' + app._data.data_mode);
@@ -63,7 +68,7 @@
                 get_pressed(button)
                 {
                   if (button == "registers") {
-                    if (app._data.data_mode == "int_registers" || app._data.data_mode == "fp_registers")
+                    if (app._data.data_mode == "int_registers" || app._data.data_mode == "fp_registers" || app._data.data_mode == "v_registers")
                     {
                       return "secondary";
                     }
@@ -86,6 +91,10 @@
                   {
                     current_reg_name = "FP Registers";
                   }
+                  if (app._data.data_mode == "v_registers")
+                  {
+                    current_reg_name = "V Registers";
+                  }
 
                   return current_reg_name;
                 }
@@ -97,63 +106,82 @@
 
   template:   '<b-container fluid align-h="center" class="mx-0 px-2">' +
               '  <b-row cols="1" >' +
-              '' +
+              "" +
               '    <b-col class="px-1">' +
               '      <b-button-group class="w-100 pb-3">' +
-              '' +
-              '        <b-button v-if="register_file_num <= 4"' +
+              "" +
+              '        <b-button v-if="register_file_num <= 5"' +
               '                  v-for="item in reg_representation_options"' +
               '                  :id="item.value"' +
               '                  size="sm"' +
               '                  :pressed="get_pressed(item.value)"' +
               '                  variant="outline-secondary"' +
               '                  @click="change_data_view(item.value)">' +
-              '          {{item.text}}' +
-              '        </b-button>' +
-              '' +
-              '        <b-dropdown split' +
-              '                    v-if="register_file_num > 4"' +
-              '                    right' +
+              "          {{item.text}}" +
+              "        </b-button>" +
+              "" +
+              "        <b-dropdown split" +
+              '                    v-if="register_file_num > 5"' +
+              "                    right" +
               '                    :text="get_register_name()"' +
               '                    size="sm"' +
-              '                    :variant="get_pressed(\'registers\')"' +
+              "                    :variant=\"get_pressed('registers')\"" +
               '                    @click="change_data_view(current_reg_type)">' +
-              '          <b-dropdown-item @click="change_data_view(\'int_registers\')">CPU-INT/Ctrl Registers</b-dropdown-item>' +
-              '          <b-dropdown-item @click="change_data_view(\'fp_registers\')">CPU-FP Registers</b-dropdown-item>' +
-              '        </b-dropdown>' +
-              '' +
+              "          <b-dropdown-item @click=\"change_data_view('int_registers')\">CPU-INT/Ctrl Registers</b-dropdown-item>" +
+              "          <b-dropdown-item @click=\"change_data_view('fp_registers')\">CPU-FP Registers</b-dropdown-item>" +
+              "          <b-dropdown-item @click=\"change_data_view('v_registers')\">V Registers</b-dropdown-item>" +
+              "        </b-dropdown>" +
+              "" +
+              '       <b-button id="csr_btn"' +
+              '                 size="sm"'+
+              "                 :pressed=\"get_pressed('csr')\""+
+              '                 variant="outline-secondary"'+
+              "                 @click=\"change_data_view('csr')\">" +
+              '         CSR Registers' +
+              '       </b-button>' +
+              "" +
               '        <b-button id="memory_btn"' +
               '                  size="sm"' +
-              '                  :pressed="get_pressed(\'memory\')"' +
+              "                  :pressed=\"get_pressed('memory')\"" +
               '                  variant="outline-secondary"' +
-              '                  @click="change_data_view(\'memory\')">' +
+              "                  @click=\"change_data_view('memory')\">" +
               '          <span class="fas fa-memory"></span>' +
-              '          Memory' +
-              '        </b-button>' +
-              '' +
+              "          Memory" +
+              "        </b-button>" +
+              "" +
+              "      </b-button-group>" +
+              "    </b-col>" +
+              "" +
+              "  </b-row>" +
+
+
+              '  <b-row cols="1" >' +
+              "" +
+              '    <b-col class="px-1">' +
+              '      <b-button-group class="w-100 pb-3">' +
               '        <b-button id="stats_btn"' +
               '                  size="sm"' +
-              '                  :pressed="get_pressed(\'stats\')"' +
+              "                  :pressed=\"get_pressed('stats')\"" +
               '                  variant="outline-secondary"' +
-              '                  @click="change_data_view(\'stats\')">' +
+              "                  @click=\"change_data_view('stats')\">" +
               '          <span class=" fas fa-chart-bar"></span>' +
-              '          Stats' +
-              '        </b-button>' +
-              '' +
+              "          Stats" +
+              "        </b-button>" +
+              "" +
               '        <b-button id="stats_btn"' +
               '                  size="sm"' +
-              '                  :pressed="get_pressed(\'clk_cycles\')"' +
+              "                  :pressed=\"get_pressed('clk_cycles')\"" +
               '                  variant="outline-secondary"' +
-              '                  @click="change_data_view(\'clk_cycles\')">' +
+              "                  @click=\"change_data_view('clk_cycles')\">" +
               '          <span class="fa-regular fa-clock"></span>' +
-              '          CLK Cyles' +
-              '        </b-button>' +
-              '        ' +
-              '      </b-button-group>' +
-              '    </b-col>' +
-              '' +
-              '  </b-row>' +
-              '</b-container>'
+              "          CLK Cyles" +
+              "        </b-button>" +
+              "        " +
+              "      </b-button-group>" +
+              "    </b-col>" +
+              "" +
+              "  </b-row>" +
+              "</b-container>"
 
   }
 

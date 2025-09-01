@@ -22,7 +22,8 @@
 
   /* jshint esversion: 6 */
 
-  var uielto_register_popover = {
+  
+var uielto_register_popover = {
 
   props:      {
                 target:           { type: String, required: true },
@@ -49,7 +50,7 @@
 
                   switch(view){
                     case "hex":
-                      if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers"  || architecture.components[this._props.component.index].type == "int_registers") {
                         ret = (((register.value).toString(16)).padStart(register.nbits/4, "0")).toUpperCase();
                       }
                       else {
@@ -63,7 +64,7 @@
                       break;
 
                     case "bin":
-                      if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers"  || architecture.components[this._props.component.index].type == "int_registers") {
                         ret = (((register.value).toString(2)).padStart(register.nbits, "0"));
                       }
                       else {
@@ -77,7 +78,7 @@
                       break;
 
                     case "signed":
-                      if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers"  || architecture.components[this._props.component.index].type == "int_registers") {
                         if ((((register.value).toString(2)).padStart(register.nbits, '0')).charAt(0) == 1){
                           ret = parseInt(register.value.toString(10))-0x100000000;
                         }
@@ -112,7 +113,7 @@
                       break;
 
                     case "char":
-                      if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers"   || architecture.components[this._props.component.index].type == "int_registers") {
                         ret = hex2char8((((register.value).toString(16)).padStart(register.nbits/4, "0")));
                       }
                       else {
@@ -126,16 +127,17 @@
                       break;
 
                     case "ieee32":
-                      if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers"  || architecture.components[this._props.component.index].type == "int_registers") {
                         ret = hex2float("0x"+(((register.value).toString(16)).padStart(8, "0")));
                       }
                       else {
+                        console.log(register);
                         ret = bi_BigIntTofloat(register.value);
                       }
                       break;
 
                     case "ieee64":
-                      if (architecture.components[this._props.component.index].type == "ctrl_registers" || architecture.components[this._props.component.index].type == "int_registers") {
+                      if (architecture.components[this._props.component.index].type == "ctrl_registers"  || architecture.components[this._props.component.index].type == "int_registers") {
                         ret = hex2double("0x"+(((register.value).toString(16)).padStart(16, "0")));
                       }
                       else {
@@ -209,7 +211,22 @@
                   else{
                     return 2;
                   }
+                },
+
+                button_sel_vec_pos(total_elm){
+                  return  '<b-dropdown size="sm" text="Small" class="m-2">' +
+                            '<b-dropdown-item-button' +
+                            '  v-for="i in total_elm"' +
+                            '  :key="index"' +
+                            '  @click="show_vec_pos(i)"'+
+                            '>' +
+                            '  {{ i }}' +
+                            '</b-dropdown-item-button>' +
+                          '</b-dropdown>'
                 }
+
+
+
               },
 
 template:     '<b-popover :target="target" ' +
@@ -285,7 +302,7 @@ template:     '<b-popover :target="target" ' +
               '    </tbody>' +
               '  </table>' +
               '' +
-              '   <b-container fluid align-h="center" class="mx-0">' +
+              '   <b-container fluid align-h="center">' +
               '     <b-row align-h="center" :cols="get_cols(component.index)">' +
               ' ' +
               '       <b-col class="popoverFooter">' +
@@ -316,6 +333,153 @@ template:     '<b-popover :target="target" ' +
               '   </b-container>' +
               '</b-popover>'
 
-  }
+};
 
-  Vue.component('popover-register', uielto_register_popover)
+Vue.component('popover-register', uielto_register_popover);
+
+var uielto_register_popover_vec = {
+  props: {
+    target: { type: String, required: true },
+    component: { type: Object, required: true },
+    register: { type: Object, required: true }
+  },
+  data: function () {
+    return { tableHeight: 0, 
+      activeView: 'hex', 
+      newValue: "", 
+      precision: "true", 
+      result: [],
+      metadata: [ { 
+                    "Metadata": "", 
+                    "Nbits": this.register.nbits, 
+                    "Length": architecture.components[3].length_elem, 
+                    "Elems": architecture.components[3].total_elements, 
+                    "Elem_op": architecture.components[3].elems_op
+                  }
+                ]
+    };
+
+  },
+  methods: {
+    onPopoverShow(){
+      this._data.metadata[0].Length = architecture.components[3].length_elem;
+      this._data.metadata[0].Elems = architecture.components[3].total_elements;
+      this._data.metadata[0].Elem_op = architecture.components[3].elems_op;
+      this.show_value_vec(this._props.register, this._data.activeView);
+    },
+    closePopover() {
+      this.$root.$emit("bv::hide::popover");
+    },
+    
+    show_value_vec(register, view="hex") {
+      this.result.length = 0;
+      for (var i = 0; i < architecture.components[3].total_elements; i++){
+        switch (view) {
+          case "hex":
+            var ret_val = (512 / length_vext) - i - 1;
+            this.result.push({"Vector index": register.name[0] + " ["+i+"]", 'value':"0x" + register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 )});
+            break;
+          case "signed":
+            var ret_val = (512 / length_vext) - i - 1;
+            var ret = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
+
+            if (parseInt(ret, 16).toString(2).padStart(length_vext, "0").charAt(0) === "1"){
+              if (length_vext === 8){
+                this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : parseInt(ret, 16) - 256});
+
+              } else if (length_vext === 16){
+                this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : parseInt(ret, 16) - 65536});
+
+              } else if (length_vext === 32){
+                this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : parseInt(ret, 16) - 4294967296});
+
+              } else {
+                this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : parseInt(ret, 16) - 18446744073709551616n});
+              }
+            }
+            else
+              this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : parseInt(ret, 16)});
+            break;
+          case "unsigned":
+            var ret_val = (512 / length_vext) - 1 - i;
+            var ret = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
+            this.result.push({ "Vector index": register.name[0] + " ["+i+"]", "value" : BigInt("0x"+ret)});
+            break;
+          case "ieee32":
+            var ret_val = (512 / length_vext) - i - 1;
+            var reg_value = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
+            switch(length_vext){
+              case 8:
+              case 16:
+              case 32:
+                reg_value = reg_value.padStart(8, "0");
+                reg_value = hex2float(reg_value).toString();
+                break;
+              case 64:
+                reg_value = hex2float(reg_value.slice(0,8)) + " | " + hex2float(reg_value.slice(8));
+                break;
+            }
+            this.result.push({"Vector index": register.name[0] + " ["+i+"]", 'value':reg_value});
+            break;
+          case "ieee64":
+            var ret_val = (512 / length_vext) - i - 1;
+            var reg_value = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
+            switch(length_vext){
+              case 8:
+              case 16:
+              case 32:
+              case 64:
+                reg_value = reg_value.padStart(16, "0");
+                reg_value = hex2double(reg_value).toString();
+                break;
+            }
+            this.result.push({"Vector index": register.name[0] + " ["+i+"]", 'value':reg_value});
+            break;
+
+        }
+      }
+      
+      this.activeView = view;
+
+      this.$nextTick(() => {
+        const table = this.$refs.vectorTable?.$el;
+        if (table) {
+          this.tableHeight = table.offsetHeight;
+        }
+      });
+      
+    }
+  },
+  template:
+    '<b-popover :target="target" ' +
+    '           triggers="click blur" ' +
+    '           @show="onPopoverShow"'+
+    '           class="popover m-0 p-0" custom-class="wide-popover">' +
+    "  <template v-slot:title>" +
+    '    <b-button @click="closePopover" class="close" aria-label="Close">' +
+    '      <span class="d-inline-block" aria-hidden="true">&times;</span>' +
+    "    </b-button>" +
+    "    {{register.name.join(' | ')}}" +
+    "  </template>" +
+    "" +
+    '  <b-table ref="MetadataTable" stripped :items="metadata" class="w-100 table-borderless custom-text" sticky-header head-variant="light"></b-table>'+
+    ''+
+    '  <b-container fluid>'+
+    '   <b-row cols="2" style="height: 100%;" class="align-items-stretch">'+
+    '     <b-col cols="4" class="d-flex justify-content-center align-items-center" :style="{ minHeight: tableHeight + \'px\' }">'+
+    '       <b-button-group vertical v-model="activeView">' +
+    '         <b-button variant="outline-secondary" :pressed="activeView === \'hex\'" value="hex" class="button_vec" @click="show_value_vec(register, \'hex\')">Hex</b-button>' +
+    '         <b-button variant="outline-secondary" :pressed="activeView === \'signed\'" value="signed" class="button_vec" @click="show_value_vec(register, \'signed\')">Signed</b-button>' +
+    '         <b-button variant="outline-secondary" :pressed="activeView === \'unsigned\'" value="unsigned" class="button_vec" @click="show_value_vec(register, \'unsigned\')">Unsigned</b-button>' +
+    '         <b-button variant="outline-secondary" :pressed="activeView === \'ieee32\'" value="ieee32" class="button_vec" @click="show_value_vec(register, \'ieee32\')" >IEEE32</b-button>'+
+    '         <b-button variant="outline-secondary" :pressed="activeView === \'ieee64\'" value="ieee64" class="button_vec" @click="show_value_vec(register, \'ieee64\')" >IEEE64</b-button>'+
+    '       </b-button-group>'+
+    '     </b-col>'+
+    '     <b-col align-self="baseline" cols="8" class="center p-0 m-0">'+
+    '       <b-table ref="vectorTable" striped  responsive :items="result" class="table-borderless custom-text w-100" sticky-header style="max-height: 250px; overflow-x:auto; width: 30ch;" head-variant="light"></b-table>'+
+    '     </b-col>'+
+    '   </b-row>'+
+    '  </b-container>'+
+    "</b-popover>",
+};
+Vue.component("popover-register-vec", uielto_register_popover_vec);

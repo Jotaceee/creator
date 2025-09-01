@@ -29,7 +29,8 @@
         props:      {
                       group:                        { type: Array,   required: true },
                       browser:                      { type: String,  required: true },
-                      arch_available:               { type: Array,   required: true }
+                      arch_available:               { type: Array,   required: true },
+                      c_sudo:                       { type: Boolean, required: true }
                     },
 
         data:       function () {
@@ -39,10 +40,13 @@
                         instruction_disable: false,
                         run_disable: false,
                         stop_disable: true
-                      }
+                      };
                     },
 
         methods:    {
+                      change_sudo_mode(){
+                        app._data.c_sudo = !app._data.c_sudo;
+                      },
                       //
                       //Screen change
                       //
@@ -70,6 +74,7 @@
                           if(e == "assembly")
                           {
                             setTimeout(function(){
+                              displayAssemblyFiles(assembly_files);
                               assembly_codemirror_start();
                               if (codemirrorHistory != null ){
                                 textarea_assembly_editor.setHistory(codemirrorHistory);
@@ -122,72 +127,77 @@
                       //Compile assembly code
                       assembly_compiler(code)
                       {
-                        //Change buttons status
+                        console.log("Código: ", code);
                         this_compiling = this;
                         this_compiling.compiling = true;
-
                         promise = new Promise((resolve, reject) => {
-                          setTimeout(function() {
+                          setTimeout(function () {
+                            if (typeof code !== "undefined") {
+                              code_assembly = code;
+                            } else {
+                              code_assembly = textarea_assembly_editor.getValue();
+                              // se cambia a el ultimo fichero editado y se guarda su estado
 
-                            // Compile
-                            if (typeof(code)!=="undefined") {
-                                code_assembly = code;
+                              for (let i = 0; i < assembly_files.length; i++){
+                                if(assembly_files[i].editing_now)
+                                  assembly_files[i].code = textarea_assembly_editor.getValue();
+                              }
                             }
-                            else{
-                                code_assembly = textarea_assembly_editor.getValue();
-                            }
-                            var ret = assembly_compiler() ;
-
-                            //Update/reset
-                            app._data.totalStats   = 0;
+                            var ret = assembly_compiler();
+                            app._data.totalStats = 0;
                             app._data.instructions = instructions;
-                            tokenIndex = 0; //TODO: change to token_index in all files
+                            tokenIndex = 0;
                             uielto_toolbar_btngroup.methods.reset(true);
-
-                            //Save a backup in the cache memory
-                            if (typeof(Storage) !== "undefined")
-                            {
+                            if (typeof Storage !== "undefined") {
                               var aux_object = jQuery.extend(true, {}, architecture);
                               var aux_architecture = register_value_serialize(aux_object);
                               var aux_arch = JSON.stringify(aux_architecture, null, 2);
-
                               var date = new Date();
-                              var auxDate = date.getHours()+":"+date.getMinutes()+":"+date.getSeconds()+" - "+date.getDate()+"/"+(date.getMonth()+1)+"/"+date.getFullYear();
-
-                              localStorage.setItem("backup_arch_name", app._data.architecture_name);
+                              var auxDate =
+                                date.getHours() +
+                                ":" +
+                                date.getMinutes() +
+                                ":" +
+                                date.getSeconds() +
+                                " - " +
+                                date.getDate() +
+                                "/" +
+                                (date.getMonth() + 1) +
+                                "/" +
+                                date.getFullYear();
+                              localStorage.setItem(
+                                "backup_arch_name",
+                                app._data.architecture_name,
+                              );
                               localStorage.setItem("backup_arch", aux_arch);
                               localStorage.setItem("backup_asm", code_assembly);
                               localStorage.setItem("backup_date", auxDate);
                             }
-
-                            //show error/warning
-                            
-                            //Change buttons status
                             this_compiling.compiling = false;
-
-                            switch (ret.type)
-                            {
-                              case "error":
-                                   uielto_toolbar_btngroup.methods.compile_error(ret.msg, ret.token, ret.line) ;
-                                   break;
-
-                              case "warning":
-                                   show_notification(ret.token, ret.bgcolor) ;
-                                   break;
-
-                              default:
-                                   show_notification('Compilation completed successfully', 'success') ;
-                                   break;
+                            if (ret !== undefined){
+                              switch (ret.type) {
+                                case "error":
+                                  uielto_toolbar_btngroup.methods.compile_error(
+                                    ret.msg,
+                                    ret.token,
+                                    ret.line,
+                                  );
+                                  break;
+                                case "warning":
+                                  show_notification(ret.token, ret.bgcolor);
+                                  break;
+                                default:
+                                  show_notification(
+                                    "Compilation completed successfully",
+                                    "success",
+                                  );
+                                  break;
+                              }
                             }
-
-                            // end
                             resolve("0");
-
                           }, 25);
                         });
-
-                        // Close all toast
-                        app.$bvToast.hide()
+                        app.$bvToast.hide();  
                       },
 
                       //Show error message in the compilation
@@ -228,7 +238,10 @@
                       //Remove a loaded binary
                       remove_library()
                       {
-                        update_binary = "";
+                        
+                        // update_binary = undefined; //undefined;
+                        app.update_binary.length = 0;
+                        // code_binary = undefined;
                         load_binary = false;
                         $("#divAssembly").attr("class", "col-lg-12 col-sm-12");
                         $("#divTags").attr("class", "col-lg-0 col-sm-0");
@@ -263,29 +276,33 @@
                         }
 
                         //Auto-scroll
-                        if ((app._data.autoscroll === true) && (run_program != 1))
-                        {
-                          if(execution_index >= 0 && (execution_index + 4) < instructions.length)
-                          {
-                            var id = "#inst_table__row_" + instructions[execution_index + (parseInt(architecture.arch_conf[1].value) / 8)].Address;
+                        if (app._data.autoscroll === true && run_program != 1) {
+                          if (execution_index >= 0 && execution_index + 4 < instructions.length) {
+                            var id =
+                              "#inst_table__row_" +
+                              instructions[
+                                execution_index + ((is_32b_arch) ?  (parseInt(architecture.arch_conf[1].value) / 8) : (parseInt(architecture.arch_conf[1].value) / 16))
+                              ].Address;
                             var row_pos = $(id).position();
-                            if(row_pos)
-                            {
-                              var pos = row_pos.top - $('.instructions_table').height();
-                              $('.instructions_table').animate({scrollTop: (pos)}, 200);
+                            if (row_pos) {
+                              var pos = row_pos.top - $(".instructions_table").height();
+                              $(".instructions_table").animate({ scrollTop: pos }, 200);
                             }
-                          }
-                          else if(execution_index > 0 && (execution_index + 4) >= instructions.length){
-                            $('.instructions_table').animate({scrollTop: ($('.instructions_table').height())}, 300);
+                          } else if (
+                            execution_index > 0 &&
+                            execution_index + 4 >= instructions.length
+                          ) {
+                            $(".instructions_table").animate(
+                              { scrollTop: $(".instructions_table").height() },
+                              300,
+                            );
                           }
                         }
-
-                        if(app._data.data_mode == "stats"){
-                          ApexCharts.exec('stat_plot', 'updateSeries', stats_value);
+                        if (app._data.data_mode == "stats") {
+                          ApexCharts.exec("stat_plot", "updateSeries", stats_value);
                         }
-
-                        if(app._data.data_mode == "clk_cycles"){
-                          ApexCharts.exec('clk_plot',  'updateSeries', clk_cycles_value);
+                        if (app._data.data_mode == "clk_cycles") {
+                          ApexCharts.exec("clk_plot", "updateSeries", clk_cycles_value);
                         }
                       },
 
@@ -321,39 +338,43 @@
                         // UI: set default row color...
                         for (var i = 0; i < instructions.length; i++) 
                         {
-                          if (instructions[i].Label == "main") {
+                          if (instructions[i].Address === entry_elf || instructions[i].Address === ("0x" + entry_elf))
+                            // if (instructions[i].Label == "_main") {
+                          {
                             draw.success.push(i);
+                            break;
                           }
-                        }
-
-                        var ret = packExecute(false, null, null, draw) ;
-                        this.execution_UI_update (ret);
-
-                        // Close all toast
-                        app.$bvToast.hide()
+                          else {
+                            if (entry_elf === undefined && instructions[i].Label == "_main")
+                              draw.success.push(i);
+                          }
+                            // }
+                          }
+                          var ret = packExecute(false, null, null, draw);
+                          this.execution_UI_update(ret);
+                          app.$bvToast.hide();
                       },
-
                       //Execute one instruction
                       execute_instruction ()
                       {
-                        // Google Analytics
-                        creator_ga('execute', 'execute.instruction', 'execute.instruction');
-
-                        execution_mode = 0;
-
-                        var ret = execute_instruction();
-
-                        if (typeof ret === "undefined") {
-                          console.log("Something weird happened :-S") ;
+                        var ret;
+                        creator_ga("execute", "execute.instruction", "execute.instruction");
+                        if (execution_mode_run === -1){
+                          execution_mode_run = 1;
+                          loadSailFunction(enablefpd, enablevec);
+                          return packExecute(
+                            true,
+                            "The execution of the program has finished",
+                            "success",
+                            null,
+                          );
+                        } else if(finished){
+                          show_notification('The program has finished', 'warning');
                         }
-
-                        if (ret.msg != null) {
-                          show_notification(ret.msg, ret.type);
-                        }
-
-                        if (ret.draw != null)
-                        {
-                          this.execution_UI_update (ret);
+                        else if(execution_mode_run !== -1 && execution_mode_run !== 2){
+                          variablechula = 1;
+                          execution_mode_run = 1;
+                          Module._reanudar_ejecucion(parseInt(1,10));
                         }
                       },
 
@@ -361,43 +382,19 @@
                       execute_program ()
                       {
                         var ret;
-
-                        // Google Analytics
-                        creator_ga('execute', 'execute.run', 'execute.run');
-
-                        execution_mode = 1;
-
-                        if (run_program == 0) {
-                          run_program = 1;
+                        creator_ga("execute", "execute.run", "execute.run");
+                        if(execution_mode_run === -1){
+                          execution_mode_run = 0;
+                          loadSailFunction(enablefpd, enablevec);
+                          
+                        } else if(finished){
+                          show_notification('The program has finished', 'warning');
                         }
-
-                        if (instructions.length === 0)
-                        {
-                          show_notification('No instructions in memory', 'danger') ;
-                          run_program = 0;
-                          return;
+                        else if (execution_mode_run !== -1 && execution_mode_run !== 2){
+                          execution_mode_run = 0;
+                          variablechula = 0;
+                          Module._reanudar_ejecucion(parseInt(0,10));
                         }
-                        if (execution_index < -1)
-                        {
-                          show_notification('The program has finished', 'warning') ;
-                          run_program = 0;
-                          return;
-                        }
-                        if (execution_index == -1)
-                        {
-                          show_notification('The program has finished with errors', 'danger') ;
-                          run_program = 0;
-                          return;
-                        }
-
-                        //Change buttons status
-                        this.reset_disable = true;
-                        this.instruction_disable = true;
-                        this.run_disable = true;
-                        this.stop_disable = false;
-                        app._data.main_memory_busy = true;
-
-                        uielto_toolbar_btngroup.methods.execute_program_packed(ret, this);
                       },
 
                       execute_program_packed(ret,local_this)
@@ -504,6 +501,7 @@
                   '         <span class="col px-0 mr-1" v-for="(item, index) in group">' +
                               button_architecture() +
                               button_assembly() +
+                              button_sudo() +
                               button_simulator() +
                               button_edit_architecture() +
                               button_save_architecture() +
@@ -552,7 +550,18 @@
             '  Assembly' +
             '</b-button>'
   }
-
+  function button_sudo(){
+    return (    
+      '<b-form-checkbox v-if="item==\'btn_sudo\'" class="d-flex sudo_btn h-100 text-center align-items-center" style="padding-left:40%;"' +
+      '                 id="sudo_btn_sim"' +
+      '                 v-model="c_sudo"' +
+      '                 switch size="md"' +
+      '                 @change="change_sudo_mode">' +
+    '                 {{c_sudo ? \'Machine Mode\' : \'User Mode\'}}'+
+      "</b-form-checkbox>" +
+    ''
+    );
+  }
   function button_simulator(){
     return  '<b-button v-if="item==\'btn_simulator\'" class="btn btn-block btn-outline-secondary menuGroup btn-sm simulator_btn btn_arch h-100"' +
             '          id="sim_btn_arch"' +

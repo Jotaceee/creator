@@ -3,11 +3,11 @@ ENTRY(_main)
 MEMORY
 {
   /* Definir la región de memoria para el código */
-  text_mem  (rx) : ORIGIN = 0x80000000, LENGTH = 0x1000
-  data_mem  (rw) : ORIGIN = 0x80001000, LENGTH = 0x1000
-  bss_mem   (rw) : ORIGIN = 0x80002000, LENGTH = 0x3000
-  heap_mem  (rw) : ORIGIN = 0x80005000, LENGTH = 0x1000
-  stack_mem (rw) : ORIGIN = 0x80006000, LENGTH = 0x1000
+  text_mem  (rx) : ORIGIN = 0x80000000, LENGTH = 0x4000
+  data_mem  (rw) : ORIGIN = 0x80004000, LENGTH = 0x2000
+  bss_mem   (rw) : ORIGIN = 0x80006000, LENGTH = 0x3000
+  heap_mem  (rw) : ORIGIN = 0x80009000, LENGTH = 0x1000
+  stack_mem (rw) : ORIGIN = 0x8000A000, LENGTH = 0x1000
 }
 
 

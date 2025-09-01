@@ -89,7 +89,7 @@
                 '                              title="Field name">' +
                 '                </b-form-input>' +
                 '                <b-form-input type="text" ' +
-                '                              v-model="instruction.fields[field_index].name = instruction.name" ' +
+                '                              v-model="instruction.fields[field_index].name"' + // = instruction.name" ' +
                 '                              required ' +
                 '                              size="sm" ' +
                 '                              v-if="(field_index) == 0"  ' +
@@ -171,7 +171,8 @@
                 '              </b-form-group>' +
                 '            </div>' +
                 '' +
-                '            <div class="col-lg-2 col-2 fields" v-if="instruction.fields[field_index].type == \'co\'">' +
+                // '            <div class="col-lg-2 col-2 fields" v-if="instruction.fields[field_index].type == \'co\'">' +
+                '            <div class="col-lg-2 col-2 fields" v-if="instruction.fields[field_index].valueField != \'\'">' +
                 '              <b-form-group>' +
                 '                <b-form-input type="text" ' +
                 '                              v-model="instruction.co" ' +

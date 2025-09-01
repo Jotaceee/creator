@@ -49,6 +49,9 @@ try
       /* Global Variables */
       /********************/
 
+      tabs: [],
+      files_list: [],
+      tabs_index: 0,
       //Forces vue to reload a component, similar to $forceUpdate()
       render: 0,
 
@@ -103,10 +106,17 @@ try
       //Debug
       c_debug: false,
 
+      //Kernel
+      c_kernel: true,
+
+      //Sudo perms
+      c_sudo: false,
+
       //Dark Mode
       dark: false,
 
-      
+      // Libs
+      update_binary: [],
 
       /*************************/
       /* Architecture Selector */
@@ -397,6 +407,20 @@ try
       {
         this.target_port = this.target_ports[this.os];
       },
+
+      // Add new Tab on multifile editor
+      addTab(filename) {
+        const newTabId = this.tabs.length;
+        this.tabs.push({
+          id: newTabId,
+          title: filename,
+          code: ""
+        });
+        this.$nextTick(() => {
+          activeTabIndex = newTabId;
+        });
+        return (this.tabs.length -1);
+      }
     },
   });
 
@@ -490,4 +514,153 @@ catch(e)
   setTimeout(function(){
     location.reload(true)
   }, 3000);
+}
+
+
+function toCompile(_checkbox, filename){
+  for (let i = 0; i < assembly_files.length; i++){
+    if(assembly_files[i].filename === filename){
+      if(_checkbox.checked)
+        assembly_files[i].to_compile = true;
+      else
+        assembly_files[i].to_compile = false;
+    }
+  }
+}
+
+function displayAssemblyFiles(asmfiles){
+  for(let i = 0; i < asmfiles.length; i++){
+    if(asmfiles[i].editing_now){
+      openFile(asmfiles[i].filename);
+    }
+  }
+}
+
+function newFile(filename = ""){
+  var filename_prompt;
+  /* GENERACION DEL NUEVO FICHERO */
+  if (filename === "") {
+  filename_prompt = prompt("Nombre del nuevo fichero");
+  if(filename_prompt === null || filename_prompt === "") //Checkeamos que hay un nombre
+    return;
+  filename_prompt = filename_prompt.replaceAll(" ", "");
+  if(!filename_prompt.endsWith(".s"))
+    filename_prompt = filename_prompt + ".s";
+  }
+  else 
+    filename_prompt = filename;
+  
+  /* ACTUALIZACION DEL EDITOR DE CÓDIGO */
+
+  var newAssemblyFile =  {
+    filename: filename_prompt,
+    code: ".section .data\n\n# Declare your data to use here\n\n.section .bss\n.align 8\ntohost:\t.dword 0\n\n.section .text.init\n.globl _main\n\n# Complete your main function here\n_main:",
+    to_compile: false,
+    editing_now: false
+  }
+  const newasm = assembly_files.find(asm => asm.filename === filename_prompt);
+  if (newasm === undefined){
+
+    assembly_files.push(newAssemblyFile);
+    app.files_list.push({filename: filename_prompt, to_compile: false});
+    const newId = app.addTab(filename_prompt);
+  }
+  openFile(filename_prompt);
+}
+
+function closeFile(filename){
+  for(let i = 0; i < assembly_files.length; i++){
+    if (assembly_files[i].filename === filename){
+      if (assembly_files[i].editing_now){
+        assembly_files[i].code = textarea_assembly_editor.getValue();
+        assembly_files[i].editing_now = false;
+        textarea_assembly_editor.setValue("");
+      }
+    }
+  }
+  
+}
+
+function renameFile(){
+  let old_filename = selectedFile;
+  let new_filename = prompt("Inserte nuevo nombre de fichero:");
+  if(new_filename === null || new_filename === "") //Checkeamos que hay un nombre
+    return;
+    new_filename = new_filename.replaceAll(" ", "");
+  if(!new_filename.endsWith(".s"))
+    new_filename = new_filename + ".s";
+
+  for(let i = 0; i < assembly_files.length; i++){
+    if (assembly_files[i].filename === old_filename){
+      assembly_files[i].filename = new_filename;
+      app.files_list[i].filename = new_filename;
+    }
+  }
+  for (let i =0; i < app.tabs.length; i++){
+    if (app.tabs[i].title === old_filename)
+      app.tabs[i].title = new_filename;
+  }
+
+}
+
+function deleteFile(){
+  let filename = selectedFile;
+  for(let i = 0; i <assembly_files.length; i++){
+    if (assembly_files[i].filename === filename){
+      assembly_files.splice(i,1);
+      app.files_list.splice(i,1);
+      textarea_assembly_editor.setValue("");
+    }
+  }
+
+  for (let i = 0; i < app.tabs.length; i++) {
+    
+    if (app.tabs[i].title === filename)
+      app.tabs.splice(i, 1);
+
+  }
+
+  console_log("Borrar fichero");
+}
+
+function openFile(name = ""){
+  let filename;
+  if (name === "")
+    filename = selectedFile;
+  else 
+    filename = name;
+  
+  let tabIndex_a = app.tabs.findIndex(tab => tab.title === filename);
+
+  if (tabIndex_a !== -1){
+    showFile(filename);
+  }
+  else {
+    app.addTab(filename);
+    showFile(filename);
+  }
+
+
+
+}
+
+function showFile(filename){
+
+  let indice_file = assembly_files.findIndex(insn => insn.filename === filename);
+    if(assembly_files[indice_file].editing_now)
+      return;
+
+  for(let i = 0; i < assembly_files.length; i++){
+    if(assembly_files[i].editing_now){
+      assembly_files[i].code = textarea_assembly_editor.getValue();
+      assembly_files[i].editing_now = false;
+    }
+  }
+  for(let i  = 0;i < assembly_files.length; i++){
+    if(assembly_files[i].filename === filename){
+      assembly_files[i].editing_now = true;
+      if (textarea_assembly_editor !== undefined) 
+      textarea_assembly_editor.setValue(assembly_files[i].code);
+    }
+  }
 }

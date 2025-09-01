@@ -573,6 +573,10 @@ function reset ()
   // Reset console
   keyboard = '' ;
   display  = '' ;
+  length_vext = 64;
+  architecture.components[3].total_elements = 8;
+  architecture.components[3].length_elem = length_vext;
+  architecture.components[3].elems_op = 0;
 
   for (var i = 0; i < architecture_hash.length; i++)
   {
@@ -616,7 +620,15 @@ function reset ()
   //Stack Reset
   creator_callstack_reset();
   track_stack_reset();
-
+  if( execution_mode_run !== -1){
+    Module._reanudar_ejecucion(parseInt(5,10));
+    if (can_reset){
+      last_execution_mode_run = -1;
+      execution_mode_run = -1;
+      resetenvironment(1);
+    } else 
+      setTimeout(resetenvironment, 1e3, 1);
+  }
   return true ;
 }
 
@@ -712,7 +724,12 @@ function writeStackLimit ( stackLimit )
     }
 
     track_stack_setsp(stackLimit);
-    architecture.memory_layout[4].value = "0x" + (stackLimit.toString(16)).padStart(8, "0").toUpperCase();
+    if (is_32b_arch)
+      architecture.memory_layout[4].value =
+        "0x" + stackLimit.toString(16).padStart(8, "0").toUpperCase();
+    else
+      architecture.memory_layout[4].value = 
+        "0x" + stackLimit.toString(16).padStart(16, "0").toUpperCase();
   }
 }
 
@@ -864,105 +881,115 @@ function display_print ( info )
 }
 
 
-function kbd_read_char ( keystroke, params )
-{
+function kbd_read_char(keystroke, params) {
   var value = keystroke.charCodeAt(0);
   writeRegister(value, params.indexComp, params.indexElem);
-
-  return value ;
+  Module._send_char_to_C(value);
+  execution_mode_run = last_execution_mode_run;
+  last_execution_mode_run = -1;
+  return value;
 }
-
-function kbd_read_int ( keystroke, params )
-{
-  var value = parseInt(keystroke) ;
+function kbd_read_int(keystroke, params) {
+  var value = parseInt(keystroke);
   writeRegister(value, params.indexComp, params.indexElem);
-
-  return value ;
+  Module._send_int_to_C(value);
+  execution_mode_run = last_execution_mode_run;
+  last_execution_mode_run = -1;
+  return value;
 }
-
-function kbd_read_float ( keystroke, params )
-{
-  var value = parseFloat(keystroke, 10) ;
+function kbd_read_float(keystroke, params) {
+  var value = parseFloat(keystroke, 10);
   writeRegister(value, params.indexComp, params.indexElem, "SFP-Reg");
-
-  return value ;
+  Module._send_float_to_C(value);
+  execution_mode_run = last_execution_mode_run;
+  last_execution_mode_run = -1;
+  return value;
 }
-
-function kbd_read_double ( keystroke, params )
-{
-  var value = parseFloat(keystroke, 10) ;
+function kbd_read_double(keystroke, params) {
+  var value = parseFloat(keystroke, 10);
   writeRegister(value, params.indexComp, params.indexElem, "DFP-Reg");
-
-  return value ;
+  Module._send_double_to_C(value);
+  return value;
 }
-
-function kbd_read_string ( keystroke, params )
-{
+function kbd_read_string(keystroke, params) {
   var value = "";
-  var neltos = readRegister ( params.indexComp2, params.indexElem2 );
-  for (var i = 0; (i < neltos) && (i < keystroke.length); i++) {
+  var neltos = readRegister(params.indexComp2, params.indexElem2);
+  for (var i = 0; i < neltos && i < keystroke.length; i++) {
     value = value + keystroke.charAt(i);
   }
-
-  var neltos = readRegister ( params.indexComp, params.indexElem );
-  writeMemory(value, parseInt(neltos), "string") ;
-
-  return value ;
+  var neltos = readRegister(params.indexComp, params.indexElem);
+  writeMemory(value, parseInt(neltos), "string");
+  var lengthBytes = lengthBytesUTF8(value) + 1;
+    
+  var buffer = Module._malloc(lengthBytes);
+  
+  stringToUTF8(value, buffer, lengthBytes);
+  
+  if (is_32b_arch){
+    Module._send_string_to_C(buffer);
+    Module._free(buffer);
+  }
+  else{
+    Module._send_string_to_C(BigInt(buffer));
+    Module._free(BigInt(buffer));
+  }
+  
+  execution_mode_run = last_execution_mode_run;
+  last_execution_mode_run = -1;
+  return value;
 }
-
-
-function keyboard_read ( fn_post_read, fn_post_params)
-{
+function keyboard_read(fn_post_read, fn_post_params) {
   var draw = {
-    space:   [],
-    info:    [],
+    space: [],
+    info: [],
     success: [],
     warning: [],
-    danger:  [],
-    flash:   []
-  } ;
-
-  // CL
-  if (typeof app === "undefined")
-  {
-    var readlineSync = require('readline-sync') ;
-    var keystroke    = readlineSync.question(' > ') ;
-
-    var value = fn_post_read(keystroke, fn_post_params) ;
+    danger: [],
+    flash: [],
+  };
+  if (typeof app === "undefined") {
+    var readlineSync = require("readline-sync");
+    var keystroke = readlineSync.question(" > ");
+    var value = fn_post_read(keystroke, fn_post_params);
     keyboard = keyboard + " " + value;
-
-    return packExecute(false, 'The data has been uploaded', 'danger', null);
+    if(last_execution_mode_run === 0){
+      instructions[insn_number]._rowVariant = '';
+      if(insn_number < instructions.length - 1)
+        instructions[insn_number]._rowVariant = '';
+      insn_number = undefined;
+    }
+    return packExecute(false, "The data has been uploaded", "danger", null);
   }
-
-  // UI
   app._data.enter = false;
-
-  if (3 === run_program) {
-    setTimeout(keyboard_read, 1000, fn_post_read, fn_post_params);
+  if (2 === execution_mode_run) {
+    setTimeout(keyboard_read, 1e3, fn_post_read, fn_post_params);
     return;
   }
-
-  fn_post_read(app._data.keyboard, fn_post_params) ;
-
+  fn_post_read(app._data.keyboard, fn_post_params);
   app._data.keyboard = "";
   app._data.enter = null;
-
-  show_notification('The data has been uploaded', 'info') ;
-
-  if (execution_index >= instructions.length)
-  {
-    for (var i = 0; i < instructions.length; i++){
-      draw.space.push(i) ;
-    }
-
-    execution_index = -2;
-    return packExecute(true, 'The execution of the program has finished', 'success', null);
+  if(last_execution_mode_run === 0){
+    instructions[insn_number]._rowVariant = '';
+    if(insn_number < instructions.length - 1)
+      instructions[insn_number]._rowVariant = '';
+    insn_number = undefined;
   }
-
-  if (run_program === 1) {
-    //uielto_toolbar_btngroup.methods.execute_program();
-    $("#playExecution").trigger("click");
+  show_notification("The data has been uploaded", "info");
+  if (execution_index >= instructions.length) {
+  //   for (var i = 0; i < instructions.length; i++) {
+  //     draw.space.push(i);
+  //   }
+  //   execution_index = -2;
+    return packExecute(
+      true,
+      "The execution of the program has finished",
+      "success",
+      null,
+    );
   }
+  // if (run_program === 1) {
+  //   $("#playExecution").trigger("click");
+  // }
 }
 
 

@@ -58,14 +58,24 @@
 
   methods:    {
                 mk_reg_representation_options(){
-                  if (this._props.data_mode == 'int_registers' || this._props.data_mode == 'ctrl_registers'){
+                   if (
+                    this._props.data_mode == "int_registers" ||
+                    this._props.data_mode == "ctrl_registers"
+                  ) {
+                    if (this._props.data_mode != this.local_data_mode) {
+                      this.reg_representation = "signed";
+                      this.local_data_mode = this._props.data_mode;
+                    }
+                    return this.reg_representation_options_int;
+                  } else if (this._props.data_mode == "v_registers"){
                     if (this._props.data_mode != this.local_data_mode) {
                       this.reg_representation = "signed";
                       this.local_data_mode = this._props.data_mode;
                     }
                     return this.reg_representation_options_int;
                   }
-                  else{
+                  
+                  else {
                     if (this._props.data_mode != this.local_data_mode) {
                       this.reg_representation = "ieee32";
                       this.local_data_mode = this._props.data_mode;
@@ -122,23 +132,38 @@
               '   <b-container fluid align-h="center" class="mx-0 px-3 my-2">' +
               '     <b-row align-h="center" cols="1">' +
               '       <b-col v-for="item in architecture_hash">' +
-              '         <b-container fluid align-h="center" class="px-0 mx-0 mb-2" v-if="(data_mode == architecture.components[item.index].type) || (data_mode == \'int_registers\' && architecture.components[item.index].type == \'ctrl_registers\')">' +
+              '         <b-container fluid align-h="center" class="px-0 mx-0 mb-2" v-if="((data_mode == architecture.components[item.index].type) || (data_mode == \'int_registers\' && architecture.components[item.index].type == \'ctrl_registers\')) && (data_mode !== \'v_registers\' || architecture.components[item.index].type !== \'v_registers\') ">' +
               '           <b-row align-h="start" cols-xl="4" cols-lg="4" cols-md="4" cols-sm="3" cols-xs="3" cols="3">' +
               '             <b-col class="p-1 mx-0" v-for="(item2, index) in architecture.components[item.index].elements">' +
-              ' ' +
+              " " +
               '               <register :render="render"' +
               '                         :component="item"' +
               '                         :register="item2"' +
               '                         :name_representation="reg_name_representation"' +
               '                         :value_representation="reg_representation">' +
-              '               </register>' +
-              ' ' +
-              '            </b-col>' +
-              '           </b-row>' +
-              '         </b-container>' +
-              '       </b-col>' +
-              '     </b-row>' +
-              '   </b-container>' +
+              "               </register>" +
+              " " +
+              "            </b-col>" +
+              "           </b-row>" +
+              "         </b-container>" +
+              ''+
+              '         <b-container fluid align-h="center" class="px-0 mx-0 mb-2" v-if="(data_mode === architecture.components[item.index].type && data_mode === \'v_registers\') ">' +
+              '           <b-row align-h="start" cols-xl="4" cols-lg="4" cols-md="4" cols-sm="3" cols-xs="3" cols="3">' +
+              '             <b-col class="p-1 mx-0" v-for="(item2, index) in architecture.components[item.index].elements">' +
+              " " +
+              '               <register-vec :render="render"' +
+              '                         :component="item"' +
+              '                         :register="item2"' +
+              '                         :name_representation="reg_name_representation"' +
+              '                         :value_representation="reg_representation">' +
+              "               </register-vec>" +
+              " " +
+              "            </b-col>" +
+              "           </b-row>" +
+              "         </b-container>" +
+              "       </b-col>" +
+              "     </b-row>" +
+              "   </b-container>" +
               ' </div>'
 
   }
