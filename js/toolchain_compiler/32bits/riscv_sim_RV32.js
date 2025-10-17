@@ -33,7 +33,6 @@ var Module = typeof Module != "undefined" ? Module : {};
 var moduleOverrides = Object.assign({}, Module);
 var arguments_ = [];
 var thisProgram = "./this.program";
-
 var quit_ = (status, toThrow) => {
   throw toThrow;
 };
@@ -167,12 +166,267 @@ var memoryExp = /mem\[0x([0-9A-Fa-f]+)\]\s*(<-|->)\s*0x([0-9A-Fa-f]+)/;
 var CSRTypeExp = /(CSR\S*)\s+(\S+)\s+(\S+)\s+(0x)([\dA-Fa-f]{1,8})/;
 var CSRExp = /^(CSR)\s+(\w+)\s+(<-|->)\s+0x([0-9a-fA-F]+)(?:\s+(.*))?$/;
 var jumpExp = /Next_PC:\s*(0x[0-9a-fA-F]+)/;
+var cacheExp = /^\[(\d+)\]\s+(L1_I|L1_D|L1|L2|L2_I|L2_D):\s*\((0x[0-9A-Fa-f]+)\)\s+<-\s+(\d+)$/;
+var configCacheExp = /^Configuration:\s*([A-Za-z_][A-Za-z0-9_]*)\s*<-\s*(\S+)\s*$/;
+
 // var displayExp = /^[A-Za-z\s]+:\s*(.*)$/;
 var displayExp = /^([\w\s]+):\s*(.*)$/;       
 var userMode = false;
 var instoper = "";
 var syscall_print_code = -1;
 var prev_add_to_jump;
+
+function updateCacheStat(index, access, data="") {
+  switch(access) {
+    case "Cache L1 hit inst":
+      if (instructions[index].L1_I == 0)
+        instructions[index].L1_I = 3;
+      else if (instructions[index].L1_I == 3)
+        instructions[index].L1_I = 3;
+      else if (instructions[index].L1_I == 4)
+        instructions[index].L1_I = 1;
+      break;
+    case "Cache L1 miss inst":
+      if (instructions[index].L1_I == 0)
+        instructions[index].L1_I = 4;
+      else if (instructions[index].L1_I == 4)
+        instructions[index].L1_I = 4;
+      else if (instructions[index].L1_I == 3)
+        instructions[index].L1_I = 1;
+      break;
+    case "Cache L1 miss":
+      if (instructions[index].L1_I == 0)
+        instructions[index].L1_I = 4;
+      else if (instructions[index].L1_I == 4)
+        instructions[index].L1_I = 4;
+      else if (instructions[index].L1_I == 3)
+        instructions[index].L1_I = 1;
+      break;
+    case "Cache L1 hit data":
+      if(data !== "") {
+        let lastv = parseInt(data[data.length - 1], 16);
+        if (lastv < 4) data = data.slice(0, -1) + "0";
+        else if (lastv < 8) data = data.slice(0, -1) + "4";
+        else if (lastv < 12) data = data.slice(0, -1) +  "8";
+        else data = data.slice(0, -1) + "C";
+        let memindex = parseInt(data, 16);
+        if (main_memory[memindex].L1_D == 0)
+          main_memory[parseInt(data, 16)].L1_D = 3;
+        else if (main_memory[memindex].L1_D == 3)
+          main_memory[parseInt(data, 16)].L1_D = 3;
+        else if (main_memory[memindex].L1_D == 4)
+          main_memory[parseInt(data, 16)].L1_D = 1;
+      }
+      if (instructions[index].L1_D == 0)
+        instructions[index].L1_D = 3;
+      else if (instructions[index].L1_D == 3)
+        instructions[index].L1_D = 3;
+      else if (instructions[index].L1_D == 4)
+        instructions[index].L1_D = 1;
+      break;
+    case "Cache L1 miss data":
+      if(data !== "") {
+        let lastv = parseInt(data[data.length - 1], 16);
+        if (lastv < 4) data = data.slice(0, -1) + "0";
+        else if (lastv < 8) data = data.slice(0, -1) + "4";
+        else if (lastv < 12) data = data.slice(0, -1) +  "8";
+        else data = data.slice(0, -1) + "C";
+        let memindex = parseInt(data, 16);
+        if (main_memory[memindex].L1_D == 0)
+          main_memory[parseInt(data, 16)].L1_D = 4;
+        else if (main_memory[memindex].L1_D == 4)
+          main_memory[parseInt(data, 16)].L1_D = 4;
+        else if (main_memory[memindex].L1_D == 3)
+          main_memory[parseInt(data, 16)].L1_D = 1;
+      }
+      if (instructions[index].L1_D == 0)
+        instructions[index].L1_D = 4;
+      else if (instructions[index].L1_D == 4)
+        instructions[index].L1_D = 4;
+      else if (instructions[index].L1_D == 3)
+        instructions[index].L1_D = 1;
+      break;
+    case "Cache L1_I hit":
+      if (instructions[index].L1_I == 0)
+        instructions[index].L1_I = 3;
+      else if (instructions[index].L1_I == 4)
+        instructions[index].L1_I = 1;
+      break;
+    case "Cache L1_I miss":
+      if (instructions[index].L1_I == 0)
+        instructions[index].L1_I = 4;
+      else if (instructions[index].L1_I == 3)
+        instructions[index].L1_I = 1;
+      else if (instructions[index].L1_I == 4)
+        instructions[index].L1_I = 4;
+      break;
+    case "Cache L1_D hit":
+      if(data !== "") {
+        let lastv = parseInt(data[data.length - 1], 16);
+        if (lastv < 4) data = data.slice(0, -1) + "0";
+        else if (lastv < 8) data = data.slice(0, -1) + "4";
+        else if (lastv < 12) data = data.slice(0, -1) +  "8";
+        else data = data.slice(0, -1) + "C";
+        let memindex = parseInt(data, 16);
+        if (main_memory[memindex].L1_D == 0)
+          main_memory[parseInt(data, 16)].L1_D = 3;
+        else if (main_memory[memindex].L1_D == 3)
+          main_memory[parseInt(data, 16)].L1_D = 3;
+        else if (main_memory[memindex].L1_D == 4)
+          main_memory[parseInt(data, 16)].L1_D = 1;
+      }
+      if (instructions[index].L1_D == 0)
+        instructions[index].L1_D = 3;
+      else if (instructions[index].L1_D == 3)
+        instructions[index].L1_D = 3;
+      else if (instructions[index].L1_D == 4)
+        instructions[index].L1_D = 1;
+      break;
+    case "Cache L1_D miss":
+      if(data !== "") {
+        let lastv = parseInt(data[data.length - 1], 16);
+        if (lastv < 4) data = data.slice(0, -1) + "0";
+        else if (lastv < 8) data = data.slice(0, -1) + "4";
+        else if (lastv < 12) data = data.slice(0, -1) +  "8";
+        else data = data.slice(0, -1) + "C";
+        let memindex = parseInt(data, 16);
+        if (main_memory[memindex].L1_D == 0)
+          main_memory[parseInt(data, 16)].L1_D = 4;
+        else if (main_memory[memindex].L1_D == 4)
+          main_memory[parseInt(data, 16)].L1_D = 4;
+        else if (main_memory[memindex].L1_D == 3)
+          main_memory[parseInt(data, 16)].L1_D = 1;
+      }
+      if (instructions[index].L1_D == 0)
+        instructions[index].L1_D = 4;
+      else if (instructions[index].L1_D == 4)
+        instructions[index].L1_D = 4;
+      else if (instructions[index].L1_D == 3)
+        instructions[index].L1_D = 1;
+      break;
+    case "Cache L2 hit inst":
+      if (instructions[index].L2_I == 0)
+        instructions[index].L2_I = 3;
+      else if (instructions[index].L2_I == 3)
+        instructions[index].L2_I = 3;
+      else if (instructions[index].L2_I == 4)
+        instructions[index].L2_I = 1;
+      break;
+    case "Cache L2 miss inst":
+      if (instructions[index].L2_I == 0)
+        instructions[index].L2_I = 4;
+      else if (instructions[index].L2_I == 4)
+        instructions[index].L2_I = 4;
+      else if (instructions[index].L2_I == 3)
+        instructions[index].L2_I = 1;
+      break;
+    case "Cache L2_I hit":
+      if (instructions[index].L2_I == 0)
+        instructions[index].L2_I = 3;
+      else if (instructions[index].L2_I == 3)
+        instructions[index].L2_I = 3;
+      else if (instructions[index].L2_I == 4)
+        instructions[index].L2_I = 1;
+      break;
+    case "Cache L2_I miss":
+      if (instructions[index].L2_I == 0)
+        instructions[index].L2_I = 4;
+      else if (instructions[index].L2_I == 4)
+        instructions[index].L2_I = 4;
+      else if (instructions[index].L2_I == 3)
+        instructions[index].L2_I = 1;
+      break;
+    case "Cache L2 hit data":
+      if(data !== "") {
+        let lastv = parseInt(data[data.length - 1], 16);
+        if (lastv < 4) data = data.slice(0, -1) + "0";
+        else if (lastv < 8) data = data.slice(0, -1) + "4";
+        else if (lastv < 12) data = data.slice(0, -1) +  "8";
+        else data = data.slice(0, -1) + "C";
+        let memindex = parseInt(data, 16);
+        if (main_memory[memindex].L2_D == 0)
+          main_memory[parseInt(data, 16)].L2_D = 3;
+        else if (main_memory[memindex].L2_D == 3)
+          main_memory[parseInt(data, 16)].L2_D = 3;
+        else if (main_memory[memindex].L2_D == 4)
+          main_memory[parseInt(data, 16)].L2_D = 1;
+      }
+      if (instructions[index].L2_D == 0)
+        instructions[index].L2_D = 3;
+      else if (instructions[index].L2_D == 3)
+        instructions[index].L2_D = 3;
+      else if (instructions[index].L2_D == 4)
+        instructions[index].L2_D = 1;
+      break;
+    case "Cache L2 miss data":
+      if(data !== "") {
+        let lastv = parseInt(data[data.length - 1], 16);
+        if (lastv < 4) data = data.slice(0, -1) + "0";
+        else if (lastv < 8) data = data.slice(0, -1) + "4";
+        else if (lastv < 12) data = data.slice(0, -1) +  "8";
+        else data = data.slice(0, -1) + "C";
+        let memindex = parseInt(data, 16);
+        if (main_memory[memindex].L2_D == 0)
+          main_memory[parseInt(data, 16)].L2_D = 4;
+        else if (main_memory[memindex].L2_D == 4)
+          main_memory[parseInt(data, 16)].L2_D = 4;
+        else if (main_memory[memindex].L2_D == 3)
+          main_memory[parseInt(data, 16)].L2_D = 1;
+      }
+      if (instructions[index].L2_D == 0)
+        instructions[index].L2_D = 4;
+      else if (instructions[index].L2_D == 4)
+        instructions[index].L2_D = 4;
+      else if (instructions[index].L2_D == 3)
+        instructions[index].L2_D = 1;
+      break;
+    case "Cache L2_D hit":
+      if(data !== "") {
+        let lastv = parseInt(data[data.length - 1], 16);
+        if (lastv < 4) data = data.slice(0, -1) + "0";
+        else if (lastv < 8) data = data.slice(0, -1) + "4";
+        else if (lastv < 12) data = data.slice(0, -1) +  "8";
+        else data = data.slice(0, -1) + "C";
+        let memindex = parseInt(data, 16);
+        if (main_memory[memindex].L2_D == 0)
+          main_memory[parseInt(data, 16)].L2_D = 3;
+        else if (main_memory[memindex].L2_D == 3)
+          main_memory[parseInt(data, 16)].L2_D = 3;
+        else if (main_memory[memindex].L2_D == 4)
+          main_memory[parseInt(data, 16)].L2_D = 1;
+      }
+      if (instructions[index].L2_D == 0)
+        instructions[index].L2_D = 3;
+      else if (instructions[index].L2_D == 3)
+        instructions[index].L2_D = 3;
+      else if (instructions[index].L2_D == 4)
+        instructions[index].L2_D = 1;
+      break;
+    case "Cache L2_D miss":
+      if(data !== "") {
+        let lastv = parseInt(data[data.length - 1], 16);
+        if (lastv < 4) data = data.slice(0, -1) + "0";
+        else if (lastv < 8) data = data.slice(0, -1) + "4";
+        else if (lastv < 12) data = data.slice(0, -1) +  "8";
+        else data = data.slice(0, -1) + "C";
+        let memindex = parseInt(data, 16);
+        if (main_memory[memindex].L2_D == 0)
+          main_memory[parseInt(data, 16)].L2_D = 4;
+        else if (main_memory[memindex].L2_D == 4)
+          main_memory[parseInt(data, 16)].L2_D = 4;
+        else if (main_memory[memindex].L2_D == 3)
+          main_memory[parseInt(data, 16)].L2_D = 1;
+      }
+      if (instructions[index].L2_D == 0)
+        instructions[index].L2_D = 4;
+      else if (instructions[index].L2_D == 4)
+        instructions[index].L2_D = 4;
+      else if (instructions[index].L2_D == 3)
+        instructions[index].L2_D = 1;
+      break;
+  }
+
+}
 
 async function check_call_convention_temp_regs(instMatch) {
   if(((instMatch[7] != undefined && (instMatch[7].includes("t") || (instMatch[7].includes("s") && !instMatch[7].includes("sp")) ) ) || (instMatch[8] != undefined && (instMatch[8].includes("t") || (instMatch[8].includes("s") && !instMatch[8].includes("sp")) ))) && instMatch[6] !== undefined && inside_function) {
@@ -195,6 +449,7 @@ async function check_call_convention_temp_regs(instMatch) {
 
 // var to_measure = "";
 var start_m, start_m;
+var cache_inst;
 
 Module['print'] = function (message) {
   if(message === "err call_convenction"){
@@ -202,21 +457,45 @@ Module['print'] = function (message) {
   }
 
   var next_add_to_jump;
-  let instMatch   = message.match(instructionExp);
-  let regiMatch   = message.match(registerExp);
-  let memoMatch   = message.match(memoryExp);
-  let printMatch  = message.match(displayExp);
-  let CSRMatch    = message.match(CSRTypeExp); 
-  let CSREMatch   = message.match(CSRExp);
-  let vectorMatch = message.match(vectorExp);
-  let jumpMatch   = message.match(jumpExp);
+  let instMatch        = message.match(instructionExp);
+  let regiMatch        = message.match(registerExp);
+  let memoMatch        = message.match(memoryExp);
+  let printMatch       = message.match(displayExp);
+  let CSRMatch         = message.match(CSRTypeExp); 
+  let CSREMatch        = message.match(CSRExp);
+  let vectorMatch      = message.match(vectorExp);
+  let jumpMatch        = message.match(jumpExp);
+  let cacheMatch       = message.match(cacheExp);
+  let configCacheMatch = message.match(configCacheExp);
+
+  if (message.startsWith("Cache") || message.startsWith("Next_PC:")){
+    if (message.includes("Cache prefetch")) {
+      let newpc = message.substring(15,message.length).toLowerCase();
+      cache_inst = instructions.findIndex(insn => insn.Address === newpc);
+    } else if (message.includes("Next_PC:")) {
+      let newpc = message.substring(9, message.length).toLowerCase();
+      cache_inst = instructions.findIndex(insn => insn.Address == newpc);
+    }
+    if (cache_inst != -1 && execution_mode_run === 1) {
+      let hexmatch = message.match(/0x[0-9A-Fa-f]+$/);
+      if (hexmatch && !message.startsWith("Cache prefetch")) {
+        let hexa = hexmatch[0];
+        message = message.replace(/on:\s*0x[0-9A-Fa-f]+$/, "").trim();
+        updateCacheStat(cache_inst, message, hexa);
+      }else {
+        updateCacheStat(cache_inst, message);
+      }
+      
+    }
+  }
 
   if (message === "May your execution has an infinity loop."){
     execution_mode_run = 1;
-    crex_show_notification("May your execution has an infinity loop", "danger");
+    crex_show_notification(message, "danger");
     instructions[hiden_executed]._rowVariant = "info";
     instructions[hiden_next_execute]._rowVariant = "success";
   }
+
   if (jumpMatch){
     const current_ins = instructions.findIndex(insn => insn.Address === (jumpMatch[1].toLowerCase()));
     
@@ -225,6 +504,56 @@ Module['print'] = function (message) {
           instructions[i]._rowVariant = "";
       }
     if (current_ins !== -1) instructions[current_ins]._rowVariant = "success";
+  }
+
+  if (configCacheMatch) {
+    // console.log(configCacheMatch);
+    switch(configCacheMatch[1]) {
+      case "L1_I_SIZE":
+        config_cache.push({configuration: "Size L1_I", value: configCacheMatch[2] + " lines"});
+        break;
+      case "L1_D_SIZE":
+        config_cache.push({configuration: "Size L1_D", value: configCacheMatch[2] + " lines"});
+        break;
+      case "L1_SIZE":
+        config_cache.push({configuration: "Size L1", value: configCacheMatch[2] + " lines"});
+        break;
+      case "L2_I_SIZE":
+        config_cache.push({configuration: "Size L2_I", value: configCacheMatch[2] + " lines"});
+        break;
+      case "L2_D_SIZE":
+        config_cache.push({configuration: "Size L2_D", value: configCacheMatch[2] + " lines"});
+        break;
+      case "L2_SIZE":
+        config_cache.push({configuration: "Size L2", value: configCacheMatch[2] + " lines"});
+        break;
+      case "Rep_policy":
+        config_cache.push({configuration: "Replacement policy", value: configCacheMatch[2]});
+        break;
+      case "L1_I_BLOCK_SIZE":
+        config_cache.push({configuration: "Size Cache L1_I block", value: configCacheMatch[2] + " bits"});
+        break;
+      case "L1_D_BLOCK_SIZE":
+        config_cache.push({configuration: "Size Cache L1_D block", value: configCacheMatch[2] + " bits"});
+        break;
+      case "L1_BLOCK_SIZE":
+        config_cache.push({configuration: "Size Cache L1 block", value: configCacheMatch[2] + " bits"});
+        break;
+      case "L2_I_BLOCK_SIZE":
+        config_cache.push({configuration: "Size Cache L2_I block", value: configCacheMatch[2] + " bits"});
+        break;
+      case "L2_D_BLOCK_SIZE":
+        config_cache.push({configuration: "Size Cache L2_D block", value: configCacheMatch[2] + " bits"});
+        break;
+      case "L2_BLOCK_SIZE":
+        config_cache.push({configuration: "Size Cache L2 block", value: configCacheMatch[2] + " bits"});
+        break;
+    }
+  }
+
+  if (cacheMatch) {
+    console.log(cacheMatch);
+    updateCacheMem(parseInt(cacheMatch[1],10), cacheMatch[2], cacheMatch[3], parseInt(cacheMatch[4], 10));
   }
 
   if(CSREMatch){
@@ -239,7 +568,7 @@ Module['print'] = function (message) {
     if (CSRMatch[2] === "vtype"){
       var size_elem = parseInt(CSRMatch[5], 16).toString(2).padStart(32, '0');
       size_elem = size_elem.slice(26, 29);
-      console.log("Tamaño: ", size_elem);
+      // console.log("Tamaño: ", size_elem);
       if(size_elem === "000"){
         length_vext = 8;
         architecture.components[3].total_elements = 64;
@@ -595,6 +924,7 @@ Module['printErr'] = function (message) {
 var out = Module["print"] /*|| console.log.bind(console)*/;
 // var out = console.log.bind(console);
 var err = Module["printErr"] /*|| console.warn.bind(console)*/;
+
 Object.assign(Module, moduleOverrides);
 moduleOverrides = null;
 if (Module["arguments"]) arguments_ = Module["arguments"];
@@ -5192,6 +5522,13 @@ function _gettimeofday(ptr) {
   HEAP32[(ptr + 4) >> 2] = ((now % 1e3) * 1e3) | 0;
   return 0;
 }
+function _time(ptr) {
+  var ret = (Date.now() / 1e3) | 0;
+  if (ptr) {
+    HEAP32[ptr >> 2] = ret;
+  }
+  return ret;
+}
 function runAndAbortIfError(func) {
   try {
     return func();
@@ -5671,6 +6008,8 @@ var asmLibraryArg = {
   fd_seek: _fd_seek,
   fd_write: _fd_write,
   gettimeofday: _gettimeofday,
+  time: _time,
+
 };
 Asyncify.instrumentWasmImports(asmLibraryArg);
 var asm = createWasm();
@@ -7128,13 +7467,27 @@ function preprocess_sail(elffile, enablefpd, enablevec, entry_add){
   console.log("Argumentos: ", argumentsToRun);
 
     if (!app.c_kernel){
-    for (let i = 0; i < instructions.length; i++){
-      if (instructions[i].Label.includes("kernel") && entry_add !== instructions[i].Address)
-        entry_add = instructions[i].Address;
+      for (let i = 0; i < instructions.length; i++){
+        if (instructions[i].Label.includes("kernel") && entry_add !== instructions[i].Address)
+          entry_add = instructions[i].Address;
+      }
     }
-  }
 
-  run(["--entry-address", entry_add, ...argumentsToRun, "-p", "output.elf"]);
+    
+
+    // argumentsToRun.push("--cache");
+    // if (!app.c_cache)
+    //   argumentsToRun.push("1");
+    // else 
+    //   argumentsToRun.push("0");
+
+    argumentsToRun.push("--cache-pol");
+    if (app.cache_policy === "FIFO")
+      argumentsToRun.push("1");
+    else 
+      argumentsToRun.push("0");
+
+  run([/*"--cache", "1" ,*/"--entry-address", entry_add, ...argumentsToRun, "-p", "output.elf"]);
 
   // if(enablefpd)
   //   run(["--entry-address", entry_add, "--config-flags", "8", "-p", "output.elf"]);

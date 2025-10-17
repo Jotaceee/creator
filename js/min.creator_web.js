@@ -21,19 +21,19 @@ var set_extensions = [
                       {"name": "B",  "description": "(Bit manipulation)",        "arg": "_zba_zbb_zbs", "activated" : false},
                       {"name": "P",  "description": "(Privileged instructions)", "arg": "_zicsr", "activated" : false},
                       // {"name": "T",  "activated" : false}, Non officially implemented
-                      // {"name": "P",  "activated" : false}, Non officially implemented                 
+                      // {"name": "P",  "activated" : false}, Non officially implemented
                       ];
 
 
 // FP Extension:
-const fpdextension = ["fadd.s", "fadd.d", "fsub.s", "fsub.d", "fmul.s", "fmul.d", "fdiv.s", "fdiv.d", "fsqrt.s", "fsqrt.d", "fmadd.s", 
-  "fmadd.d", "fmsub.s", "fmsub.d", "fnmadd.s", "fnmadd.d", "fnmsub.s", "fnmsub.d", "fcvt.w.s", "fcvt.wu.s", "fcvt.w.d", 
-  "fcvt.wu.d", "fcvt.s.w", "fcvt.s.wu", "fcvt.d.w", "fcvt.d.wu", "feq.s", "feq.d", "flt.s", "flt.d", "fle.s", "fle.w", 
-  "fsgnj.s", "fsgnj.d", "fsgnjn.s", "fsgnjn.d", "fsgnjx.s", "fsgnjx.d", "fclass.s", "fclass.d", "fmax.s", "fmax.d", 
+const fpdextension = ["fadd.s", "fadd.d", "fsub.s", "fsub.d", "fmul.s", "fmul.d", "fdiv.s", "fdiv.d", "fsqrt.s", "fsqrt.d", "fmadd.s",
+  "fmadd.d", "fmsub.s", "fmsub.d", "fnmadd.s", "fnmadd.d", "fnmsub.s", "fnmsub.d", "fcvt.w.s", "fcvt.wu.s", "fcvt.w.d",
+  "fcvt.wu.d", "fcvt.s.w", "fcvt.s.wu", "fcvt.d.w", "fcvt.d.wu", "feq.s", "feq.d", "flt.s", "flt.d", "fle.s", "fle.w",
+  "fsgnj.s", "fsgnj.d", "fsgnjn.s", "fsgnjn.d", "fsgnjx.s", "fsgnjx.d", "fclass.s", "fclass.d", "fmax.s", "fmax.d",
   "fmin.s", "fmin.d", "flw", "flsw", "fld", "fsd"];
 // Vector Extension:
   const vecextension = ["vle8.v", "vse8.v", "vle16.v", "vse16.v", "vle32.v", "vse32.v", "vle64.v", "vse64.v", "vadd.vv", "vadd.vx", "vadd.vi",
- "vsub.vv", "vsub.vx", "vmul.vv", "vmul.vx", "vdiv.vv", "vdiv.vx", "vand.vv", "vor.vv", "vxor.vv", "vnot.v", "vsll.vv", 
+ "vsub.vv", "vsub.vx", "vmul.vv", "vmul.vx", "vdiv.vv", "vdiv.vx", "vand.vv", "vor.vv", "vxor.vv", "vnot.v", "vsll.vv",
  "vsrl.vv", "vsra.vv", "vmseq.vv", "vmsne.vv", "vmslt.vv", "vmsle.vv"];
 
 // Crear una expresión regular optimizada
@@ -49,13 +49,13 @@ const filecontents = [];
 
 function clean_environment() {
   const moduleKeys = [
-    'ENVIRONMENT', 'HEAP16', 'HEAP32', 'HEAP8', 'HEAPF32', 'HEAPF64', 'HEAPU16', 
-    'HEAPU32', 'HEAPU8', 'INITIAL_MEMORY', 'TOTAL_MEMORY', 'TOTAL_STACK', '_main', 
-    'arguments', 'asm', 'calledRun', 'cdInitializerPrefixURL', 'extraStackTrace', 
-    'filePackagePrefixURL', 'inspect', 'instantiateWasm', 'locateFile', 'logReadFiles', 
-    'memoryInitializerPrefixURL', 'monitorRunDependencies', 'noExitRuntime', 'noInitialRun', 
-    'onAbort', 'onExit', 'onRuntimeInitialized', 'postRun', 'preInit', 'preRun', 'print', 
-    'printErr', 'pthreadMainPrefixURL', 'quit', 'read', 'readAsync', 'readBinary', 'run', 
+    'ENVIRONMENT', 'HEAP16', 'HEAP32', 'HEAP8', 'HEAPF32', 'HEAPF64', 'HEAPU16',
+    'HEAPU32', 'HEAPU8', 'INITIAL_MEMORY', 'TOTAL_MEMORY', 'TOTAL_STACK', '_main',
+    'arguments', 'asm', 'calledRun', 'cdInitializerPrefixURL', 'extraStackTrace',
+    'filePackagePrefixURL', 'inspect', 'instantiateWasm', 'locateFile', 'logReadFiles',
+    'memoryInitializerPrefixURL', 'monitorRunDependencies', 'noExitRuntime', 'noInitialRun',
+    'onAbort', 'onExit', 'onRuntimeInitialized', 'postRun', 'preInit', 'preRun', 'print',
+    'printErr', 'pthreadMainPrefixURL', 'quit', 'read', 'readAsync', 'readBinary', 'run',
     'setStatus', 'setWindowTitle', 'stderr', 'stdin', 'stdout', 'thisProgram', 'wasmBinary'
     ,'createWasm', 'STACK_SIZE' ,'wasmMemory', 'preloadPlugins', 'safeSetTimeout', 'ccall', 'missingLibrarySymbol'
     , 'hookGlobalSymbolAccess'
@@ -64,8 +64,8 @@ function clean_environment() {
     moduleKeys.forEach(key => {
       delete Module[key];
     });
-    
-  
+
+
   delete window.missingLibrarySymbol;
   delete window.ccall;
   delete window.safeSetTimeout;
@@ -86,7 +86,7 @@ function clean_environment() {
   }
 }
 
-// Funcion para limpiar el entorno en caso de que haya ocurrido algun error durante la ejecución 
+// Funcion para limpiar el entorno en caso de que haya ocurrido algun error durante la ejecución
 // o si ha ido exitoso para volver a utilizarlo sin tener que recargar la página.
 function resetenvironment (value){
   if (can_reset || value === 2) {
@@ -220,7 +220,7 @@ function loadSailFunction(maxAttemps = 50){
 
 async function dissamble_binary(maxAttemps = 50) {
   let attempsdis = 0;
-  
+
   while ((typeof preprocess_dissamble !== "function" || typeof preprocess_ld === "function" ) && attempsdis < maxAttemps ) {
     await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100 ms antes de volver a verificar
     attempsdis++;
@@ -253,9 +253,9 @@ async function dissamble_binary(maxAttemps = 50) {
     scriptsail.async = true;
     if(is_32b_arch)
       scriptsail.id = 'riscv_sim_RV32';
-    else 
+    else
       scriptsail.id = 'riscv_sim_RV64';
-    
+
     scriptsail.type = 'text/javascript';
     document.head.appendChild(scriptsail);
     return new Promise(resolve => setTimeout(resolve(true), 100));
@@ -297,8 +297,8 @@ async function waitForFunction(maxAttemps = 50) {
     await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100 ms antes de volver a verificar
   }
   if(load_binary)
-    elffile = preprocess_ld(objectcontent, linkercontent, app.update_binary); 
-  else 
+    elffile = preprocess_ld(objectcontent, linkercontent, app.update_binary);
+  else
     elffile = preprocess_ld(objectcontent, linkercontent);
 
   scriptld.parentNode.removeChild(scriptld);
@@ -366,7 +366,7 @@ function register_value_deserialize(architecture) {
     for (var j = 0; j < architecture.components[i].elements.length; j++) {
       if (architecture.components[i].type != "fp_registers") {
         if (architecture.components[i].type === "v_registers" || architecture.components[i].type === "csr_registers" ){
-          architecture.components[i].elements[j].value = 
+          architecture.components[i].elements[j].value =
             architecture.components[i].elements[j].value;
         }else {
         architecture.components[i].elements[j].value = bi_intToBigInt(
@@ -375,7 +375,7 @@ function register_value_deserialize(architecture) {
         );
 
         }
-        
+
       } else {
         architecture.components[i].elements[j].value = bi_floatToBigInt(
           architecture.components[i].elements[j].value,
@@ -384,7 +384,7 @@ function register_value_deserialize(architecture) {
       if (architecture.components[i].double_precision !== true) {
         if (architecture.components[i].type != "fp_registers") {
           if (architecture.components[i].type === "v_registers" || architecture.components[i].type === "csr_registers"){
-            architecture.components[i].elements[j].default_value = 
+            architecture.components[i].elements[j].default_value =
               architecture.components[i].elements[j].default_value;
           }else {
             architecture.components[i].elements[j].default_value = bi_intToBigInt(
@@ -1959,6 +1959,13 @@ if (!is_32b_arch)
   word_size_bits = 64;
 var word_size_bytes = word_size_bits / 8;
 var main_memory = [];
+var L1_cache_memory = [/*{id:0, addr: "0", binary: "0x00"}*/];
+var L1_I_cache_memory = [];
+var L1_D_cache_memory = [];
+var L2_cache_memory = [];
+var L2_I_cache_memory = [];
+var L2_D_cache_memory = [];
+var config_cache = [];
 var main_memory_datatypes = {};
 var memory_hash = ["data_memory", "instructions_memory", "stack_memory"];
 function main_memory_get_addresses() {
@@ -1991,6 +1998,8 @@ function main_memory_packs_forav(addr, value) {
     data_type: null,
     reset: true,
     break: false,
+    L1_D: 0,
+    L2_D: 0,
   };
 }
 function main_memory_datatypes_packs_foravt(addr, value, type, size) {
@@ -2035,6 +2044,7 @@ function main_memory_read(addr) {
   return main_memory_packs_forav(addr, "00");
 }
 function main_memory_write(addr, value) {
+  console.log("valor a escribir: ", value);
   main_memory[addr] = value;
 }
 function main_memory_zerofill(addr, size) {
@@ -2046,6 +2056,8 @@ function main_memory_zerofill(addr, size) {
     data_type: null,
     reset: true,
     break: false,
+    L1_D: 0,
+    L2_D: 0,
   };
   var value = Array(size)
     .fill(base)
@@ -2142,7 +2154,7 @@ function main_memory_read_bydatatype(addr, type) {
     case "float":
       if (is_32b_arch)
         ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes);
-      else 
+      else
         ret = "0x" + main_memory_read_nbytes(addr, word_size_bytes / 2);
       ret = hex2float(ret);
       break;
@@ -2239,12 +2251,12 @@ function main_memory_write_bydatatype(addr, value, type, value_human) {
     case "word":
       if (is_32b_arch)
         size = word_size_bytes;
-      else 
+      else
         size = word_size_bytes / 2;
       ret = main_memory_write_nbytes(addr, value, size, type);
       main_memory_datatypes_update_or_create(addr, value_human, size, type);
       break;
-    case "dword": 
+    case "dword":
       if (is_32b_arch)
         size = word_size_bytes * 2;
       else
@@ -2329,7 +2341,7 @@ function creator_memory_type2size(type) {
     case "instruction":
       if (is_32b_arch)
         size = word_size_bytes;
-      else 
+      else
         size = word_size_bytes / 2;
       break;
     case "d":
@@ -2465,7 +2477,7 @@ function creator_memory_updaterow(addr) {
   var addr_base = parseInt(addr);
   if (is_32b_arch)
     addr_base = addr_base - (addr_base % word_size_bytes);
-  else 
+  else
     addr_base = addr_base - (addr_base % (word_size_bytes /2));
   var elto = {
     addr: 0,
@@ -2475,6 +2487,8 @@ function creator_memory_updaterow(addr) {
     size: 0,
     hex: [],
     eye: true,
+    L1_D: 0,
+    L2_D: 0,
   };
   if (typeof app._data.main_memory[addr_base] != "undefined") {
     elto = app._data.main_memory[addr_base];
@@ -2489,7 +2503,7 @@ function creator_memory_updaterow(addr) {
         elto.hex[i] = { byte: "00", tag: null };
       }
     }
-    
+
   }
   if (main_memory[addr_base] !== undefined) {
     elto.addr_begin =
@@ -2533,7 +2547,7 @@ function creator_memory_updaterow(addr) {
       }
     }
   }
-  
+
 }
 function creator_memory_updateall() {
   if (
@@ -2731,6 +2745,76 @@ var pc = 80000000;
 if (!is_32b_arch)
   pc = 0;
 
+function updateCacheMem(index, type, addr, value) {
+  // Identificamps primero a que cache afecta
+  // Despues comprobamos si ese bloque de cache ya existe
+  // Si existe se reemplaza, sino se hace un push de una nueva línea
+  switch(type) {
+    case "L1_I":
+      let L1_I_index = L1_I_cache_memory.findIndex(block => block.id === index);
+      if (L1_I_index === -1) {
+        L1_I_cache_memory.push({id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
+      } else {
+        // L1_I_cache_memory[L1_I_index].value = value;
+        L1_I_cache_memory[L1_I_index].size = /*value.slice(2).length * 4*/ value; // Length in bits
+        L1_I_cache_memory[L1_I_index].addr = addr;
+      }
+      app.L1_I_cache_memory = L1_I_cache_memory;
+      break;
+    case "L1_D":
+      let L1_D_index = L1_D_cache_memory.findIndex(block => block.id === index);
+      if (L1_D_index === -1) {
+        L1_D_cache_memory.push({id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
+      } else {
+        // L1_D_cache_memory[L1_D_index].value = value.slice(2);
+        L1_D_cache_memory[L1_D_index].size = /*value.slice(2).length * 4*/ value; // Length in bits
+        L1_D_cache_memory[L1_D_index].addr = addr;
+      }
+      break;
+    case "L1":
+      let L1_index = L1_cache_memory.findIndex(block => block.id === index);
+      if (L1_index === -1) {
+        L1_cache_memory.push({id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
+      } else {
+        // L1_cache_memory[L1_index].value = value.slice(2);
+        L1_cache_memory[L1_index].size = /*value.slice(2).length * 4*/ value; // Length in bits
+        L1_cache_memory[L1_index].addr = addr;
+      }
+      break;
+    case "L2":
+      let L2_index = L2_cache_memory.findIndex(block => block.id === index);
+      if (L2_index === -1) {
+        L2_cache_memory.push({id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
+      } else {
+        // L2_cache_memory[L2_index].value = value.slice(2);
+        L2_cache_memory[L2_index].size = /*value.slice(2).length * 4*/ value; // Length in bits
+        L2_cache_memory[L2_index].addr = addr;
+      }
+      break;
+    case "L2_I":
+      let L2_I_index = L2_I_cache_memory.findIndex(block => block.id === index);
+      if (L2_I_index === -1) {
+        L2_I_cache_memory.push({id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
+      } else {
+        // L2_I_cache_memory[L2_I_index].value = value;
+        L2_I_cache_memory[L2_I_index].size = /*value.slice(2).length * 4*/ value; // Length in bits
+        L2_I_cache_memory[L2_I_index].addr = addr;
+      }
+      app.L2_I_cache_memory = L2_I_cache_memory;
+      break;
+    case "L2_D":
+      let L2_D_index = L2_D_cache_memory.findIndex(block => block.id === index);
+      if (L2_D_index === -1) {
+        L2_D_cache_memory.push({id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
+      } else {
+        // L2_D_cache_memory[L2_D_index].value = value.slice(2);
+        L2_D_cache_memory[L2_D_index].size = /*value.slice(2).length * 4*/ value; // Length in bits
+        L2_D_cache_memory[L2_D_index].addr = addr;
+      }
+      break;
+  }
+}
+
 var address;
 var data_address;
 var stack_address;
@@ -2831,8 +2915,8 @@ var tag_instructions = {};
 var instructions_binary = [];
 var data = [];
 var data_tag = [];
-// var code_binary = undefined; 
-// var update_binary = undefined; 
+// var code_binary = undefined;
+// var update_binary = undefined;
 // var update_binary = [];
 var load_binary = false;
 
@@ -3009,7 +3093,7 @@ function identify_pseudo(instruction_assembly){
   if(instruction_assembly.search("li") != -1 && instruction_assembly.search("vsetvli") === -1 && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init"))){
     list_user_instructions.push(instruction_assembly);
     let parts = instruction_assembly.split(',');
-    
+
     if (!(-2048 >= parseInt(parts[1]?.trim(), 16)) && !(parseInt(parts[1]?.trim(), 16) <= 2047)){
       if (!is_32b_arch) {
         list_user_instructions.push("");
@@ -3025,7 +3109,7 @@ function identify_pseudo(instruction_assembly){
     {
       list_user_instructions.push(instruction_assembly);
       list_user_instructions.push("");
-    } 
+    }
   else if (instruction_assembly.search("ecall") != -1 && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
     list_user_instructions.push(instruction_assembly);
   else if (instruction_assembly.search("call") != -1 && !(instruction_assembly.search("ecall") != -1) && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
@@ -3033,7 +3117,7 @@ function identify_pseudo(instruction_assembly){
     list_user_instructions.push(instruction_assembly);
     if (is_32b_arch)
       list_user_instructions.push("");
-  } 
+  }
   else if (instruction_assembly.search("lw") != -1 && !(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
     {
       list_user_instructions.push(instruction_assembly);
@@ -3043,7 +3127,7 @@ function identify_pseudo(instruction_assembly){
         list_user_instructions.push("");
         return;
       }
-    } 
+    }
   else if(!(instruction_assembly.includes(".section") || instruction_assembly.includes(".globl") || instruction_assembly.includes(".include") || instruction_assembly.includes(".init")))
     list_user_instructions.push(instruction_assembly);
 
@@ -3129,7 +3213,7 @@ function assembly_compiler()
             // console.log("align:", matchalign);
             // console.log("value:", matchvalue);
             if (matchlabel){
-              
+
               data_to_store.label = matchlabel[1];
             }
             if (matchalign){
@@ -3195,7 +3279,7 @@ function assembly_compiler()
               });
             }
           }
-            
+
           if (is_text && code_assembly_array[i].endsWith(':'))
             labeltext = code_assembly_array[i].slice(0, -1);
           else if (is_text && labeltext !== ""){
@@ -3238,7 +3322,7 @@ function assembly_compiler()
         // }
         app.$bvToast.hide();
         resetenvironment(0);
-        // return packCompileError("m3", 
+        // return packCompileError("m3",
         //   objectcontent[2],
         //   "error",
         //   "danger"
@@ -3247,7 +3331,7 @@ function assembly_compiler()
       }
 
     }
-    
+
     (async function loop() {
       do {
         linked = await waitForFunction();
@@ -3284,6 +3368,10 @@ function assembly_compiler()
                 Label: dumptextinstructions[i][4],
                 loaded: dumptextinstructions[i][2],
                 user : list_user_instructions[i],
+                L1_I: 0,
+                L1_D: 0,
+                L2_I: 0,
+                L2_D: 0,
                 _rowVariant: "",
                 visible: true,
                 hide: false,
@@ -3297,13 +3385,13 @@ function assembly_compiler()
                   instructions[i]._rowVariant = 'success';
               }
             }
-            
-    
-    
+
+
+
             process_data_to_store_memory();
-    
+
             for (let i = 0; i < dumpdatainstructions.length; i++){
-              
+
               switch(dumpdatainstructions[i][6]){
                 case "half":
 
@@ -3316,11 +3404,11 @@ function assembly_compiler()
                   }
                   for (var j = 0; j < elements; j++){
                     var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j * 2 + 2) * 2, dumpdatainstructions[i][1].length - (4 * j));
-                    if (j === 0 ) 
+                    if (j === 0 )
                       creator_memory_data_compiler(init_add, element_to_insert, 2, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
                     else
                       creator_memory_data_compiler(init_add + j*2, element_to_insert, 2, null, (parseInt(element_to_insert, 16) << 16) >> 16, dumpdatainstructions[i][6],);
-                    
+
                   }
                 }else {
                   creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
@@ -3342,7 +3430,7 @@ function assembly_compiler()
                         creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, dumpdatainstructions[i][4], (parseInt(element_to_insert, 16) << 24) >> 24, dumpdatainstructions[i][6],);
                       else
                         creator_memory_data_compiler(init_add + j*1, element_to_insert, 1, null, (parseInt(element_to_insert,16) << 24 ) >> 24, dumpdatainstructions[i][6],);
-                      
+
                     }
                   }else {
                     creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
@@ -3364,12 +3452,12 @@ function assembly_compiler()
                         creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], parseInt(element_to_insert, 16) >> 0, dumpdatainstructions[i][6],);
                       else
                         creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, null, parseInt(element_to_insert, 16) >> 0, dumpdatainstructions[i][6],);
-                      
+
                     }
                   }else {
                     creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                   }
-                  
+
                   break;
                 case "dword":
                   if(dumpdatainstructions[i][1].length > 16){
@@ -3385,13 +3473,13 @@ function assembly_compiler()
                         creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, dumpdatainstructions[i][4], element_to_insert >> 0, dumpdatainstructions[i][6],);
                       else
                         creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, null, element_to_insert >> 0, dumpdatainstructions[i][6],);
-                      
+
                     }
                   }else {
                     creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                   }
                   break;
-    
+
                 case "float":
                   align = 2;
 
@@ -3408,22 +3496,22 @@ function assembly_compiler()
 
                       var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 8, dumpdatainstructions[i][1].length - (8 * j));
                       view.setUint32(0, parseInt(element_to_insert, 16), false);
-                      
+
                       if (j === 0 )
                         creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, dumpdatainstructions[i][4], view.getFloat32(0, false), dumpdatainstructions[i][6],);
                       else
                         creator_memory_data_compiler(init_add + j*4, element_to_insert, 4, null, view.getFloat32(0, false), dumpdatainstructions[i][6],);
-                      
+
                     }
                   }else {
                     let buffer = new ArrayBuffer(4); // 4 bytes para float
                     let view = new DataView(buffer);
-      
+
                     // Convertir hexadecimal a entero
                     let intVal = parseInt(dumpdatainstructions[i][1], 16);
-      
+
                     // Escribir el entero en el buffer como float
-                    view.setUint32(0, intVal, false); 
+                    view.setUint32(0, intVal, false);
                     creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 4, dumpdatainstructions[i][4],view.getFloat32(0, false), dumpdatainstructions[i][6],);
                   }
                   break;
@@ -3443,14 +3531,14 @@ function assembly_compiler()
                     for (var j = 0; j < elements; j++){
                       let bufferd = new ArrayBuffer(8); // 8 bytes para double
                       let viewd = new DataView(bufferd);
-    
+
 
                       var element_to_insert = dumpdatainstructions[i][1].slice(dumpdatainstructions[i][1].length - (j + 1) * 16, dumpdatainstructions[i][1].length - (16 * j));
-                      
+
                       // Convertir hexadecimal a entero
                       let high = parseInt(element_to_insert.slice(0, 8), 16); // Parte alta
                       let low = parseInt(element_to_insert.slice(8, 16), 16); // Parte baja
-        
+
                       // Escribir los valores en el buffer
                       viewd.setUint32(0, high, false); // Parte alta
                       viewd.setUint32(4, low, false);  // Parte baja
@@ -3459,20 +3547,20 @@ function assembly_compiler()
                         creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
                       else
                         creator_memory_data_compiler(init_add + j*8, element_to_insert, 8, null, viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
-                      
+
                     }
                   }else {
                     let bufferd = new ArrayBuffer(8); // 8 bytes para double
                     let viewd = new DataView(bufferd);
-      
+
                     // Convertir hexadecimal a entero
                     let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
                     let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
-      
+
                     // Escribir los valores en el buffer
                     viewd.setUint32(0, high, false); // Parte alta
                     viewd.setUint32(4, low, false);  // Parte baja
-      
+
                     // Leer como double de 64 bits
                     // return viewd.getFloat64(0, false);
                     creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
@@ -3485,34 +3573,34 @@ function assembly_compiler()
 
                   // let bufferd = new ArrayBuffer(8); // 8 bytes para double
                   // let viewd = new DataView(bufferd);
-    
+
                   // // Convertir hexadecimal a entero
                   // let high = parseInt(dumpdatainstructions[i][1].slice(0, 8), 16); // Parte alta
                   // let low = parseInt(dumpdatainstructions[i][1].slice(8, 16), 16); // Parte baja
-    
+
                   // // Escribir los valores en el buffer
                   // viewd.setUint32(0, high, false); // Parte alta
                   // viewd.setUint32(4, low, false);  // Parte baja
-    
+
                   // // Leer como double de 64 bits
                   // // return viewd.getFloat64(0, false);
                   // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 8, dumpdatainstructions[i][4], viewd.getFloat64(0, false), dumpdatainstructions[i][6],);
                   // break;
 
                 // case "char":
-                  
+
                 // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 1, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                 //   break;
-    
+
                 case "asciz":
                   // creator_memory_data_compiler(parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][1], 2, dumpdatainstructions[i][4], parseInt(dumpdatainstructions[i][1], 16) >> 0, dumpdatainstructions[i][6],);
                   creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
                   break;
-    
+
                 case "ascii":
                   creator_memory_storestring(dumpdatainstructions[i][1], (dumpdatainstructions[i][1].length / 2), parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
                   break;
-    
+
                 case "space":
                 case "zero":
                   creator_memory_storestring(dumpdatainstructions[i][1], dumpdatainstructions[i][1], parseInt(dumpdatainstructions[i][0], 16), dumpdatainstructions[i][4], dumpdatainstructions[i][6], dumpdatainstructions[i][5]);
@@ -3550,17 +3638,17 @@ function assembly_compiler()
 
 
 
-        }); 
+        });
       }
-      
 
 
 
-    }); 
-    
+
+    });
+
   }
   else {
-    // reestablecemos al estado inicial para volver a compilar 
+    // reestablecemos al estado inicial para volver a compilar
     if(execution_mode_run !== -1 && !can_reset){
       Module._reanudar_ejecucion(parseInt(5,10));
       setTimeout(assembly_compiler, 100);
@@ -3573,7 +3661,7 @@ function assembly_compiler()
       setTimeout(assembly_compiler, 200);
     }
   }
-  
+
   return /*ret (mirar si puedo hacer el */ ;
 }
 
@@ -7145,7 +7233,7 @@ function executeProgramOneShot(limit_n_instructions) {
 function reset() {
   creator_ga("execute", "execute.reset");
 
-  
+
   execution_index = 0;
   execution_init = 1;
   run_program = 0;
@@ -7221,7 +7309,7 @@ function reset() {
       last_execution_mode_run = -1;
       execution_mode_run = -1;
       resetenvironment(1);
-    }else 
+    }else
       setTimeout(resetenvironment, 1e3, 1);
     // scriptsail = document.createElement('script');
     // scriptsail.src = window.location.href +'js/toolchain_compiler/wasm64_riscv_sim_RV32.js';
@@ -7300,14 +7388,14 @@ function writeStackLimit(stackLimit) {
   } else {
     var diff = parseInt(architecture.memory_layout[4].value) - stackLimit;
     if (diff > 0) {
-      creator_memory_zerofill(stackLimit, diff);  
+      creator_memory_zerofill(stackLimit, diff);
     }
     track_stack_setsp(stackLimit);
     if (is_32b_arch)
       architecture.memory_layout[4].value =
         "0x" + stackLimit.toString(16).padStart(8, "0").toUpperCase();
     else
-      architecture.memory_layout[4].value = 
+      architecture.memory_layout[4].value =
         "0x" + stackLimit.toString(16).padStart(16, "0").toUpperCase();
     }
 }
@@ -7448,11 +7536,11 @@ function kbd_read_string(keystroke, params) {
   var neltos = readRegister(params.indexComp, params.indexElem);
   writeMemory(value, parseInt(neltos), "string");
   var lengthBytes = lengthBytesUTF8(value) + 1;
-    
+
   var buffer = Module._malloc(lengthBytes);
-  
+
   stringToUTF8(value, buffer, lengthBytes);
-  
+
   if (is_32b_arch){
     Module._send_string_to_C(buffer);
     Module._free(buffer);
@@ -7461,7 +7549,7 @@ function kbd_read_string(keystroke, params) {
     Module._send_string_to_C(BigInt(buffer));
     Module._free(BigInt(buffer));
   }
-  
+
   execution_mode_run = last_execution_mode_run;
   last_execution_mode_run = -1;
   return value;
@@ -7733,7 +7821,7 @@ var uielto_toolbar_btngroup = {
             if (codemirrorHistory != null) {
               textarea_assembly_editor.setHistory(codemirrorHistory);
               textarea_assembly_editor.undo();
-              
+
             }
             textarea_assembly_editor.setValue(code_assembly);
             if (app.update_binary.length !== 0 ) {
@@ -7926,10 +8014,22 @@ var uielto_toolbar_btngroup = {
       app._data.enter = null;
       reset(reset_graphic);
       for (var i = 0; i < instructions.length; i++) {
+        instructions[i].L1_I = 0;
+        instructions[i].L2_I = 0;
+        instructions[i].L1_D = 0;
+        instructions[i].L2_D = 0;
+        
         draw.space.push(i);
       }
       draw.success = [];
       draw.info = [];
+      L1_D_cache_memory = [];
+      L1_I_cache_memory = [];
+      L1_cache_memory = [];
+      L2_cache_memory = [];
+      L2_D_cache_memory = [];
+      L2_I_cache_memory = [];
+      config_cache = [];
       for (var i = 0; i < instructions.length; i++) {
         if (instructions[i].Address === entry_elf || instructions[i].Address === ("0x" + entry_elf))
         // if (instructions[i].Label == "_main") {
@@ -7968,7 +8068,7 @@ var uielto_toolbar_btngroup = {
         Module._reanudar_ejecucion(parseInt(1,10));
       }
 
-      
+
     },
     execute_program() {
       var ret;
@@ -7976,7 +8076,7 @@ var uielto_toolbar_btngroup = {
       if(execution_mode_run === -1){
         execution_mode_run = 0;
         loadSailFunction(enablefpd, enablevec);
-        
+
       } else if(finished){
         show_notification('The program has finished', 'warning');
       }
@@ -8110,7 +8210,7 @@ function button_assembly() {
   );
 }
 function button_sudo(){
-  return (    
+  return (
     '<b-form-checkbox v-if="item==\'btn_sudo\'" class="d-flex sudo_btn h-100 text-center align-items-center" style="padding-left:40%;"' +
     '                 id="sudo_btn_sim"' +
     '                 v-model="c_sudo"' +
@@ -8317,6 +8417,7 @@ var uielto_configuration = {
     dark: { type: Boolean, required: true },
     c_debug: { type: Boolean, required: true },
     c_kernel: { type: Boolean, required: true, default: true },
+    c_cache: { type:Boolean, required: true, default: false},
   },
   data: function () {
     return {
@@ -8327,6 +8428,7 @@ var uielto_configuration = {
         // { text: "RISC-V (RV32IMFD)", value: "RISC-V (RV32IMFD)" },
         // { text: "MIPS-32", value: "MIPS-32" },
       ]),
+      
     };
   },
   methods: {
@@ -8353,6 +8455,44 @@ var uielto_configuration = {
       if (localStorage.getItem("conf_instruction_help_size") != null) {
         app._data.instruction_help_size = parseInt(
           localStorage.getItem("conf_instruction_help_size"),
+        );
+      }
+
+      if (localStorage.getItem("conf_L1_size") != null) {
+        app._data.L1_size = parseInt(
+          localStorage.getItem("conf_L1_size"),
+        );
+      }
+
+      
+      if (localStorage.getItem("conf_L1_I_size") != null) {
+        app._data.L1_I_size = parseInt(
+          localStorage.getItem("conf_L1_I_size"),
+        );
+      }
+
+      if (localStorage.getItem("conf_L1_D_size") != null) {
+        app._data.L1_D_size = parseInt(
+          localStorage.getItem("conf_L1_D_size"),
+        );
+      }
+
+      
+      if (localStorage.getItem("conf_L2_size") != null) {
+        app._data.L2_size = parseInt(
+          localStorage.getItem("conf_L2_size"),
+        );
+      }
+      if (localStorage.getItem("conf_L2_I_size") != null) {
+        app._data.L2_I_size = parseInt(
+          localStorage.getItem("conf_L2_I_size"),
+        );
+      }
+
+      
+      if (localStorage.getItem("conf_L2_D_size") != null) {
+        app._data.L2_D_size = parseInt(
+          localStorage.getItem("conf_L2_D_size"),
         );
       }
     },
@@ -8520,7 +8660,8 @@ var uielto_configuration = {
         "configuration.kernel_simulator",
         "configuration.kernel_simulator." + this._props.c_kernel,
       );
-    }
+    },
+    
   },
   template:
     ' <b-modal  :id ="id" ' +
@@ -8648,6 +8789,170 @@ var uielto_configuration = {
     "       </b-form-checkbox>" +
     "     </b-list-group-item>" +
     " " +
+    // '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
+    // '       <label for="range-5">Cache Policy:</label>' +
+    // '         <b-form-select v-model="cache_policy" ' +
+    // '                        :options="policies" ' +
+    // '                        size="sm"' +
+    // '                        @change="change_policy" ' +
+    // '                        title="Cache Policy">' +
+    // "         </b-form-select>" +
+    // "     </b-list-group-item>" +
+    // " "+
+    // "     </b-list-group-item>" + 
+    // '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
+    // '       <label for="range-5">Cache Architecture:</label>' +
+    // '         <b-form-select v-model="cache_type" ' +
+    // '                        :options="cache_architectures" ' +
+    // '                        size="sm"' +
+    // '                        @change="change_cache_architecture" ' +
+    // '                        title="Cache Architecture">' +
+    // "         </b-form-select>" +
+    // "     </b-list-group-item>" +
+    // ""+
+    // "     </b-list-group-item>" + 
+    // '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
+    // '       <label for="range-5">Cache Sizes:\n</label>' +
+    // '       <div></div>'+
+    // ''+
+
+    // ""+
+    // '       <label v-if="cache_type == 0 || cache_type == 2 || cache_type == 4" for="range-5">L1 lines:</label>' +
+    // '         <b-form-spinbutton id="L1_size"' +
+    // '                       v-model="L1_size" ' +
+    // '                       v-if="cache_type == 0 || cache_type == 2 || cache_type == 4"' +
+    // '                       @change="change_cache_lines(0, 0)" ' +
+    // '                       type="range" ' +
+    // '                       min="32" ' +
+    // '                       max="2048" ' +
+    // '                       step="32" ' +
+    // '                       title="L1 size">' +
+    // "         </b-form-spinbutton>" +
+
+    // " "+
+    // // '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
+    // '       <label v-if="cache_type == 0 || cache_type == 2 || cache_type == 4" for="range-9">Data Block Cache L1 Size:</label>' +
+    // "       <b-input-group>" +
+    // '         <b-form-spinbutton id="range-7"' +
+    // '                       v-model="L1_gsb" ' +
+    // '                       v-if="cache_type == 0 || cache_type == 2 || cache_type == 4"'+
+    // '                       min="32" ' +
+    // '                       max="128" ' +
+    // '                       step="32" ' +
+    // '                       title="Data Block Cache L1 Size">' +
+    // "         </b-form-spinbutton>" +
+    // "       </b-input-group>" +
+    // // "     </b-list-group-item>" +
+
+
+
+
+    // ""+
+    
+    // '       <label v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" for="range-5">L1_I lines:</label>' +
+    // '         <b-form-spinbutton id="L1_I_size" key="spin-L1I"'+
+    // '                            v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" '+
+    // '                            v-model="L1I_gs" '+
+    // '                            min="32"'+
+    // '                            max="1024"'+
+    // '                            step="32"'+ 
+    // '                            title="L1_I size"></b-form-spinbutton>' +
+    // '         <label v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" for="range-9">Data Block Cache L1_I Size:</label>' +
+    // "         <b-input-group>" +
+    // '           <b-form-spinbutton id="range-7"' +
+    // '                         v-model="L1I_gsb" ' +
+    // '                         v-if="cache_type == 1 || cache_type == 3 || cache_type == 5"'+
+    // '                         min="32" ' +
+    // '                         max="128" ' +
+    // '                         step="32" ' +
+    // '                         title="Data Block Cache L1_I Size">' +
+    // "           </b-form-spinbutton>" +
+    // "         </b-input-group>" +
+    // // L1_D con key + proxy
+    // '       <label v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" for="range-5">L1_D lines:</label>' +
+    // '         <b-form-spinbutton id="L1_D_size" key="spin-L1D" v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" v-model="L1D_gs" min="32" max="1024" step="32" title="L1_D size"></b-form-spinbutton>' +
+    // '         <label v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" for="range-9">Data Block Cache L1_D Size:</label>' +
+    // "         <b-input-group>" +
+    // '           <b-form-spinbutton id="range-7"' +
+    // '                         v-model="L1D_gsb" ' +
+    // '                         v-if="cache_type == 1 || cache_type == 3 || cache_type == 5"'+
+    // '                         min="32" ' +
+    // '                         max="128" ' +
+    // '                         step="32" ' +
+    // '                         title="Data Block Cache L1_D Size">' +
+    // "           </b-form-spinbutton>" +
+    // "         </b-input-group>" +
+    // ""+
+
+
+
+
+    // '       <label v-if="cache_type == 2 || cache_type == 3" for="range-5">L2 lines:</label>' +
+    // '         <b-form-spinbutton id="L2_size"' +
+    // '                       v-model="L2_size" ' +
+    // '                       v-if="cache_type == 2 || cache_type == 3"' +
+    // '                       @change="change_cache_lines(3, 0)" ' +
+    // '                       type="range" ' +
+    // '                       min="32" ' +
+    // '                       max="2048" ' +
+    // '                       step="32" ' +
+    // '                       title="L2 size">' +
+    // "         </b-form-spinbutton>" +
+    
+    // '       <label v-if="cache_type == 2 || cache_type == 3" for="range-9">Data Block Cache L2 Size:</label>' +
+    // "       <b-input-group>" +
+    // '         <b-form-spinbutton id="range-7"' +
+    // '                       v-model="L2_gsb" ' +
+    // '                       v-if="cache_type == 2 || cache_type == 3"'+
+    // '                       min="32" ' +
+    // '                       max="128" ' +
+    // '                       step="32" ' +
+    // '                       title="Data Block Cache L2 Size">' +
+    // "         </b-form-spinbutton>" +
+    // "       </b-input-group>" +
+
+
+
+
+
+    // ""+
+    // '       <label v-if="cache_type == 4 || cache_type == 5" for="range-5">L2_I lines:</label>' +
+    // '         <b-form-spinbutton id="L2_I_size" key="spin-L2I" v-if="cache_type == 4 || cache_type == 5" v-model="L2I_gs" min="32" max="1024" step="32" title="L2_I size"></b-form-spinbutton>' +
+    // '         <label v-if="cache_type == 4 || cache_type == 5" for="range-9">Data Block Cache L2_I Size:</label>' +
+    // "         <b-input-group>" +
+    // '           <b-form-spinbutton id="range-7"' +
+    // '                         v-model="L2I_gsb" ' +
+    // '                         v-if="cache_type == 4 || cache_type == 5"'+
+    // '                         min="32" ' +
+    // '                         max="128" ' +
+    // '                         step="32" ' +
+    // '                         title="Data Block Cache L2_I Size">' +
+    // "           </b-form-spinbutton>" +
+    // "         </b-input-group>" +
+    
+    
+    
+    
+    
+    // // L2_D con key + proxy
+    // '       <label v-if="cache_type == 4 || cache_type == 5" for="range-5">L2_D lines:</label>' +
+    // '         <b-form-spinbutton id="L2_D_size" key="spin-L2D" v-if="cache_type == 4 || cache_type == 5" v-model="L2D_gs" min="32" max="1024" step="32" title="L2_D size"></b-form-spinbutton>' +
+    
+    // '         <label v-if="cache_type == 4 || cache_type == 5" for="range-9">Data Block Cache L2_D Size:</label>' +
+    // "         <b-input-group>" +
+    // '           <b-form-spinbutton id="range-7"' +
+    // '                         v-model="L2D_gsb" ' +
+    // '                         v-if="cache_type == 4 || cache_type == 5"'+
+    // '                         min="32" ' +
+    // '                         max="128" ' +
+    // '                         step="32" ' +
+    // '                         title="Data Block Cache L2_D Size">' +
+    // "           </b-form-spinbutton>" +
+    // "         </b-input-group>" +
+    // ""+
+    // "     </b-list-group-item>" +
+    // " "+
+    " "+
     " </b-modal>",
 };
 Vue.component("form-configuration", uielto_configuration);
@@ -9026,7 +9331,7 @@ var uielto_preload_architecture = {
       });
     },
     load_arch_select_aux(cfg, load_associated_examples, e) {
-      if(execution_mode_run !== -1 && !can_reset){ 
+      if(execution_mode_run !== -1 && !can_reset){
         Module._reanudar_ejecucion(parseInt(5,10));
         setTimeout(uielto_preload_architecture.methods.load_arch_select, 200, e);
        } else if (can_reset && execution_mode_run !== -1){
@@ -9044,14 +9349,14 @@ var uielto_preload_architecture = {
           scriptas.async = true;
           scriptas.type = 'text/javascript';
           document.head.appendChild(scriptas);
-  
+
           fetch(window.location.href+'js/toolchain_compiler/32bits/linker32.ld')
             .then(response => {
             return response.text();})
             .then(data => {
             linkercontent = data;
             });
-  
+
           is_32b_arch = true;
           word_size_bits = 32;
           word_size_bytes = word_size_bits / 8;
@@ -9061,7 +9366,7 @@ var uielto_preload_architecture = {
 
           if(window.Module !== undefined)
             clean_environment();
-          
+
           scriptas = document.createElement('script');
           scriptas.src = window.location.href + 'js/toolchain_compiler/64bits/as-new.js';
           scriptas.async = true;
@@ -9073,7 +9378,7 @@ var uielto_preload_architecture = {
             .then(data => {
             linkercontent = data;
             });
-  
+
           is_32b_arch = false;
           word_size_bits = 64;
           word_size_bytes = word_size_bits / 8;
@@ -9255,7 +9560,7 @@ var uielto_preload_architecture = {
     "        </b-card-text>" +
     "      </b-card-body>" +
     "    </b-col>" +
-    
+
     " " +
     '    <b-col sm="12" ' +
     '                   v-if="default_arch(item.name) == true">' +
@@ -9291,7 +9596,7 @@ var uielto_select_extension = {
     return {
             local_extensions: set_extensions,
     };
-    
+
   },
   computed: {
     selectAll: {
@@ -9331,7 +9636,7 @@ var uielto_select_extension = {
   ''+
   ' </b-row>'+
   '</div>'
-   
+
 
 };
 Vue.component("select-extension", uielto_select_extension);
@@ -9976,6 +10281,633 @@ var uielto_memory_layout = {
     "</div>",
 };
 Vue.component("memory-layout", uielto_memory_layout);
+var uielto_cache_configuration = {
+  props: {
+    cache_policy : {type:String, required: true },
+    cache_type: { type: Number, required: true },
+    L1_size: { type:Number, required: true },
+    L1_size_block: { type:Number, required: true },
+    L1_I_size: { type:Number, required: true },
+    L1_I_size_block: { type:Number, required: true },
+    L1_D_size: { type:Number, required: true },
+    L1_D_size_block: { type:Number, required: true },
+    L2_size: { type:Number, required: true },
+    L2_size_block: { type:Number, required: true },
+    L2_I_size: { type:Number, required: true },
+    L2_I_size_block: { type:Number, required: true },
+    L2_D_size: { type:Number, required: true },
+    L2_D_size_block: { type:Number, required: true },
+  },
+  data: function(){
+    return {
+      cache_architectures: (architectures = [
+        { text: "L1", value: 0 },
+        { text: "L1_I + L1_D", value: 1},
+        { text: "L1 + L2", value: 2},
+        { text: "L1_I + L1_D + L2", value: 3},
+        { text: "L1 + L2_I + L2_D", value: 4},
+        { text: "L1_I + L1_D + L2_I + L2_D", value: 5},
+        // { text: "RISC-V (RV32IMFD)", value: "RISC-V (RV32IMFD)" },
+        // { text: "MIPS-32", value: "MIPS-32" },
+      ]),
+      running_execution : execution_mode_run,
+      cache_policies: (policies = [
+        { text: "FIFO", value: "FIFO"},
+        { text: "Random", value: "Random"},
+      ])
+    };
+  },
+  methods: {
+    change_cache_memory() {
+      if (execution_mode_run === -1) {
+        this._props.c_cache = !this._props.c_cache;
+        app._data.c_cache = this._props.c_cache;
+        localStorage.setItem(
+          "conf_cache_policy",
+          this._props.cache_policy,
+        );
+        creator_ga(
+          "configuration",
+          "configuration.cache_memory",
+          "configuration.cache_memory." + this._props.c_cache,
+        );
+      }
+    },
+    change_policy() {
+      this._props.cache_policy = this.cache_policy;
+      app._data.cache_policy = this._props.cache_policy;
+      localStorage.setItem("cache_policy",
+        this._props.cache_policy,
+      );
+      creator_ga(
+        "configuration",
+        "configuration.cache_policy",
+        "configuration.cache_policy." +
+          this._props.cache_policy,
+      );
+    },
+    change_cache_architecture(value){
+      console.log(value);
+      this._props.cache_type = value;
+      this.cache_type = value;
+      app._data.cache_type = value;
+      localStorage.setItem("cache_type",
+        this._props.cache_type,
+      );
+      creator_ga(
+        "configuration",
+        "configuration.cache_type",
+        "configuration.cache_type." +
+          this._props.cache_type,
+      );
+      console.log("Condigurarion componente:", this._props.cache_type);
+      console.log("Condigurarion global:", app._data.cache_type);
+    },
+    change_cache_lines(cache, value){
+      switch(cache){
+        case 0:
+          console.log(value);
+          var L1_prev_size = this._props.L1_size;
+          if (value) {
+            this._props.L1_size =
+              this._props.L1_size + value;
+            if (this._props.L1_size < 32) {
+              this._props.L1_size = 32;
+            }
+            if (this._props.L1_size > 2048) {
+              this._props.L1_size = 2048;
+            }
+          } else {
+            this._props.L1_size = parseInt(
+              this._props.L1_size,
+            );
+          }
+          app._data.L1_size = this._props.L1_size;
+          localStorage.setItem(
+            "conf_L1_size",
+            this._props.L1_size,
+          );
+          creator_ga(
+            "configuration",
+            "configuration.L1_size",
+            "configuration.L1_size.size_" +
+              (
+                L1_prev_size > this._props.L1_size
+              ).toString(),
+          );
+        break;
+        case 1:
+          var L1_I_prev_size = this._props.L1_I_size;
+          if (value) {
+            this._props.L1_I_size =
+              this._props.L1_I_size + value;
+            if (this._props.L1_I_size < 32) {
+              this._props.L1_I_size = 32;
+            }
+            if (this._props.L1_I_size > 1024) {
+              this._props.L1_I_size = 1024;
+            }
+          } else {
+            this._props.L1_I_size = parseInt(
+              this._props.L1_I_size,
+            );
+          }
+          app._data.L1_I_size = this._props.L1_I_size;
+          localStorage.setItem(
+            "conf_L1_I_size",
+            this._props.L1_I_size,
+          );
+          creator_ga(
+            "configuration",
+            "configuration.L1_I_size",
+            "configuration.L1_I_size.size_" +
+              (
+                L1_I_prev_size > this._props.L1_I_size
+              ).toString(),
+          );
+        break;
+        case 2:
+          var L1_D_prev_size = this._props.L1_D_size;
+          if (value) {
+            this._props.L1_D_size =
+              this._props.L1_D_size + value;
+            if (this._props.L1_D_size < 32) {
+              this._props.L1_D_size = 32;
+            }
+            if (this._props.L1_D_size > 1024) {
+              this._props.L1_D_size = 1024;
+            }
+          } else {
+            this._props.L1_D_size = parseInt(
+              this._props.L1_D_size,
+            );
+          }
+          app._data.L1_D_size = this._props.L1_D_size;
+          localStorage.setItem(
+            "conf_L1_D_size",
+            this._props.L1_D_size,
+          );
+          creator_ga(
+            "configuration",
+            "configuration.L1_D_size",
+            "configuration.L1_D_size.size_" +
+              (
+                L1_D_prev_size > this._props.L1_D_size
+              ).toString(),
+          );
+        break;
+        case 3:
+          var L2_prev_size = this._props.L2_size;
+          if (value) {
+            this._props.L2_size =
+              this._props.L2_size + value;
+            if (this._props.L2_size < 32) {
+              this._props.L2_size = 32;
+            }
+            if (this._props.L2_size > 2048) {
+              this._props.L2_size = 2048;
+            }
+          } else {
+            this._props.L2_size = parseInt(
+              this._props.L2_size,
+            );
+          }
+          app._data.L2_size = this._props.L2_size;
+          localStorage.setItem(
+            "conf_L2_size",
+            this._props.L2_size,
+          );
+          creator_ga(
+            "configuration",
+            "configuration.L2_size",
+            "configuration.L2_size.size_" +
+              (
+                L2_prev_size > this._props.L2_size
+              ).toString(),
+          );
+        break;
+        case 4:
+          var L2_I_prev_size = this._props.L2_I_size;
+          if (value) {
+            this._props.L2_I_size =
+              this._props.L2_I_size + value;
+            if (this._props.L2_I_size < 32) {
+              this._props.L2_I_size = 32;
+            }
+            if (this._props.L2_I_size > 1024) {
+              this._props.L2_I_size = 1024;
+            }
+          } else {
+            this._props.L2_I_size = parseInt(
+              this._props.L2_I_size,
+            );
+          }
+          app._data.L2_I_size = this._props.L2_I_size;
+          localStorage.setItem(
+            "conf_L2_I_size",
+            this._props.L2_I_size,
+          );
+          creator_ga(
+            "configuration",
+            "configuration.L2_I_size",
+            "configuration.L2_I_size.size_" +
+              (
+                L2_I_prev_size > this._props.L2_I_size
+              ).toString(),
+          );
+        break;
+        case 5:
+          var L2_D_prev_size = this._props.L2_D_size;
+          if (value) {
+            this._props.L2_D_size =
+              this._props.L2_D_size + value;
+            if (this._props.L2_D_size < 32) {
+              this._props.L2_D_size = 32;
+            }
+            if (this._props.L2_D_size > 1024) {
+              this._props.L2_D_size = 1024;
+            }
+          } else {
+            this._props.L2_D_size = parseInt(
+              this._props.L2_D_size,
+            );
+          }
+          app._data.L2_D_size = this._props.L2_D_size;
+          localStorage.setItem(
+            "conf_L2_D_size",
+            this._props.L2_D_size,
+          );
+          creator_ga(
+            "configuration",
+            "configuration.L2_D_size",
+            "configuration.L2_D_size.size_" +
+              (
+                L2_D_prev_size > this._props.L2_D_size
+              ).toString(),
+          );
+        break;
+      }
+    }
+  },
+  computed: {
+    L1_gsb: {
+      get() {
+        const v = app?._data?.L1_size_block ?? this.L1_size_block;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = Math.max(32, Math.min(128, Number(v) || 32));
+        app._data.L1_size_block = n;
+        this.$emit('update:L1_size_block', n);
+        localStorage.setItem('conf_L1_size_block', n);
+      }
+    },
+    L1I_gs: {
+      get() {
+        const v = app?._data?.L1_I_size ?? this.L1_I_size;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = Math.max(32, Math.min(1024, Number(v) || 32));
+        app._data.L1_I_size = n;
+        this.$emit('update:L1_I_size', n);
+        localStorage.setItem('conf_L1_I_size', n);
+      }
+    },
+    L1I_gsb: {
+      get() {
+        const v = app?._data?.L1_I_size_block ?? this.L1_I_size_block;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = Math.max(32, Math.min(128, Number(v) || 32));
+        app._data.L1_I_size_block = n;
+        this.$emit('update:L1_I_size_block', n);
+        localStorage.setItem('conf_L1_I_size_block', n);
+      }
+    },
+    L1D_gs: {
+      get() {
+        const v = app?._data?.L1_D_size ?? this.L1_D_size;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = Math.max(32, Math.min(1024, Number(v) || 32));
+        app._data.L1_D_size = n;
+        this.$emit('update:L1_D_size', n);
+        localStorage.setItem('conf_L1_D_size', n);
+      }
+    },
+    L1D_gsb: {
+      get() {
+        const v = app?._data?.L1_D_size_block ?? this.L1_D_size_block;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = Math.max(32, Math.min(128, Number(v) || 32));
+        app._data.L1_D_size_block = n;
+        this.$emit('update:L1_D_size_block', n);
+        localStorage.setItem('conf_L1_D_size_block', n);
+      }
+    },
+    L2I_gs: {
+      get() {
+        const v = app?._data?.L2_I_size ?? this.L2_I_size;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = Math.max(32, Math.min(1024, Number(v) || 32));
+        app._data.L2_I_size = n;
+        this.$emit('update:L2_I_size', n);
+        localStorage.setItem('conf_L2_I_size', n);
+      }
+    },
+    L2I_gsb: {
+      get() {
+        const v = app?._data?.L2_I_size_block ?? this.L2_I_size_block;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = Math.max(32, Math.min(128, Number(v) || 32));
+        app._data.L2_I_size_block = n;
+        this.$emit('update:L2_I_size_block', n);
+        localStorage.setItem('conf_L2_I_size_block', n);
+      }
+    },
+    L2D_gs: {
+      get() {
+        const v = app?._data?.L2_D_size ?? this.L2_D_size;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = Math.max(32, Math.min(1024, Number(v) || 32));
+        app._data.L2_D_size = n;
+        this.$emit('update:L2_D_size', n);
+        localStorage.setItem('conf_L2_D_size', n);
+      }
+    },
+    L2D_gsb: {
+      get() {
+        const v = app?._data?.L2_D_size_block ?? this.L2_D_size_block;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = Math.max(32, Math.min(128, Number(v) || 32));
+        app._data.L2_D_size_block = n;
+        this.$emit('update:L2_D_size_block', n);
+        localStorage.setItem('conf_L2_D_size_block', n);
+      }
+    },
+    L2_gsb: {
+      get() {
+        const v = app?._data?.L2_size_block ?? this.L2_size_block;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = Math.max(32, Math.min(1024, Number(v) || 32));
+        app._data.L2_size_block = n;
+        this.$emit('update:L2_size_block', n);
+        localStorage.setItem('conf_L2_size_block', n);
+      }
+    },
+  },
+  template:
+  " <b-container fluid>"+
+  '   <b-row>'+
+  '     <b-col cols="6">'+ // parte izquierda
+  ''+
+  ''+
+  ''+
+  '   <b-row>'+ // Menu de seleccion de architectura
+  // "     </b-list-group-item>" + 
+  '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
+  '       <label for="range-5">Cache Architecture:</label>' +
+  '         <b-form-radio-group'+
+  '                        v-model="cache_type" ' +
+  '                        :options="cache_architectures" ' +
+  '                        size="md"' +
+  '                        @change="change_cache_architecture" ' +
+  '                        title="Cache Architecture"'+
+  '                        stacked>' +
+  "         </b-form-radio-group>" +
+  "     </b-list-group-item>" +
+  '     '+
+  '     '+
+  '     '+
+  '     '+
+  '     '+
+  '     '+
+  '     '+
+  '     '+
+  '     '+
+  '   </b-row>'+
+  ''+
+  ''+
+  ''+
+  '   <b-row>'+ // Seleccion de politica de reemplazo
+  ''+
+  ''+
+  '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
+  '       <label for="range-5">Cache Policy:</label>' +
+  '         <b-form-radio-group v-model="cache_policy" ' +
+  '                        :options="policies" ' +
+  '                        size="md"' +
+  '                        @change="change_policy" ' +
+  '                        title="Cache Policy"'+
+  '                        stacked>' +
+  "         </b-form-radio-group>" +
+  "     </b-list-group-item>" +
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  '   </b-row>'+
+  ''+
+  
+  '     </b-col>'+
+  ''+
+  ''+
+  ''+
+  '     <b-col>'+ // Parte derecha
+  ''+
+
+  '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
+    '       <label for="range-5">Cache Sizes:\n</label>' +
+    '       <div></div>'+
+    ''+
+
+    ""+
+    '       <label v-if="cache_type == 0 || cache_type == 2 || cache_type == 4" for="range-5">L1 lines:</label>' +
+    '         <b-form-spinbutton id="L1_size"' +
+    '                       v-model="L1_size" ' +
+    '                       v-if="cache_type == 0 || cache_type == 2 || cache_type == 4"' +
+    '                       @change="change_cache_lines(0, 0)" ' +
+    '                       type="range" ' +
+    '                       min="32" ' +
+    '                       max="2048" ' +
+    '                       step="32" ' +
+    '                       title="L1 size">' +
+    "         </b-form-spinbutton>" +
+
+    " "+
+    // '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
+    '       <label v-if="cache_type == 0 || cache_type == 2 || cache_type == 4" for="range-9">Data Block Cache L1 Size:</label>' +
+    "       <b-input-group>" +
+    '         <b-form-spinbutton id="range-7"' +
+    '                       v-model="L1_gsb" ' +
+    '                       v-if="cache_type == 0 || cache_type == 2 || cache_type == 4"'+
+    '                       min="32" ' +
+    '                       max="128" ' +
+    '                       step="32" ' +
+    '                       title="Data Block Cache L1 Size">' +
+    "         </b-form-spinbutton>" +
+    "       </b-input-group>" +
+    // "     </b-list-group-item>" +
+
+
+
+
+    ""+
+    
+    '       <label v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" for="range-5">L1_I lines:</label>' +
+    '         <b-form-spinbutton id="L1_I_size" key="spin-L1I"'+
+    '                            v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" '+
+    '                            v-model="L1I_gs" '+
+    '                            min="32"'+
+    '                            max="1024"'+
+    '                            step="32"'+ 
+    '                            title="L1_I size"></b-form-spinbutton>' +
+    '         <label v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" for="range-9">Data Block Cache L1_I Size:</label>' +
+    "         <b-input-group>" +
+    '           <b-form-spinbutton id="range-7"' +
+    '                         v-model="L1I_gsb" ' +
+    '                         v-if="cache_type == 1 || cache_type == 3 || cache_type == 5"'+
+    '                         min="32" ' +
+    '                         max="128" ' +
+    '                         step="32" ' +
+    '                         title="Data Block Cache L1_I Size">' +
+    "           </b-form-spinbutton>" +
+    "         </b-input-group>" +
+    // L1_D con key + proxy
+    '       <label v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" for="range-5">L1_D lines:</label>' +
+    '         <b-form-spinbutton id="L1_D_size" key="spin-L1D" v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" v-model="L1D_gs" min="32" max="1024" step="32" title="L1_D size"></b-form-spinbutton>' +
+    '         <label v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" for="range-9">Data Block Cache L1_D Size:</label>' +
+    "         <b-input-group>" +
+    '           <b-form-spinbutton id="range-7"' +
+    '                         v-model="L1D_gsb" ' +
+    '                         v-if="cache_type == 1 || cache_type == 3 || cache_type == 5"'+
+    '                         min="32" ' +
+    '                         max="128" ' +
+    '                         step="32" ' +
+    '                         title="Data Block Cache L1_D Size">' +
+    "           </b-form-spinbutton>" +
+    "         </b-input-group>" +
+    ""+
+
+
+
+
+    '       <label v-if="cache_type == 2 || cache_type == 3" for="range-5">L2 lines:</label>' +
+    '         <b-form-spinbutton id="L2_size"' +
+    '                       v-model="L2_size" ' +
+    '                       v-if="cache_type == 2 || cache_type == 3"' +
+    '                       @change="change_cache_lines(3, 0)" ' +
+    '                       type="range" ' +
+    '                       min="32" ' +
+    '                       max="2048" ' +
+    '                       step="32" ' +
+    '                       title="L2 size">' +
+    "         </b-form-spinbutton>" +
+    
+    '       <label v-if="cache_type == 2 || cache_type == 3" for="range-9">Data Block Cache L2 Size:</label>' +
+    "       <b-input-group>" +
+    '         <b-form-spinbutton id="range-7"' +
+    '                       v-model="L2_gsb" ' +
+    '                       v-if="cache_type == 2 || cache_type == 3"'+
+    '                       min="32" ' +
+    '                       max="128" ' +
+    '                       step="32" ' +
+    '                       title="Data Block Cache L2 Size">' +
+    "         </b-form-spinbutton>" +
+    "       </b-input-group>" +
+
+
+
+
+
+    ""+
+    '       <label v-if="cache_type == 4 || cache_type == 5" for="range-5">L2_I lines:</label>' +
+    '         <b-form-spinbutton id="L2_I_size" key="spin-L2I" v-if="cache_type == 4 || cache_type == 5" v-model="L2I_gs" min="32" max="1024" step="32" title="L2_I size"></b-form-spinbutton>' +
+    '         <label v-if="cache_type == 4 || cache_type == 5" for="range-9">Data Block Cache L2_I Size:</label>' +
+    "         <b-input-group>" +
+    '           <b-form-spinbutton id="range-7"' +
+    '                         v-model="L2I_gsb" ' +
+    '                         v-if="cache_type == 4 || cache_type == 5"'+
+    '                         min="32" ' +
+    '                         max="128" ' +
+    '                         step="32" ' +
+    '                         title="Data Block Cache L2_I Size">' +
+    "           </b-form-spinbutton>" +
+    "         </b-input-group>" +
+    
+    
+    
+    
+    
+    // L2_D con key + proxy
+    '       <label v-if="cache_type == 4 || cache_type == 5" for="range-5">L2_D lines:</label>' +
+    '         <b-form-spinbutton id="L2_D_size" key="spin-L2D" v-if="cache_type == 4 || cache_type == 5" v-model="L2D_gs" min="32" max="1024" step="32" title="L2_D size"></b-form-spinbutton>' +
+    
+    '         <label v-if="cache_type == 4 || cache_type == 5" for="range-9">Data Block Cache L2_D Size:</label>' +
+    "         <b-input-group>" +
+    '           <b-form-spinbutton id="range-7"' +
+    '                         v-model="L2D_gsb" ' +
+    '                         v-if="cache_type == 4 || cache_type == 5"'+
+    '                         min="32" ' +
+    '                         max="128" ' +
+    '                         step="32" ' +
+    '                         title="Data Block Cache L2_D Size">' +
+    "           </b-form-spinbutton>" +
+    "         </b-input-group>" +
+    ""+
+    "     </b-list-group-item>" +
+    
+  ''+
+  ''+
+  ''+
+  ''+
+  '     </b-col>'+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  '   </b-row>'+
+  ' </b-container>'
+};
+Vue.component('cache-configuration', uielto_cache_configuration);
+
 var uielto_register_file = {
   props: { register_file: { type: Array, required: true } },
   data: function () {
@@ -10763,7 +11695,7 @@ var uielto_load_library = {
       var file;
       var reader;
       var files = document.getElementById("binary_file").files;
-      
+
       for (var i = 0; i < files.length; i++) {
         file = files[i];
         reader = new FileReader();
@@ -10772,7 +11704,7 @@ var uielto_load_library = {
           arrayBuffer = ev.target.result;
           console.log("nombre: ", file);
           app.update_binary.push({name : file.name, lib :new Uint8Array(arrayBuffer), apply: true});
-        
+
         };
         reader.readAsArrayBuffer(file);
         // update_binary = new Uint8Array(code_binary);
@@ -10813,7 +11745,7 @@ var uielto_save_library = {
           "danger",
         );
 
-      else 
+      else
         {
           const blob = new Blob([objectcontent], {type: "application/octet-stream"});
 
@@ -10824,7 +11756,7 @@ var uielto_save_library = {
 
           if (this.name_binary_save == "")
             a.download = "library.o";
-          else 
+          else
             a.download = this.name_binary_save +".o";
           document.body.appendChild(a);
           a.click();
@@ -10964,11 +11896,11 @@ var uielto_multifile_editor = {
             }
           }
         }
-        
+
       } else {
         activeTabIndex = -1;
       }
-      
+
     },
 
   },
@@ -10986,7 +11918,7 @@ var uielto_multifile_editor = {
             this.currentTabIndex = lastTab.id;
             this.tabskey++;
           });
-        }else 
+        }else
         activeTabIndex = -1;
     }
   },
@@ -11001,14 +11933,14 @@ var uielto_multifile_editor = {
           this.currentTabIndex = val;
           const tab = app.tabs.find(t => t.id === val);
           if (tab) showFile(tab.title);
-          else { // limpiar el code mirror  
-          
+          else { // limpiar el code mirror
+
           }
         }
       }
     }
   },
-  template: 
+  template:
   "<b-tabs :key=\"tabskey\" content-class=\"mt-3\" v-model=\"currentTab\" >"+ // style=\"max-width: auto;\"
   "  <b-tab v-for=\"tab in current_editor_tabs\" :value=\"tab.id\" :id=\"tab.title\" @click=\"showFile(tab.title)\" :title=\"tab.title\">" +
   "    <template #title> "+
@@ -11048,8 +11980,8 @@ var uielto_applied_libs = {
     libs_to_list() {
       return app.update_binary;
     }
-    
-  }, 
+
+  },
   template:
   "<div style=\"overflow-x: auto; max-width: 100%;\">"+
   " <b-table stripped hover :items=\"libs_to_list\" :fields=\"fields\" thead-class=\"theadg\" style=\"width: 100%; table-layout:auto;\">"+
@@ -11078,11 +12010,11 @@ var uielto_file_menu = {  // En cada entrada habra un objeto: {filename (string)
   },
   methods: {
     modifyToCompile(filename){
-      
+
       let file_index = this._props.files_to_list.findIndex(file => file.filename === filename);
-      
+
       let assembly_index = assembly_files.findIndex(asmfile => asmfile.filename === filename);
-      
+
       assembly_files[assembly_index].to_compile = !assembly_files[assembly_index].to_compile;
       this._props.files_to_list[file_index].to_compile = !this._props.files_to_list[file_index].to_compile;
     },
@@ -11093,7 +12025,7 @@ var uielto_file_menu = {  // En cada entrada habra un objeto: {filename (string)
       }
     },
     showContextMenu(event, filename){
-      
+
       event.preventDefault();
       selectedFile = event.target.textContent;
 
@@ -11130,7 +12062,7 @@ var uielto_file_menu = {  // En cada entrada habra un objeto: {filename (string)
   mounted() {
     document.addEventListener("click", this.hideContextMenu);
   },
-  template: 
+  template:
 
   "<div style=\"overflow-x: auto; max-width: 100%;\">"+
   " <b-table stripped hover :items=\"files\" :fields=\"fields\" thead-class=\"theadg\" style=\"width: 100%; table-layout:auto;\">"+
@@ -12598,7 +13530,7 @@ function changeEntry(value){
     for (let i = 0; i < instructions.length; i++) {
       if (i !== value)
         instructions[i]._rowVariant = '';
-      else 
+      else
         instructions[i]._rowVariant = "success";
     }
     entry_elf = instructions[value].Address;
@@ -12622,6 +13554,8 @@ var uielto_execution = {
         "Label",
         "userInstructions",
         "loadedInstructions",
+        "L1",
+        "L2",
         "tag",
       ],
     };
@@ -12663,25 +13597,25 @@ var uielto_execution = {
       }
     },
     handleRowEntry(item, index, event){
-      
+
       event.preventDefault();
       // selectedFile = event.target.textContent;
 
       // let menu = document.getElementById("entryMenu");
-      
+
       let menu = this.$refs.entryMenu;
       console.log(document);
       console.log(menu);
       console.log(event);
       console.log(item);
-      console.log(index); 
+      console.log(index);
       this.selectedItem = index;
-      
+
 
       this.$nextTick(() => {
       const menu = this.$refs.entryMenu;
       if (!menu) return;
-      
+
 
       let x = event.pageX / 2.5;
       let y = event.pageY / 2.5;
@@ -12697,6 +13631,14 @@ var uielto_execution = {
       menu.style.top = `${y}px`;
       menu.style.display = "block";
     });
+    }, 
+    pptarget(addr, cl, val){
+      return (addr + "-" + cl.toString() + "-" + val.toString()); 
+    },
+    ctype(val) {
+      if (val == "L1") return "L1";
+      else if (val =="L2") return ("L2");
+      else return "";
     }
     // ,
     // changeEntry() {
@@ -12705,7 +13647,7 @@ var uielto_execution = {
     //   // Tu lógica aquí
     // }
     // // selectEntryPoint(record, index) {
-      
+
     // }
   },
   mounted() {
@@ -12778,6 +13720,18 @@ var uielto_execution = {
     '           <span class="h6" v-if="row.item.visible == false">&lt;&lt;Hidden&gt;&gt;</span>' +
     "         </template> " +
     " " +
+    '         <template v-slot:cell(L1)="row">' +
+    '           <i v-if="(row.item.L1_I == 3 && row.item.L1_D == 0) || (row.item.L1_I == 0 && row.item.L1_D == 3) || (row.item.L1_I == 3 && row.item.L1_D == 3)" :id="pptarget(row.item.Address, 1, 3)" class="fa-regular fa-circle-check"><cache-info :target="pptarget(row.item.Address, 1, 3)" :instruction="row.item" :cache_type="ctype(\'L1\')"></cache-info></i>'+
+    '           <i v-if="(row.item.L1_I == 4 && row.item.L1_D == 4) || (row.item.L1_I == 0 && row.item.L1_D == 4) || (row.item.L1_I == 4 && row.item.L1_D == 0)" :id="pptarget(row.item.Address, 1, 4)" class="fa-regular fa-circle-xmark"><cache-info :target="pptarget(row.item.Address, 1, 4)" :instruction="row.item" :cache_type="ctype(\'L1\')"></cache-info></i>'+
+    '           <i v-if="(row.item.L1_I == 1 || row.item.L1_D == 1) || (row.item.L1_I == 3 && row.item.L1_D == 4) || (row.item.L1_I == 4 && row.item.L1_D == 3)" :id="pptarget(row.item.Address, 1, 1)" class="fa-solid fa-circle-exclamation"><cache-info :target="pptarget(row.item.Address, 1, 1)" :instruction="row.item" :cache_type="ctype(\'L1\')"></cache-info></i>'+
+    '         </template>'+
+    ''+
+    '         <template v-slot:cell(L2)="row">' +
+    '           <i v-if="(row.item.L2_I == 3 && row.item.L2_D == 0) || (row.item.L2_I == 0 && row.item.L2_D == 3) || (row.item.L2_I == 3 && row.item.L2_D == 3)" :id="pptarget(row.item.Address, 2, 3)" class="fa-regular fa-circle-check"><cache-info :target="pptarget(row.item.Address, 2, 3)" :instruction="row.item" :cache_type="ctype(\'L2\')"></cache-info></i>'+
+    '           <i v-if="(row.item.L2_I == 4 && row.item.L2_D == 4) || (row.item.L2_I == 0 && row.item.L2_D == 4) || (row.item.L2_I == 4 && row.item.L2_D == 0)" :id="pptarget(row.item.Address, 2, 4)" class="fa-regular fa-circle-xmark"><cache-info :target="pptarget(row.item.Address, 2, 4)" :instruction="row.item" :cache_type="ctype(\'L2\')"></cache-info></i>'+
+    '           <i v-if="(row.item.L2_I == 1 || row.item.L2_D == 1) || (row.item.L2_I == 3 && row.item.L2_D == 4) || (row.item.L2_I == 4 && row.item.L2_D == 3)" :id="pptarget(row.item.Address, 2, 1)" class="fa-solid fa-circle-exclamation"><cache-info :target="pptarget(row.item.Address, 2, 1)" :instruction="row.item" :cache_type="ctype(\'L2\')"></cache-info></i>'+
+    '         </template>'+
+    " " +
     '         <template v-slot:cell(tag)="row">' +
     '           <b-badge variant="warning" ' +
     '                    class="border border-warning shadow executionTag" ' +
@@ -12810,14 +13764,49 @@ var uielto_execution = {
     "     </b-col>" +
     "   </b-row>" +
     " </b-container>"+
-    ' <div ref="entryMenu" class="context-menu">'+ 
-    '   <ul>'+ 
-    '     <li @click="changeEntry(selectedItem)">Select as new entry program</li>'+ 
-    '   </ul>'+ 
+    ' <div ref="entryMenu" class="context-menu">'+
+    '   <ul>'+
+    '     <li @click="changeEntry(selectedItem)">Select as new entry program</li>'+
+    '   </ul>'+
     ' </div>'+
     '</div>'
 };
 Vue.component("table-execution", uielto_execution);
+var uielto_cache_info = {
+  props: {
+    target: {type: String, required: true},
+    instruction: {type: Object, required: true},
+    cache_type: {type: String, required: true}
+  },
+  template:  
+  '<div>'+
+  ' <b-popover :target="target" triggers="hover focus" placement="button" html>'+
+  '   <div>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_I != 0) || cache_type==\'L2\' && (instruction.L2_I != 0)" :style="{whiteSpace: \'pre-line\' }">Instructions</span>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_I == 3)"><i class="fa-regular fa-circle-check"></i></span>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_I == 4)"><i class="fa-regular fa-circle-xmark"></i></span>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_I == 1)"><i class="fa-solid fa-circle-exclamation"></i></span>'+
+  '     <span v-if="cache_type==\'L2\' && (instruction.L2_I == 3)"><i class="fa-regular fa-circle-check"></i></span>'+
+  '     <span v-if="cache_type==\'L2\' && (instruction.L2_I == 4)"><i class="fa-regular fa-circle-xmark"></i></span>'+
+  '     <span v-if="cache_type==\'L2\' && (instruction.L2_I == 1)"><i class="fa-solid fa-circle-exclamation"></i></span>'+
+  '   </div>'+
+  '   <div>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_D != 0) || cache_type==\'L2\' && (instruction.L2_D != 0)" :style="{whiteSpace: \'pre-line\' }">Data</span>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_D == 3)"><i class="fa-regular fa-circle-check"></i></span>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_D == 4)"><i class="fa-regular fa-circle-xmark"></i></span>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_D == 1)"><i class="fa-solid fa-circle-exclamation"></i></span>'+
+  '     <span v-if="cache_type==\'L2\' && (instruction.L2_D == 3)"><i class="fa-regular fa-circle-check"></i></span>'+
+  '     <span v-if="cache_type==\'L2\' && (instruction.L2_D == 4)"><i class="fa-regular fa-circle-xmark"></i></span>'+
+  '     <span v-if="cache_type==\'L2\' && (instruction.L2_D == 1)"><i class="fa-solid fa-circle-exclamation"></i></span>'+
+  '   </div>'+
+  ' </b-popover>'+
+  ' '+
+  ' '+
+  ' '+
+  ' '+
+  '</div>'
+};
+Vue.component("cache-info", uielto_cache_info);
 var uielto_data_view_selector = {
   props: {
     data_mode: { type: String, required: true },
@@ -12917,15 +13906,6 @@ var uielto_data_view_selector = {
     '         CSR Registers' +
     '       </b-button>' +
     "" +
-    '        <b-button id="memory_btn"' +
-    '                  size="sm"' +
-    "                  :pressed=\"get_pressed('memory')\"" +
-    '                  variant="outline-secondary"' +
-    "                  @click=\"change_data_view('memory')\">" +
-    '          <span class="fas fa-memory"></span>' +
-    "          Memory" +
-    "        </b-button>" +
-    "" +
     "      </b-button-group>" +
     "    </b-col>" +
     "" +
@@ -12936,6 +13916,24 @@ var uielto_data_view_selector = {
     "" +
     '    <b-col class="px-1">' +
     '      <b-button-group class="w-100 pb-3">' +
+    '        <b-button id="memory_btn"' +
+    '                  size="sm"' +
+    "                  :pressed=\"get_pressed('memory')\"" +
+    '                  variant="outline-secondary"' +
+    "                  @click=\"change_data_view('memory')\">" +
+    '          <span class="fas fa-memory"></span>' +
+    "          Memory" +
+    "        </b-button>" +
+    "" +
+    '        <b-button id="cache_btn"' +
+    '                  size="sm"' +
+    "                  :pressed=\"get_pressed('cache')\"" +
+    '                  variant="outline-secondary"' +
+    "                  @click=\"change_data_view('cache')\">" +
+    '          <span class="fas fa-sd-card"></span>' +
+    "          Cache" +
+    "        </b-button>" +
+    "" +
     '        <b-button id="stats_btn"' +
     '                  size="sm"' +
     "                  :pressed=\"get_pressed('stats')\"" +
@@ -13005,7 +14003,7 @@ var uielto_register_file = {
         }
         return this.reg_representation_options_int;
       }
-      
+
       else {
         if (this._props.data_mode != this.local_data_mode) {
           this.reg_representation = "ieee32";
@@ -13180,7 +14178,7 @@ var uielto_register = {
                       else {
                         ret = bin2hex(double2bin(bi_BigIntTodouble(register.value)));
                       }
-                    }         
+                    }
                     break;
                 }
 
@@ -13194,7 +14192,7 @@ var uielto_register = {
                 }
 
                 return ret
-                
+
               },
 
               show_value_truncate ( register ) {
@@ -13265,27 +14263,27 @@ var uielto_register_vec = {
           ret = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
           ret = (parseInt(ret.toString(10) >>> 0));
           break;
-        case "signed":    
+        case "signed":
         default:
           var ret_val = (512 / length_vext) - 1;
             ret = register.value.slice(ret_val * length_vext / 4, (ret_val + 1) * length_vext / 4 );
-  
+
             if (ret.charAt(0) === 1){
               if (length_vext === 8){
                 ret = (parseInt(ret, 16) - 256);
-  
+
               } else if (length_vext === 16){
                 ret = (parseInt(ret, 16) - 65536);
-  
+
               } else if (length_vext === 32){
                 ret = (parseInt(ret, 16) - 4294967296);
-  
+
               } else {
                 ret = (parseInt(ret, 16) - 18446744073709551616n);
               }
             }
             else
-              ret = (parseInt(ret, 16));  
+              ret = (parseInt(ret, 16));
           break;
       }
       return ret;
@@ -13368,7 +14366,7 @@ var uielto_register_popover = {
                         else {
                           ret = bin2hex(double2bin(bi_BigIntTodouble(register.value)));
                         }
-                      }         
+                      }
                       break;
 
                     case "bin":
@@ -13382,7 +14380,7 @@ var uielto_register_popover = {
                         else {
                           ret = double2bin(bi_BigIntTodouble(register.value));
                         }
-                      }         
+                      }
                       break;
 
                     case "signed":
@@ -13431,7 +14429,7 @@ var uielto_register_popover = {
                         else {
                           ret = hex2char8(bin2hex(double2bin(bi_BigIntTodouble(register.value))));
                         }
-                      } 
+                      }
                       break;
 
                     case "ieee32":
@@ -13457,7 +14455,7 @@ var uielto_register_popover = {
                   ret = ret.toString();
 
                   return ret
-                  
+
                 },
 
                 //Update a new register value
@@ -13652,16 +14650,16 @@ var uielto_register_popover_vec = {
     register: { type: Object, required: true }
   },
   data: function () {
-    return { tableHeight: 0, 
-      activeView: 'hex', 
-      newValue: "", 
-      precision: "true", 
+    return { tableHeight: 0,
+      activeView: 'hex',
+      newValue: "",
+      precision: "true",
       result: [],
-      metadata: [ { 
-                    "Metadata": "", 
-                    "Nbits": this.register.nbits, 
-                    "Length": architecture.components[3].length_elem, 
-                    "Elems": architecture.components[3].total_elements, 
+      metadata: [ {
+                    "Metadata": "",
+                    "Nbits": this.register.nbits,
+                    "Length": architecture.components[3].length_elem,
+                    "Elems": architecture.components[3].total_elements,
                     "Elem_op": architecture.components[3].elems_op
                   }
                 ]
@@ -13678,7 +14676,7 @@ var uielto_register_popover_vec = {
     closePopover() {
       this.$root.$emit("bv::hide::popover");
     },
-    
+
     show_value_vec(register, view="hex") {
       this.result.length = 0;
       for (var i = 0; i < architecture.components[3].total_elements; i++){
@@ -13746,7 +14744,7 @@ var uielto_register_popover_vec = {
 
         }
       }
-      
+
       this.activeView = view;
 
       this.$nextTick(() => {
@@ -13755,7 +14753,7 @@ var uielto_register_popover_vec = {
           this.tableHeight = table.offsetHeight;
         }
       });
-      
+
     }
   },
   template:
@@ -13803,7 +14801,7 @@ var uielto_csr_register_file = {
               superRegs: this.getRegs("supervisor"),
               // superElems:   (architecture.components[4].elements.supervisor.length % 2 === 0) ? architecture.components[4].elements.supervisor.length / 2 : (architecture.components[4].elements.supervisor.length / 2) + 1,
               machineRegs: this.getRegs("machine"),
-              // machineElems: (architecture.components[4].elements.machine.length % 2 === 0)    ? architecture.components[4].elements.machine.length / 2    : (architecture.components[4].elements.machine.length / 2) + 1, 
+              // machineElems: (architecture.components[4].elements.machine.length % 2 === 0)    ? architecture.components[4].elements.machine.length / 2    : (architecture.components[4].elements.machine.length / 2) + 1,
               commonRegs: this.getRegs("common"),
               // commonElems:  (architecture.components[4].elements.common.length % 2 === 0)     ? architecture.components[4].elements.common.length / 2     : (architecture.components[4].elements.common.length / 2) + 1
             }
@@ -13818,7 +14816,7 @@ var uielto_csr_register_file = {
     getRegs(type){
       var ret = [];
       for(var i = 0; i < architecture.components[4].elements.length; i++){
-      
+
         if (architecture.components[4].elements[i].type === type && type === "user"){
           ret.push(architecture.components[4].elements[i]);
         } else if (architecture.components[4].elements[i].type === type && type === "supervisor"){
@@ -13830,11 +14828,11 @@ var uielto_csr_register_file = {
         }
       }
       return ret;
-    
+
     }
   },
-  template:           
-  
+  template:
+
   '<div>'+
   '<b-container v-b-toggle.user fluid align-h="between" class="mx-0 my-3 px-2">' +
   '       <b-row style="margin-left:0.001vh; max-width:99.95%; align-items:center; border-bottom:2px solid #6C757D;" @click="toggleSeccion(\'user\')">' +
@@ -13854,7 +14852,7 @@ var uielto_csr_register_file = {
   '<b-collapse id="user"> '+
   ' <b-container fluid>'+
   '   <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(userRegs.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
-  
+
   '     <csr-register :id="(i-1)*2"'+
   '                   :register="userRegs[(i-1)*2]"'+
   '                   ></csr-register>'+
@@ -13885,7 +14883,7 @@ var uielto_csr_register_file = {
   '<b-collapse id="super">'+
   '<b-container fluid>'+
   ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(superRegs.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
-  
+
   '   <csr-register :id="(i-1)*2"'+
   '                 :register="superRegs[(i-1)*2]"'+
   '                 ></csr-register>'+
@@ -13916,7 +14914,7 @@ var uielto_csr_register_file = {
   '<b-collapse id="machine">'+
   '<b-container fluid>'+
   ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(machineRegs.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
-  
+
   '   <csr-register :id="(i-1)*2"'+
   '                 :register="machineRegs[(i-1)*2]"'+
   '                 ></csr-register>'+
@@ -13947,7 +14945,7 @@ var uielto_csr_register_file = {
   '<b-collapse id="common">'+
   '<b-container fluid>'+
   ' <b-row style="margin-top:1.5%; margin-bottom:1.5%;" v-for="i in Math.ceil(commonRegs.length / 2)" :key="i" cols-xl="2" cols-lg="2" cols-md="2" cols-sm="1" cols-xs="1">'+
-  
+
   '   <csr-register :id="(i-1)*2"'+
   '                 :register="commonRegs[(i-1)*2]"'+
   '                 ></csr-register>'+
@@ -13971,13 +14969,13 @@ var uielto_csr_register = {
       register: {type: Object, required: true}
   },
   methods:{
-    show_csr_value(register){ 
+    show_csr_value(register){
         return "0x"+register.value;
     },
     update_csr_value(register){
     }
   },
-  template: 
+  template:
   '<div>'+
   '   <b-col>'+
   '     <div class="d-flex align-items-center justify-content-between">'+
@@ -14086,6 +15084,7 @@ var uielto_memory = {
   data: function () {
     return {
       memFields: ["Tag", "Address", "Binary", "Value"],
+      cache_info: {L1_I: 0, L1_D: 0, L2_I: 0, L2_D: 0},
       row_info: null,
       selected_space_view: null,
       selected_stack_view: null,
@@ -14124,6 +15123,7 @@ var uielto_memory = {
       }
     },
     select_data_type(record, index) {
+      console.log(index);
       this.row_info = {
         index: index,
         addr: record.addr - 3,
@@ -14140,6 +15140,45 @@ var uielto_memory = {
       if (this.memory_segment == "stack_memory") {
         this.$root.$emit("bv::show::modal", "stack_modal");
       }
+    },
+    show_cache_location(record, index){
+      // this.row_info = {
+      //   index: index,
+      //   addr: record.addr - 3,
+      //   size: record.size,
+      // };
+      // Extraer la informacion de la cache asociada a dicha instruccion o dato
+      if (this.memory_segment == "data_memory") {
+        if (this.check_tag_null(record.hex)) {
+          let auxmem = main_memory[parseInt(record.addr_begin, 16)];
+          let auxL1_I = 0;
+          let auxL1_D = auxmem.L1_D;
+          let auxL2_I = 0;
+          let auxL2_D = auxmem.L2_D;
+          this.cache_info = {
+            L1_I: auxL1_I,
+            L1_D: auxL1_D,
+            L2_I: auxL2_I,
+            L2_D: auxL2_D
+          }
+          this.$root.$emit("bv::show::modal", "cache_modal");
+        }
+      }
+      if (this.memory_segment == "instructions_memory") {
+        let auxins = instructions.find(insn => insn.Address.toLowerCase() == record.addr_begin.toLowerCase());
+        let auxL1_I = auxins.L1_I;
+        let auxL1_D = 0; // auxins.L1_D;
+        let auxL2_I = auxins.L2_I;
+        let auxL2_D = 0; // auxins.L2_D;
+        this.cache_info = {
+          L1_I: auxL1_I,
+          L1_D: auxL1_D,
+          L2_I: auxL2_I,
+          L2_D: auxL2_D
+        }
+        this.$root.$emit("bv::show::modal", "cache_modal");
+      }
+      console.log("Entrada: ", record);
     },
     change_space_view() {
       creator_memory_update_space_view(
@@ -14160,6 +15199,9 @@ var uielto_memory = {
     },
     hide_stack_modal() {
       this.selected_stack_view = null;
+    },
+    hide_cache_modal() {
+      this.cache_info = {L1_I: 0, L1_D: 0, L2_I: 0, L2_D: 0};
     },
     check_tag_null(record) {
       for (var i = 0; i < record.length; i++) {
@@ -14190,6 +15232,7 @@ var uielto_memory = {
   },
   computed: {
     main_memory_items() {
+      // console.log(Object.values(this.main_memory).sort((a, b) => a.addr - b.addr));
       return Object.values(this.main_memory).sort((a, b) => a.addr - b.addr);
     },
   },
@@ -14209,8 +15252,8 @@ var uielto_memory = {
     '                 :fields="memFields" ' +
     "                 :filter-function=filter " +
     '                 filter=" " ' +
-    '                 class="memory_table align-items-start" ' +
-    '                 @row-clicked="select_data_type">' +
+    '                 class="memory_table align-items-start"> ' +
+    // '                 @row-clicked="select_data_type">' +
     " " +
     "           <template #table-busy>" +
     '             <div class="text-center text-primary my-2">' +
@@ -14291,9 +15334,16 @@ var uielto_memory = {
     '             <span v-bind:class="get_classes(row)" style="white-space: pre-wrap;">' +
     "               {{row.item.value}}" +
     '               <span class="fas fa-eye memoryValue" ' +
-    '                     v-if="row.item.eye && check_tag_null(row.item.hex)">' +
+    '                     @click="select_data_type(row.item, row.index)"'+
+    '                     v-if="row.item.eye && check_tag_null(row.item.hex) && memory_segment != \'instructions_memory\'">' +
     "               </span>" +
+    // Añadir el elemento cache para hacer el show cache value on this memvalue
+    '               <span class="fas fa-sd-card cacheValue"'+
+    '                     @click="show_cache_location(row.item, row.index)"'+
+    '                     v-if="(row.item.eye && check_tag_null(row.item.hex)) || memory_segment == \'instructions_memory\'">'+
+    '               </span>'+
     "             </span>" +
+    
     "           </div>" +
     "         </template>" +
     "       </b-table>" +
@@ -14333,6 +15383,37 @@ var uielto_memory = {
     "     </b-row>" +
     "   </b-container>" +
     " " +
+    '   <b-modal id="cache_modal" ' +
+    '            size="m" ' +
+    '            title="Cache location element" ' +
+    '            @hidden="hide_cache_modal" ' +
+    '            @ok="hide_cache_modal">' +
+    '     <span v-if="cache_info != null & (cache_info.L1_I != 0 || cache_info.L1_D != 0)">L1:<br><br></span>'+
+    // "             <br>"+
+    // "             <br>"+
+    '     <span v-if="cache_info != null & cache_info.L1_I == 3">Instructions: <i class="fa-regular fa-circle-check"> </i>    Only hits in cache<br></span>'+
+    '     <span v-if="cache_info != null & cache_info.L1_I == 4">Instructions: <i class="fa-regular fa-circle-xmark"> </i>    Only misses in cache<br></span>'+
+    '     <span v-if="cache_info != null & cache_info.L1_I == 1">Instructions: <i class="fa-solid fa-circle-exclamation"></i> Hits and misses in cache<br></span>'+
+    "             <br>"+
+    '     <span v-if="cache_info != null & cache_info.L1_D == 3">Data: <i class="fa-regular fa-circle-check"></i> Only hits in cache<br></span>'+
+    '     <span v-if="cache_info != null & cache_info.L1_D == 4">Data: <i class="fa-regular fa-circle-xmark"></i> Only misses in cache<br></span>'+
+    '     <span v-if="cache_info != null & cache_info.L1_D == 1">Data: <i class="fa-solid fa-circle-exclamation"></i> Hits and misses in cache<br></span>'+
+    '     '+
+    // "             <br>"+
+    '     <span v-if="cache_info != null & (cache_info.L2_I != 0 || cache_info.L2_D != 0)">L2: <br><br></span>'+
+    // "             <br>"+
+    // "             <br>"+
+    '     <span v-if="cache_info != null & cache_info.L2_I == 3">Instructions: <i class="fa-regular fa-circle-check"></i> Only hits in cache<br></span>'+
+    '     <span v-if="cache_info != null & cache_info.L2_I == 4">Instructions: <i class="fa-regular fa-circle-xmark"></i> Only misses in cache<br></span>'+
+    '     <span v-if="cache_info != null & cache_info.L2_I == 1">Instructions: <i class="fa-solid fa-circle-exclamation"></i> Hits and misses in cache<br></span>'+
+    '     '+
+    // "             <br>"+
+    '     <span v-if="cache_info != null & cache_info.L2_D == 3">Data: <i class="fa-regular fa-circle-check"></i> Only hits in cache <br></span>'+
+    '     <span v-if="cache_info != null & cache_info.L2_D == 4">Data: <i class="fa-regular fa-circle-xmark"></i> Only misses in cache <br></span>'+
+    '     <span v-if="cache_info != null & cache_info.L2_D == 1">Data: <i class="fa-solid fa-circle-exclamation"></i> Hits and misses in cache<br> </span>'+
+    '     '+
+    "   </b-modal>" +
+
     '   <b-modal id="space_modal" ' +
     '            size="sm" ' +
     '            title="Select space view:" ' +
@@ -14358,6 +15439,188 @@ var uielto_memory = {
     "  </div>",
 };
 Vue.component("table-mem", uielto_memory);
+var uielto_cache_memory = {
+  props: {
+    cache_memory: { type:Array, required: true },
+    cache_policy: { type:String, required: true },
+  },
+  data: function () {
+     return {
+      cache_representation: "L1_I_cache_memory",
+      cache_representation_options: [
+        { text: "L1", value: "L1_cache_memory"    , active:[0, 2, 4] },
+        { text: "L1_I", value: "L1_I_cache_memory", active:[1, 3, 5] },
+        { text: "L1_D", value: "L1_D_cache_memory", active:[1, 3, 5] },
+        { text: "L2_I", value: "L2_I_cache_memory", active:[4, 5] },
+        { text: "L2_D", value: "L2_D_cache_memory", active:[4, 5] },
+        { text: "L2", value: "L2_cache_memory"    , active:[2, 3] },
+        { text: "Info", value: "cache_information" },
+      ],
+    };
+  },
+  methods: {
+    change_cache_memory(cache_segment){
+      if (cache_segment == "L1_cache_memory") {
+        this.cache_memory = L1_cache_memory;
+      } else if (cache_segment == "L1_I_cache_memory") {
+        this.cache_memory = L1_I_cache_memory;
+      } else if (cache_segment == "L1_D_cache_memory") {
+        this.cache_memory = L1_D_cache_memory;
+      } else if (cache_segment == "L2_cache_memory") {
+        this.cache_memory = L2_cache_memory;
+      } else if (cache_segment == "L2_I_cache_memory") {
+        this.cache_memory = L2_I_cache_memory;
+      } else if (cache_segment == "L2_D_cache_memory") {
+        this.cache_memory = L2_D_cache_memory;
+      } else {
+        this.cache_memory = config_cache;
+      }
+        this._data.cache_representation = cache_segment;
+        app._data.cache_memory = this.cache_memory;
+    
+        // console.log(cache_segment)
+    }
+  },
+  computed: {
+    activeLevels(){
+      let actualct = app._data.cache_type;
+      return this.cache_representation_options.filter(o => !o.active || o.active.includes(app._data.cache_type));
+    }
+  },
+
+  template:
+    ' <b-container fluid align-h="center" class="mx-0 my-3 px-2">' +
+    '   <b-row cols-xl="2" cols-lg="1" cols-md="2" cols-sm="1" cols-xs="1" cols="1">' +
+    '     <b-col align-h="center" class="px-2">' +
+    '       <div class="border m-1 py-1 px-2">' +
+    '         <b-badge variant="light" class="h6 groupLabelling border mx-2 my-0">Cache memory segment</b-badge>' +
+    '         <b-form-group class="mb-2" v-slot="{ ariaDescribedby }" >' +
+    "           <b-form-radio-group" +
+    '             id="btn-radios-1"' +
+    '             class="w-100"' +
+    '             v-model="cache_representation"' +
+    '             :options="activeLevels"' +
+    '             button-variant="outline-secondary"' +
+    '             size="sm"' +
+    '             :aria-describedby="ariaDescribedby"' +
+    '             name="radios-btn-default"' +
+    "             buttons" +
+    '             @change="change_cache_memory"' +
+    "           ></b-form-radio-group>" +
+    "         </b-form-group>" +
+    "       </div >" +
+    "     </b-col>" +
+    "" +
+    "     <b-col></b-col>" +
+    "   </b-row>" +
+    "" +
+    '   <b-row cols="1">' +
+    '     <b-col align-h="center" class="px-2">' +
+    '       <table-cache class="my-2"' +
+    '                  :cache_memory="cache_memory"' +
+    '                  :cache_segment="cache_representation">' +
+    "       </table-cache>" +
+    "     </b-col>" +
+    "   </b-row>" +
+    "" +
+    " </b-container>",
+};
+Vue.component("cache", uielto_cache_memory);
+var uielto_cache_table = {
+  props: {
+    cache_memory: { type: Array, required: true },
+    cache_segment: { type: String, required: true },
+  },
+  data: function() {
+    return {
+      cacheFields: ["ID", /*"Tag","Index",*/ "Address"/*, "Binary"*/],
+      infoFields: ["Configuration", "Value"],
+      row_info: null,
+      selected_space_view: null,
+      selected_stack_view: null,
+    };
+  },
+  methods: {
+    Address (address, size) {
+      let aux = parseInt(address, 16) + (size / 8) - 1;
+      return (address + " - 0x" + (aux.toString(16).padStart(8,"0")).toUpperCase());
+    }
+  },
+  computed: {
+    cache_memory_items() {
+      if (this._props.cache_segment != "cache_information") {
+        console.log(Object.values(this._props.cache_memory).sort((a, b) => b.id - a.id));
+        return Object.values(this.cache_memory).sort((a, b) => a.id - b.id);
+      } else {
+        return Object.values(this.cache_memory);
+      }
+      
+    }
+  },
+  template: // Hacer una tabla para las caches y otra tabla para el info
+    " <div>" +
+    " " +
+    '   <b-container fluid align-h="between" class="mx-0 px-0">' +
+    '     <b-row align-v="start" cols="1">' +
+    '       <b-col class="mx-0 pl-0 pr-2" style="min-height:35vh !important;">' +
+    " " +
+    "         <b-table sticky-header " +
+    '                 striped ref="table"' +
+    "                 small " +
+    "                 hover " +
+    "                 v-if=\"cache_segment != 'cache_information'\""+
+    '                 :items="cache_memory_items" ' +
+    '                 :fields="cacheFields" ' +
+    '                 class="align-items-start"> ' +
+    ''+
+    '           <template v-slot:cell(ID)="{item}">'+
+    '             <b-badge :variant="info">'+
+    '             {{item.id}}</b-badge>'+
+    '           </template>'+
+
+    '           <template v-slot:cell(Address)="{item}">'+
+    '             <b-badge :variant="info">'+
+    '             {{Address(item.addr, item.size)}}</b-badge>'+
+    '           </template>'+
+
+    // '           <template v-slot:cell(Binary)="{item}">'+
+    // '             <b-badge :variant="info">'+
+    // '             {{item.value}}</b-badge>'+
+    // '           </template>'+
+
+    "       </b-table>" +
+
+    "         <b-table sticky-header " +
+    '                 striped ref="table"' +
+    "                 small " +
+    "                 hover " +
+    "                 v-if=\"cache_segment == 'cache_information'\""+
+    '                 :items="cache_memory_items" ' +
+    '                 :fields="infoFields" ' +
+    '                 class="align-items-start"> ' +
+    ''+
+    '           <template v-slot:cell(Configuration)="{item}">'+
+    '               <b-badge :variant="info">'+
+    '             {{item.configuration}}</b-badge>'+
+    '           </template>'+
+
+    '           <template v-slot:cell(Value)="{item}">'+
+    '             <b-badge :variant="info">'+
+    '             {{item.value}}</b-badge>'+
+    '           </template>'+
+    "         </b-table>"+
+    " " +
+    "       </b-col>" +
+    "     </b-row>" +
+    " " +
+    "   </b-container>" +
+    " " +
+    " " +
+    "  </div>",
+};
+Vue.component("table-cache", uielto_cache_table);
+
+
 var uielto_stats = {
   props: {
     stats: { type: Array, required: true },
@@ -14868,15 +16131,20 @@ try {
       notifications: notifications,
       creator_mode: "load_architecture",
       default_architecture: "none",
+      cache_policy: "FIFO",
+      cache_type: 0, 
+      cache_memory: L1_I_cache_memory,
+      // data_cache_block_size: 64,
       stack_total_list: 40,
       notification_time: 1500,
       instruction_help_size: 33,
-      autoscroll: true, 
-      font_size: 15, 
-      c_debug: false, 
-      c_kernel: true, 
-      c_sudo: false, 
-      update_binary: [], 
+      autoscroll: true,
+      font_size: 15,
+      c_debug: false,
+      c_kernel: true,
+      c_sudo: false,
+      c_cache: false,
+      update_binary: [],
       dark: false,
       arch_available: architecture_available,
       back_card: back_card,
@@ -14897,6 +16165,24 @@ try {
       instructions: instructions,
       data_mode: "int_registers",
       main_memory: {},
+      L1_I_cache_memory: {},
+      L1_D_cache_memory: {},
+      L1_cache_memory: {},
+      L2_I_cache_memory: {},
+      L2_D_cache_memory: {},
+      L2_cache_memory: {},
+      L1_size: 32,
+      L1_size_block: 32,
+      L1_I_size: 32,
+      L1_I_size_block: 32,
+      L1_D_size: 32,
+      L1_D_size_block: 32,
+      L2_size: 32,
+      L2_size_block: 32,
+      L2_I_size: 32,
+      L2_I_size_block: 32,
+      L2_D_size: 32,
+      L2_D_size_block: 32,
       main_memory_busy: false,
       track_stack_names: track_stack_names,
       callee_subrutine: "",
@@ -15119,9 +16405,9 @@ function newFile(filename = ""){
   if(!filename_prompt.endsWith(".s"))
     filename_prompt = filename_prompt + ".s";
   }
-  else 
+  else
     filename_prompt = filename;
-  
+
   /* ACTUALIZACION DEL EDITOR DE CÓDIGO */
 
   var newAssemblyFile =  {
@@ -15150,7 +16436,7 @@ function closeFile(filename){
       }
     }
   }
-  
+
 }
 
 function renameFile(){
@@ -15186,7 +16472,7 @@ function deleteFile(){
   }
 
   for (let i = 0; i < app.tabs.length; i++) {
-    
+
     if (app.tabs[i].title === filename)
       app.tabs.splice(i, 1);
 
@@ -15199,9 +16485,9 @@ function openFile(name = ""){
   let filename;
   if (name === "")
     filename = selectedFile;
-  else 
+  else
     filename = name;
-  
+
   let tabIndex_a = app.tabs.findIndex(tab => tab.title === filename);
 
   if (tabIndex_a !== -1){
@@ -15231,7 +16517,7 @@ function showFile(filename){
   for(let i  = 0;i < assembly_files.length; i++){
     if(assembly_files[i].filename === filename){
       assembly_files[i].editing_now = true;
-      if (textarea_assembly_editor !== undefined) 
+      if (textarea_assembly_editor !== undefined)
       textarea_assembly_editor.setValue(assembly_files[i].code);
     }
   }
