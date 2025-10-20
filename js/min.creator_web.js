@@ -89,7 +89,7 @@ function clean_environment() {
 // Funcion para limpiar el entorno en caso de que haya ocurrido algun error durante la ejecución
 // o si ha ido exitoso para volver a utilizarlo sin tener que recargar la página.
 function resetenvironment (value){
-  if (can_reset || value === 2) {
+  if (can_reset || value === 2 || (!can_reset && value == 0 && execution_mode_run === -1)) {
       if (Module !== undefined)
         clean_environment();
       if (is_32b_arch){
@@ -121,6 +121,9 @@ function resetenvironment (value){
       calledMain = false;
       calledRun = false;
       err_comp = false;
+      assembled = false;
+      linked = false;
+      dissambled = false;
       runtimeInitialized = false;
       entry_elf = undefined;
       enablefpd = false;
@@ -2044,7 +2047,7 @@ function main_memory_read(addr) {
   return main_memory_packs_forav(addr, "00");
 }
 function main_memory_write(addr, value) {
-  console.log("valor a escribir: ", value);
+  // console.log("valor a escribir: ", value);
   main_memory[addr] = value;
 }
 function main_memory_zerofill(addr, size) {
@@ -3165,13 +3168,14 @@ function process_data_to_store_memory(){
 }
 
 function assembly_compiler()
-{ creator_memory_clear();
+{ 
+  creator_memory_clear();
   var explabel = /^(\w+):/;
   var expvalue = /\.(\w+)\s+(.+)/;
   var expalign = /^\.align\s+(\d+)/;
   var data_alignment = 0;
   // const start_compile = performance.now();
-  if(!assembled && !linked && !dissambled && execution_mode_run === -1){
+  if(!assembled && !linked && !dissambled && execution_mode_run === -1 && typeof preprocess_as === "function"){
     var is_text = false;
     var is_data = false;
     var labeltext = "";
@@ -3303,7 +3307,7 @@ function assembly_compiler()
     }
 
     if(!preprocess_run(filenames, filecontents, enablefpd, enablevec)){
-      console.log("objectcontent_err: ", objectcontent);
+      // console.log("objectcontent_err: ", objectcontent);
       if (objectcontent === undefined){
         can_reset = true;
         app.$bvToast.hide();
@@ -3376,7 +3380,7 @@ function assembly_compiler()
                 visible: true,
                 hide: false,
               });
-              console.log("entrada: ", entry_elf);
+              // console.log("entrada: ", entry_elf);
               if(is_32b_arch){
                 if (dumptextinstructions[i][0] === entry_elf || ("0x"+dumptextinstructions[i][0]) === entry_elf )
                   instructions[i]._rowVariant = 'success';
@@ -3649,7 +3653,10 @@ function assembly_compiler()
   }
   else {
     // reestablecemos al estado inicial para volver a compilar
-    if(execution_mode_run !== -1 && !can_reset){
+    if (!assembled && !linked && !dissambled) {
+      setTimeout(assembly_compiler, 200);
+    }
+    else if(execution_mode_run !== -1 && !can_reset){
       Module._reanudar_ejecucion(parseInt(5,10));
       setTimeout(assembly_compiler, 100);
     } else if (execution_mode_run !== -1 && can_reset)
@@ -10347,7 +10354,7 @@ var uielto_cache_configuration = {
       );
     },
     change_cache_architecture(value){
-      console.log(value);
+      // console.log(value);
       this._props.cache_type = value;
       this.cache_type = value;
       app._data.cache_type = value;
@@ -10360,13 +10367,13 @@ var uielto_cache_configuration = {
         "configuration.cache_type." +
           this._props.cache_type,
       );
-      console.log("Condigurarion componente:", this._props.cache_type);
-      console.log("Condigurarion global:", app._data.cache_type);
+      // console.log("Condigurarion componente:", this._props.cache_type);
+      // console.log("Condigurarion global:", app._data.cache_type);
     },
     change_cache_lines(cache, value){
       switch(cache){
         case 0:
-          console.log(value);
+          // console.log(value);
           var L1_prev_size = this._props.L1_size;
           if (value) {
             this._props.L1_size =
@@ -10961,7 +10968,7 @@ var uielto_registers = {
   methods: {
     element_id(name, type, double) {
       var id = 0;
-      console.log(name);
+      // console.log(name);
       for (var i = 0; i < architecture.components.length; i++) {
         for (var j = 0; j < architecture.components[i].elements.length; j++) {
           if (architecture.components[i].elements[j].name == name) {
@@ -11557,6 +11564,14 @@ var uielto_examples = {
       this.$root.$emit("bv::hide::modal", this._props.modal, "#closeExample");
       $.get(url, function (data) {
         let name = url.split("/");
+        // Comprobar si ya hay un ejemplo cargado y compilado.
+        if (instructions.length != 0) {
+          for(let i = 0; i < assembly_files.length; i++){
+            app.files_list[i].to_compile = false;
+            assembly_files[i].to_compile = false;
+          }
+          resetenvironment(0);
+        }
         newFile(name[2]);
         let index = assembly_files.findIndex(asm => asm.filename === name[2]);
         assembly_files[index].code = data;
@@ -11702,7 +11717,7 @@ var uielto_load_library = {
         var arrayBuffer;
         reader.onload = function (ev) {
           arrayBuffer = ev.target.result;
-          console.log("nombre: ", file);
+          // console.log("nombre: ", file);
           app.update_binary.push({name : file.name, lib :new Uint8Array(arrayBuffer), apply: true});
 
         };
@@ -11969,10 +11984,10 @@ var uielto_applied_libs = {
       let lib_index = this.libs_to_list.findIndex(file => file.name === filename);
       let binary_index = app.update_binary.findIndex(binary => binary.name === filename);
 
-      console.log(binary_index);
+      // console.log(binary_index);
       app.update_binary[binary_index].apply = !app.update_binary[binary_index].apply;
       this.libs_to_list[lib_index].apply = !this.libs_to_list[lib_index].apply;
-      console.log(app.update_binary);
+      // console.log(app.update_binary);
     }
 
   },
@@ -13522,7 +13537,7 @@ function getDebounceTime() {
 }
 
 function changeEntry(value){
-  console.log("Inicio: ", entry_elf);
+  // console.log("Inicio: ", entry_elf);
   if (execution_mode_run !== -1) {
     // show error
     show_notification("You cannot change the entry binary value during the execution. Please stop or reset the simulation environment", "danger");
@@ -13537,7 +13552,7 @@ function changeEntry(value){
     if (!entry_elf.startsWith("0x"))
       entry_elf = "0x" + entry_elf;
   }
-  console.log("Cambia el entry: ", entry_elf);
+  // console.log("Cambia el entry: ", entry_elf);
 }
 
 var uielto_execution = {
@@ -13604,11 +13619,11 @@ var uielto_execution = {
       // let menu = document.getElementById("entryMenu");
 
       let menu = this.$refs.entryMenu;
-      console.log(document);
-      console.log(menu);
-      console.log(event);
-      console.log(item);
-      console.log(index);
+      // console.log(document);
+      // console.log(menu);
+      // console.log(event);
+      // console.log(item);
+      // console.log(index);
       this.selectedItem = index;
 
 
@@ -14437,7 +14452,7 @@ var uielto_register_popover = {
                         ret = hex2float("0x"+(((register.value).toString(16)).padStart(8, "0")));
                       }
                       else {
-                        console.log(register);
+                        // console.log(register);
                         ret = bi_BigIntTofloat(register.value);
                       }
                       break;
@@ -15123,7 +15138,7 @@ var uielto_memory = {
       }
     },
     select_data_type(record, index) {
-      console.log(index);
+      // console.log(index);
       this.row_info = {
         index: index,
         addr: record.addr - 3,
@@ -15178,7 +15193,7 @@ var uielto_memory = {
         }
         this.$root.$emit("bv::show::modal", "cache_modal");
       }
-      console.log("Entrada: ", record);
+      // console.log("Entrada: ", record);
     },
     change_space_view() {
       creator_memory_update_space_view(
@@ -15548,13 +15563,10 @@ var uielto_cache_table = {
   },
   computed: {
     cache_memory_items() {
-      if (this._props.cache_segment != "cache_information") {
-        console.log(Object.values(this._props.cache_memory).sort((a, b) => b.id - a.id));
+      if (this._props.cache_segment != "cache_information") 
         return Object.values(this.cache_memory).sort((a, b) => a.id - b.id);
-      } else {
+       else 
         return Object.values(this.cache_memory);
-      }
-      
     }
   },
   template: // Hacer una tabla para las caches y otra tabla para el info
@@ -16510,7 +16522,8 @@ function showFile(filename){
 
   for(let i = 0; i < assembly_files.length; i++){
     if(assembly_files[i].editing_now){
-      assembly_files[i].code = textarea_assembly_editor.getValue();
+      if (textarea_assembly_editor !== undefined)
+        assembly_files[i].code = textarea_assembly_editor.getValue();
       assembly_files[i].editing_now = false;
     }
   }
