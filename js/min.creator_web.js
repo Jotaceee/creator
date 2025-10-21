@@ -3654,7 +3654,10 @@ function assembly_compiler()
   else {
     // reestablecemos al estado inicial para volver a compilar
     if (!assembled && !linked && !dissambled) {
-      setTimeout(assembly_compiler, 200);
+      if (is_32b_arch)
+        setTimeout(assembly_compiler, 200);
+      else 
+        setTimeout(assembly_compiler, 300);
     }
     else if(execution_mode_run !== -1 && !can_reset){
       Module._reanudar_ejecucion(parseInt(5,10));
@@ -10691,7 +10694,7 @@ var uielto_cache_configuration = {
   template:
   " <b-container fluid>"+
   '   <b-row>'+
-  '     <b-col cols="6">'+ // parte izquierda
+  '     <b-col cols="3">'+ // parte izquierda
   ''+
   ''+
   ''+
@@ -10748,7 +10751,7 @@ var uielto_cache_configuration = {
   ''+
   ''+
   ''+
-  '     <b-col>'+ // Parte derecha
+  '     <b-col cols="3">'+ // Parte derecha
   ''+
 
   '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
@@ -15165,7 +15168,8 @@ var uielto_memory = {
       // Extraer la informacion de la cache asociada a dicha instruccion o dato
       if (this.memory_segment == "data_memory") {
         if (this.check_tag_null(record.hex)) {
-          let auxmem = main_memory[parseInt(record.addr_begin, 16)];
+
+          let auxmem = (is_32b_arch) ? main_memory[parseInt(record.addr_begin, 16)] : main_memory[BigInt(record.addr_begin)];
           let auxL1_I = 0;
           let auxL1_D = auxmem.L1_D;
           let auxL2_I = 0;
@@ -15180,10 +15184,10 @@ var uielto_memory = {
         }
       }
       if (this.memory_segment == "instructions_memory") {
-        let auxins = instructions.find(insn => insn.Address.toLowerCase() == record.addr_begin.toLowerCase());
-        let auxL1_I = auxins.L1_I;
+        let auxins = instructions.find(insn => insn.Address.toLowerCase() == ((is_32b_arch) ? record.addr_begin.toLowerCase() : ("0x" + BigInt(record.addr_begin).toString(16).toLowerCase() ) ));
+        let auxL1_I = (auxins == undefined) ? 0 : auxins.L1_I;
         let auxL1_D = 0; // auxins.L1_D;
-        let auxL2_I = auxins.L2_I;
+        let auxL2_I = (auxins == undefined) ? 0 : auxins.L2_I;
         let auxL2_D = 0; // auxins.L2_D;
         this.cache_info = {
           L1_I: auxL1_I,
@@ -15557,8 +15561,13 @@ var uielto_cache_table = {
   },
   methods: {
     Address (address, size) {
-      let aux = parseInt(address, 16) + (size / 8) - 1;
-      return (address + " - 0x" + (aux.toString(16).padStart(8,"0")).toUpperCase());
+      if (is_32b_arch) {
+        let aux = parseInt(address, 16) + (size / 8) - 1;
+        return (address + " - 0x" + (aux.toString(16).padStart(8,"0")).toUpperCase());
+      } else {
+        let aux = BigInt(address) + (BigInt(size) / 8n) - 1n;
+        return (address + " - 0x" + (aux.toString(16).padStart(16,"0")).toUpperCase());
+      }
     }
   },
   computed: {
