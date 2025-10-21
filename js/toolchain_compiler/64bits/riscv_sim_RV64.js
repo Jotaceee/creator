@@ -5504,6 +5504,12 @@ function preprocess_sail(elffile, enablefpd, enablevec, entry_add){
     }
   }
 
+  argumentsToRun.push("--cache-pol");
+    if (app.cache_policy === "FIFO")
+      argumentsToRun.push("1");
+    else 
+      argumentsToRun.push("0");
+
   run(["--entry-address", entry_add, ...argumentsToRun, "-p", "output.elf"]);
 
 
