@@ -13800,22 +13800,22 @@ var uielto_cache_info = {
   '<div>'+
   ' <b-popover :target="target" triggers="hover focus" placement="button" html>'+
   '   <div>'+
-  '     <span v-if="cache_type==\'L1\' && (instruction.L1_I != 0) || cache_type==\'L2\' && (instruction.L2_I != 0)" :style="{whiteSpace: \'pre-line\' }">Instructions</span>'+
-  '     <span v-if="cache_type==\'L1\' && (instruction.L1_I == 3)"><i class="fa-regular fa-circle-check"></i></span>'+
-  '     <span v-if="cache_type==\'L1\' && (instruction.L1_I == 4)"><i class="fa-regular fa-circle-xmark"></i></span>'+
-  '     <span v-if="cache_type==\'L1\' && (instruction.L1_I == 1)"><i class="fa-solid fa-circle-exclamation"></i></span>'+
-  '     <span v-if="cache_type==\'L2\' && (instruction.L2_I == 3)"><i class="fa-regular fa-circle-check"></i></span>'+
-  '     <span v-if="cache_type==\'L2\' && (instruction.L2_I == 4)"><i class="fa-regular fa-circle-xmark"></i></span>'+
-  '     <span v-if="cache_type==\'L2\' && (instruction.L2_I == 1)"><i class="fa-solid fa-circle-exclamation"></i></span>'+
+  // '     <span v-if="cache_type==\'L1\' && (instruction.L1_I != 0) || cache_type==\'L2\' && (instruction.L2_I != 0)" :style="{whiteSpace: \'pre-line\' }">Instruction:</span>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_I == 3)"><i class="fa-regular fa-circle-check"></i> There are hits on cache instruction access </span>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_I == 4)"><i class="fa-regular fa-circle-xmark"></i> There are misses on cache instruction access </span>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_I == 1)"><i class="fa-solid fa-circle-exclamation"></i> There are hits and misses on cache instruction access </span>'+
+  '     <span v-if="cache_type==\'L2\' && (instruction.L2_I == 3)"><i class="fa-regular fa-circle-check"></i> There are hits on cache instruction access </span>'+
+  '     <span v-if="cache_type==\'L2\' && (instruction.L2_I == 4)"><i class="fa-regular fa-circle-xmark"></i> There are misses on cache instruction access </span>'+
+  '     <span v-if="cache_type==\'L2\' && (instruction.L2_I == 1)"><i class="fa-solid fa-circle-exclamation"></i> There are hits and misses on cache instruction access </span>'+
   '   </div>'+
   '   <div>'+
-  '     <span v-if="cache_type==\'L1\' && (instruction.L1_D != 0) || cache_type==\'L2\' && (instruction.L2_D != 0)" :style="{whiteSpace: \'pre-line\' }">Data</span>'+
-  '     <span v-if="cache_type==\'L1\' && (instruction.L1_D == 3)"><i class="fa-regular fa-circle-check"></i></span>'+
-  '     <span v-if="cache_type==\'L1\' && (instruction.L1_D == 4)"><i class="fa-regular fa-circle-xmark"></i></span>'+
-  '     <span v-if="cache_type==\'L1\' && (instruction.L1_D == 1)"><i class="fa-solid fa-circle-exclamation"></i></span>'+
-  '     <span v-if="cache_type==\'L2\' && (instruction.L2_D == 3)"><i class="fa-regular fa-circle-check"></i></span>'+
-  '     <span v-if="cache_type==\'L2\' && (instruction.L2_D == 4)"><i class="fa-regular fa-circle-xmark"></i></span>'+
-  '     <span v-if="cache_type==\'L2\' && (instruction.L2_D == 1)"><i class="fa-solid fa-circle-exclamation"></i></span>'+
+  // '     <span v-if="cache_type==\'L1\' && (instruction.L1_D != 0) || cache_type==\'L2\' && (instruction.L2_D != 0)" :style="{whiteSpace: \'pre-line\' }">Data: </span>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_D == 3)"><i class="fa-regular fa-circle-check"></i>There are Hits on cache data access </span>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_D == 4)"><i class="fa-regular fa-circle-xmark"></i>There are Misses on cache data access </span>'+
+  '     <span v-if="cache_type==\'L1\' && (instruction.L1_D == 1)"><i class="fa-solid fa-circle-exclamation"></i>There are Hits and misses on cache data access </span>'+
+  '     <span v-if="cache_type==\'L2\' && (instruction.L2_D == 3)"><i class="fa-regular fa-circle-check"></i>There are Hits on cache data access </span>'+
+  '     <span v-if="cache_type==\'L2\' && (instruction.L2_D == 4)"><i class="fa-regular fa-circle-xmark"></i>There are Misses on cache data access </span>'+
+  '     <span v-if="cache_type==\'L2\' && (instruction.L2_D == 1)"><i class="fa-solid fa-circle-exclamation"></i>There are Hits and misses on cache data access </span>'+
   '   </div>'+
   ' </b-popover>'+
   ' '+
@@ -15552,7 +15552,7 @@ var uielto_cache_table = {
   },
   data: function() {
     return {
-      cacheFields: ["ID", /*"Tag","Index",*/ "Address"/*, "Binary"*/],
+      cacheFields: ["ID", /*"Tag","Index",*/ "Tag"/*, "Binary"*/],
       infoFields: ["Configuration", "Value"],
       row_info: null,
       selected_space_view: null,
@@ -15599,7 +15599,7 @@ var uielto_cache_table = {
     '             {{item.id}}</b-badge>'+
     '           </template>'+
 
-    '           <template v-slot:cell(Address)="{item}">'+
+    '           <template v-slot:cell(Tag)="{item}">'+
     '             <b-badge :variant="info">'+
     '             {{Address(item.addr, item.size)}}</b-badge>'+
     '           </template>'+
