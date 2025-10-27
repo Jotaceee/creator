@@ -269,20 +269,27 @@
                       </b-tab>
 
                       <b-tab title="Cache Configuration">
-                        <cache-configuration  :cache_policy="cache_policy"
+                        <cache-configuration  :cache_location="cache_location"
+                                              :cache_policy="cache_policy"
                                               :cache_type="cache_type"
                                               :L1_size="L1_size"
-                                              :L1_size="L1_size_block"
+                                              :L1_size_block="L1_size_block"
+                                              :L1_num_lines="L1_num_lines"
                                               :L1_I_size="L1_I_size"
-                                              :L1_I_size="L1_I_size_block"
+                                              :L1_I_size_block="L1_I_size_block"
+                                              :L1_I_num_lines="L1_num_lines"
                                               :L1_D_size="L1_D_size"
-                                              :L1_D_size="L1_D_size_block"
+                                              :L1_D_size_block="L1_D_size_block"
+                                              :L1_D_num_lines="L1_num_lines"
                                               :L2_size="L2_size"
-                                              :L2_size="L2_size_block"
+                                              :L2_size_block="L2_size_block"
+                                              :L2_num_lines="L1_num_lines"
                                               :L2_I_size="L2_I_size"
-                                              :L2_I_size="L2_I_size_block"
+                                              :L2_I_size_block="L2_I_size_block"
+                                              :L2_I_num_lines="L1_num_lines"
                                               :L2_D_size="L2_D_size"
-                                              :L2_D_size="L2_D_size_block"></cache-configuration>
+                                              :L2_D_size="L2_D_size_block"
+                                              :L2_D_num_lines="L1_num_lines"></cache-configuration>
                       </b-tab>
 
                       <!-- Register File -->

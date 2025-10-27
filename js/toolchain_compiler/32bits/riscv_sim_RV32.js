@@ -166,7 +166,7 @@ var memoryExp = /mem\[0x([0-9A-Fa-f]+)\]\s*(<-|->)\s*0x([0-9A-Fa-f]+)/;
 var CSRTypeExp = /(CSR\S*)\s+(\S+)\s+(\S+)\s+(0x)([\dA-Fa-f]{1,8})/;
 var CSRExp = /^(CSR)\s+(\w+)\s+(<-|->)\s+0x([0-9a-fA-F]+)(?:\s+(.*))?$/;
 var jumpExp = /Next_PC:\s*(0x[0-9a-fA-F]+)/;
-var cacheExp = /^\[(\d+)\]\s+(L1_I|L1_D|L1|L2|L2_I|L2_D):\s*\((0x[0-9A-Fa-f]+)\)\s+<-\s+(\d+)$/;
+var cacheExp = /^\[(\d+)\]\s+(L1_I|L1_D|L1|L2|L2_I|L2_D):\s*\((0x[0-9A-Fa-f]+)\)\s$/;
 var configCacheExp = /^Configuration:\s*([A-Za-z_][A-Za-z0-9_]*)\s*<-\s*(\S+)\s*$/;
 
 // var displayExp = /^[A-Za-z\s]+:\s*(.*)$/;
@@ -553,7 +553,32 @@ Module['print'] = function (message) {
 
   if (cacheMatch) {
     console.log(cacheMatch);
-    updateCacheMem(parseInt(cacheMatch[1],10), cacheMatch[2], cacheMatch[3], parseInt(cacheMatch[4], 10));
+    switch(cacheMatch[2]) {
+      case "L1_I":
+        updateCacheMem(parseInt(cacheMatch[1],10), cacheMatch[2], cacheMatch[3], app._data.L1_I_size_block);
+      break;
+      case "L1_D":
+        updateCacheMem(parseInt(cacheMatch[1],10), cacheMatch[2], cacheMatch[3], app._data.L1_D_size_block);
+        
+      break;
+      case "L1":
+        updateCacheMem(parseInt(cacheMatch[1],10), cacheMatch[2], cacheMatch[3], app._data.L1_size_block);
+        
+      break;
+      case "L2_I":
+        updateCacheMem(parseInt(cacheMatch[1],10), cacheMatch[2], cacheMatch[3], app._data.L2_I_size_block);
+        
+      break;
+      case "L2_D":
+        updateCacheMem(parseInt(cacheMatch[1],10), cacheMatch[2], cacheMatch[3], app._data.L2_D_size_block);
+        
+      break;
+      case "L2":
+        updateCacheMem(parseInt(cacheMatch[1],10), cacheMatch[2], cacheMatch[3], app._data.L2_size_block);
+        
+      break;
+
+    }
   }
 
   if(CSREMatch){

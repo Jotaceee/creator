@@ -2023,6 +2023,10 @@ function main_memory_reset() {
   var addrs = main_memory_get_addresses();
   for (i = 0; i < addrs.length; i++) {
     main_memory[addrs[i]].bin = main_memory[addrs[i]].def_bin;
+    main_memory[addrs[i]].L1_I = 0;
+    main_memory[addrs[i]].L1_D = 0;
+    main_memory[addrs[i]].L2_I = 0;
+    main_memory[addrs[i]].L2_D = 0;
   }
   addrs = main_memory_datatype_get_addresses();
   for (i = 0; i < addrs.length; i++) {
@@ -10293,20 +10297,27 @@ var uielto_memory_layout = {
 Vue.component("memory-layout", uielto_memory_layout);
 var uielto_cache_configuration = {
   props: {
+    cache_location : {type:String, required: true},
     cache_policy : {type:String, required: true },
     cache_type: { type: Number, required: true },
     L1_size: { type:Number, required: true },
     L1_size_block: { type:Number, required: true },
+    L1_num_lines: { type:Number, required: true },
     L1_I_size: { type:Number, required: true },
     L1_I_size_block: { type:Number, required: true },
+    L1_I_num_lines: { type:Number, required: true },
     L1_D_size: { type:Number, required: true },
     L1_D_size_block: { type:Number, required: true },
+    L1_D_num_lines: { type:Number, required: true },
     L2_size: { type:Number, required: true },
     L2_size_block: { type:Number, required: true },
+    L2_num_lines: { type:Number, required: true },
     L2_I_size: { type:Number, required: true },
     L2_I_size_block: { type:Number, required: true },
+    L2_I_num_lines: { type:Number, required: true },
     L2_D_size: { type:Number, required: true },
     L2_D_size_block: { type:Number, required: true },
+    L2_D_num_lines: { type:Number, required: true },
   },
   data: function(){
     return {
@@ -10320,14 +10331,52 @@ var uielto_cache_configuration = {
         // { text: "RISC-V (RV32IMFD)", value: "RISC-V (RV32IMFD)" },
         // { text: "MIPS-32", value: "MIPS-32" },
       ]),
+      cache_locations : (locations = [
+        { text: "Associative",  value: "Associative" },
+        { text: "Associative per sets", value: "Associative_per_sets" },
+      ]),
       running_execution : execution_mode_run,
       cache_policies: (policies = [
         { text: "FIFO", value: "FIFO"},
         { text: "Random", value: "Random"},
-      ])
+      ]),
+      prevL1:   Number(app?._data?.L1_size ?? this.L1_size) || 32,
+      prevL1B:  Number(app?._data?.L1_size_block ?? this.L1_size_block) || 32,
+      prevL1LC: Number(app?._data?.L1_num_lines ?? this.L1_num_lines) || 32,
+
+      prevL1I:  Number(app?._data?.L1_I_size ?? this.L1_I_size) || 32,
+      prevL1IB: Number(app?._data?.L1_I_size_block ?? this.L1_I_size_block) || 32,
+      prevL1ILC: Number(app?._data?.L1_I_num_lines ?? this.L1_I_num_lines) || 32,
+
+      prevL1D:  Number(app?._data?.L1_D_size ?? this.L1_D_size) || 32,
+      prevL1DB: Number(app?._data?.L1_D_size_block ?? this.L1_D_size_block) || 32,
+      prevL1DLC: Number(app?._data?.L1_D_num_lines ?? this.L1_D_num_lines) || 32,
+
+      prevL2:   Number(app?._data?.L2_size ?? this.L2_size) || 32,
+      prevL2B:  Number(app?._data?.L2_size_block ?? this.L2_size_block) || 32,
+      prevL2LC: Number(app?._data?.L2_num_lines ?? this.L2_num_lines) || 32,
+
+      prevL2I:  Number(app?._data?.L2_I_size ?? this.L2_I_size) || 32,
+      prevL2IB: Number(app?._data?.L2_I_size_block ?? this.L2_I_size_block) || 32,
+      prevL2ILC: Number(app?._data?.L2_I_num_lines ?? this.L2_I_num_lines) || 32,
+
+      prevL2D:  Number(app?._data?.L2_D_size ?? this.L2_D_size) || 32,
+      prevL2DB: Number(app?._data?.L2_D_size_block ?? this.L2_D_size_block) || 32,
+      prevL2DLC: Number(app?._data?.L2_D_num_lines ?? this.L2_D_num_lines) || 32,
+
     };
   },
   methods: {
+    pow2Step(prev, v, min, max) {
+      const cur = Number(prev) || min;
+      const target = Number(v);
+      let n = cur;
+      if (target > cur)       n = cur * 2;           // "+"
+      else if (target < cur)  n = Math.floor(cur/2); // "−"
+      // clamp a [min, max]
+      n = Math.max(min, Math.min(max, n));
+      return n;
+    },
     change_cache_memory() {
       if (execution_mode_run === -1) {
         this._props.c_cache = !this._props.c_cache;
@@ -10343,9 +10392,10 @@ var uielto_cache_configuration = {
         );
       }
     },
-    change_policy() {
-      this._props.cache_policy = this.cache_policy;
-      app._data.cache_policy = this._props.cache_policy;
+    change_policy(value) {
+      this._props.cache_policy = value;
+      this.cache_policy = value;
+      app._data.cache_policy = value;
       localStorage.setItem("cache_policy",
         this._props.cache_policy,
       );
@@ -10354,6 +10404,20 @@ var uielto_cache_configuration = {
         "configuration.cache_policy",
         "configuration.cache_policy." +
           this._props.cache_policy,
+      );
+    },
+    change_location(value) {
+      this._props.cache_location = value;
+      this.cache_location = value;
+      app._data.cache_location = value;
+      localStorage.setItem("cache_policy",
+        this._props.cache_location,
+      );
+      creator_ga(
+        "configuration",
+        "configuration.cache_location",
+        "configuration.cache_location." +
+          this._props.cache_location,
       );
     },
     change_cache_architecture(value){
@@ -10373,193 +10437,213 @@ var uielto_cache_configuration = {
       // console.log("Condigurarion componente:", this._props.cache_type);
       // console.log("Condigurarion global:", app._data.cache_type);
     },
-    change_cache_lines(cache, value){
-      switch(cache){
-        case 0:
-          // console.log(value);
-          var L1_prev_size = this._props.L1_size;
-          if (value) {
-            this._props.L1_size =
-              this._props.L1_size + value;
-            if (this._props.L1_size < 32) {
-              this._props.L1_size = 32;
-            }
-            if (this._props.L1_size > 2048) {
-              this._props.L1_size = 2048;
-            }
-          } else {
-            this._props.L1_size = parseInt(
-              this._props.L1_size,
-            );
-          }
-          app._data.L1_size = this._props.L1_size;
-          localStorage.setItem(
-            "conf_L1_size",
-            this._props.L1_size,
-          );
-          creator_ga(
-            "configuration",
-            "configuration.L1_size",
-            "configuration.L1_size.size_" +
-              (
-                L1_prev_size > this._props.L1_size
-              ).toString(),
-          );
-        break;
-        case 1:
-          var L1_I_prev_size = this._props.L1_I_size;
-          if (value) {
-            this._props.L1_I_size =
-              this._props.L1_I_size + value;
-            if (this._props.L1_I_size < 32) {
-              this._props.L1_I_size = 32;
-            }
-            if (this._props.L1_I_size > 1024) {
-              this._props.L1_I_size = 1024;
-            }
-          } else {
-            this._props.L1_I_size = parseInt(
-              this._props.L1_I_size,
-            );
-          }
-          app._data.L1_I_size = this._props.L1_I_size;
-          localStorage.setItem(
-            "conf_L1_I_size",
-            this._props.L1_I_size,
-          );
-          creator_ga(
-            "configuration",
-            "configuration.L1_I_size",
-            "configuration.L1_I_size.size_" +
-              (
-                L1_I_prev_size > this._props.L1_I_size
-              ).toString(),
-          );
-        break;
-        case 2:
-          var L1_D_prev_size = this._props.L1_D_size;
-          if (value) {
-            this._props.L1_D_size =
-              this._props.L1_D_size + value;
-            if (this._props.L1_D_size < 32) {
-              this._props.L1_D_size = 32;
-            }
-            if (this._props.L1_D_size > 1024) {
-              this._props.L1_D_size = 1024;
-            }
-          } else {
-            this._props.L1_D_size = parseInt(
-              this._props.L1_D_size,
-            );
-          }
-          app._data.L1_D_size = this._props.L1_D_size;
-          localStorage.setItem(
-            "conf_L1_D_size",
-            this._props.L1_D_size,
-          );
-          creator_ga(
-            "configuration",
-            "configuration.L1_D_size",
-            "configuration.L1_D_size.size_" +
-              (
-                L1_D_prev_size > this._props.L1_D_size
-              ).toString(),
-          );
-        break;
-        case 3:
-          var L2_prev_size = this._props.L2_size;
-          if (value) {
-            this._props.L2_size =
-              this._props.L2_size + value;
-            if (this._props.L2_size < 32) {
-              this._props.L2_size = 32;
-            }
-            if (this._props.L2_size > 2048) {
-              this._props.L2_size = 2048;
-            }
-          } else {
-            this._props.L2_size = parseInt(
-              this._props.L2_size,
-            );
-          }
-          app._data.L2_size = this._props.L2_size;
-          localStorage.setItem(
-            "conf_L2_size",
-            this._props.L2_size,
-          );
-          creator_ga(
-            "configuration",
-            "configuration.L2_size",
-            "configuration.L2_size.size_" +
-              (
-                L2_prev_size > this._props.L2_size
-              ).toString(),
-          );
-        break;
-        case 4:
-          var L2_I_prev_size = this._props.L2_I_size;
-          if (value) {
-            this._props.L2_I_size =
-              this._props.L2_I_size + value;
-            if (this._props.L2_I_size < 32) {
-              this._props.L2_I_size = 32;
-            }
-            if (this._props.L2_I_size > 1024) {
-              this._props.L2_I_size = 1024;
-            }
-          } else {
-            this._props.L2_I_size = parseInt(
-              this._props.L2_I_size,
-            );
-          }
-          app._data.L2_I_size = this._props.L2_I_size;
-          localStorage.setItem(
-            "conf_L2_I_size",
-            this._props.L2_I_size,
-          );
-          creator_ga(
-            "configuration",
-            "configuration.L2_I_size",
-            "configuration.L2_I_size.size_" +
-              (
-                L2_I_prev_size > this._props.L2_I_size
-              ).toString(),
-          );
-        break;
-        case 5:
-          var L2_D_prev_size = this._props.L2_D_size;
-          if (value) {
-            this._props.L2_D_size =
-              this._props.L2_D_size + value;
-            if (this._props.L2_D_size < 32) {
-              this._props.L2_D_size = 32;
-            }
-            if (this._props.L2_D_size > 1024) {
-              this._props.L2_D_size = 1024;
-            }
-          } else {
-            this._props.L2_D_size = parseInt(
-              this._props.L2_D_size,
-            );
-          }
-          app._data.L2_D_size = this._props.L2_D_size;
-          localStorage.setItem(
-            "conf_L2_D_size",
-            this._props.L2_D_size,
-          );
-          creator_ga(
-            "configuration",
-            "configuration.L2_D_size",
-            "configuration.L2_D_size.size_" +
-              (
-                L2_D_prev_size > this._props.L2_D_size
-              ).toString(),
-          );
-        break;
-      }
-    }
+    // change_cache_lines(cache, value){
+    //   switch(cache){
+    //     case 0:
+    //       // console.log(value);
+    //       var L1_prev_size = this._props.L1_size;
+    //       if (value) {
+    //         this._props.L1_size =
+    //           this._props.L1_size + value;
+    //         if (this._props.L1_size < 32) {
+    //           this._props.L1_size = 32;
+    //         }
+    //         if (this._props.L1_size > 2048) {
+    //           this._props.L1_size = 2048;
+    //         }
+    //       } else {
+    //         this._props.L1_size = parseInt(
+    //           this._props.L1_size,
+    //         );
+    //       }
+    //       app._data.L1_size = this._props.L1_size;
+    //       localStorage.setItem(
+    //         "conf_L1_size",
+    //         this._props.L1_size,
+    //       );
+    //       creator_ga(
+    //         "configuration",
+    //         "configuration.L1_size",
+    //         "configuration.L1_size.size_" +
+    //           (
+    //             L1_prev_size > this._props.L1_size
+    //           ).toString(),
+    //       );
+    //     break;
+    //     case 1:
+    //       var L1_I_prev_size = this._props.L1_I_size;
+    //       if (value) {
+    //         this._props.L1_I_size =
+    //           this._props.L1_I_size + value;
+    //         if (this._props.L1_I_size < 32) {
+    //           this._props.L1_I_size = 32;
+    //         }
+    //         if (this._props.L1_I_size > 1024) {
+    //           this._props.L1_I_size = 1024;
+    //         }
+    //       } else {
+    //         this._props.L1_I_size = parseInt(
+    //           this._props.L1_I_size,
+    //         );
+    //       }
+    //       app._data.L1_I_size = this._props.L1_I_size;
+    //       localStorage.setItem(
+    //         "conf_L1_I_size",
+    //         this._props.L1_I_size,
+    //       );
+    //       creator_ga(
+    //         "configuration",
+    //         "configuration.L1_I_size",
+    //         "configuration.L1_I_size.size_" +
+    //           (
+    //             L1_I_prev_size > this._props.L1_I_size
+    //           ).toString(),
+    //       );
+    //     break;
+    //     case 2:
+    //       var L1_D_prev_size = this._props.L1_D_size;
+    //       if (value) {
+    //         this._props.L1_D_size =
+    //           this._props.L1_D_size + value;
+    //         if (this._props.L1_D_size < 32) {
+    //           this._props.L1_D_size = 32;
+    //         }
+    //         if (this._props.L1_D_size > 1024) {
+    //           this._props.L1_D_size = 1024;
+    //         }
+    //       } else {
+    //         this._props.L1_D_size = parseInt(
+    //           this._props.L1_D_size,
+    //         );
+    //       }
+    //       app._data.L1_D_size = this._props.L1_D_size;
+    //       localStorage.setItem(
+    //         "conf_L1_D_size",
+    //         this._props.L1_D_size,
+    //       );
+    //       creator_ga(
+    //         "configuration",
+    //         "configuration.L1_D_size",
+    //         "configuration.L1_D_size.size_" +
+    //           (
+    //             L1_D_prev_size > this._props.L1_D_size
+    //           ).toString(),
+    //       );
+    //     break;
+    //     case 3:
+    //       var L2_prev_size = this._props.L2_size;
+    //       if (value) {
+    //         this._props.L2_size =
+    //           this._props.L2_size + value;
+    //         if (this._props.L2_size < 32) {
+    //           this._props.L2_size = 32;
+    //         }
+    //         if (this._props.L2_size > 2048) {
+    //           this._props.L2_size = 2048;
+    //         }
+    //       } else {
+    //         this._props.L2_size = parseInt(
+    //           this._props.L2_size,
+    //         );
+    //       }
+    //       app._data.L2_size = this._props.L2_size;
+    //       localStorage.setItem(
+    //         "conf_L2_size",
+    //         this._props.L2_size,
+    //       );
+    //       creator_ga(
+    //         "configuration",
+    //         "configuration.L2_size",
+    //         "configuration.L2_size.size_" +
+    //           (
+    //             L2_prev_size > this._props.L2_size
+    //           ).toString(),
+    //       );
+    //     break;
+    //     case 4:
+    //       var L2_I_prev_size = this._props.L2_I_size;
+    //       if (value) {
+    //         this._props.L2_I_size =
+    //           this._props.L2_I_size + value;
+    //         if (this._props.L2_I_size < 32) {
+    //           this._props.L2_I_size = 32;
+    //         }
+    //         if (this._props.L2_I_size > 1024) {
+    //           this._props.L2_I_size = 1024;
+    //         }
+    //       } else {
+    //         this._props.L2_I_size = parseInt(
+    //           this._props.L2_I_size,
+    //         );
+    //       }
+    //       app._data.L2_I_size = this._props.L2_I_size;
+    //       localStorage.setItem(
+    //         "conf_L2_I_size",
+    //         this._props.L2_I_size,
+    //       );
+    //       creator_ga(
+    //         "configuration",
+    //         "configuration.L2_I_size",
+    //         "configuration.L2_I_size.size_" +
+    //           (
+    //             L2_I_prev_size > this._props.L2_I_size
+    //           ).toString(),
+    //       );
+    //     break;
+    //     case 5:
+    //       var L2_D_prev_size = this._props.L2_D_size;
+    //       if (value) {
+    //         this._props.L2_D_size =
+    //           this._props.L2_D_size + value;
+    //         if (this._props.L2_D_size < 32) {
+    //           this._props.L2_D_size = 32;
+    //         }
+    //         if (this._props.L2_D_size > 1024) {
+    //           this._props.L2_D_size = 1024;
+    //         }
+    //       } else {
+    //         this._props.L2_D_size = parseInt(
+    //           this._props.L2_D_size,
+    //         );
+    //       }
+    //       app._data.L2_D_size = this._props.L2_D_size;
+    //       localStorage.setItem(
+    //         "conf_L2_D_size",
+    //         this._props.L2_D_size,
+    //       );
+    //       creator_ga(
+    //         "configuration",
+    //         "configuration.L2_D_size",
+    //         "configuration.L2_D_size.size_" +
+    //           (
+    //             L2_D_prev_size > this._props.L2_D_size
+    //           ).toString(),
+    //       );
+    //     break;
+    //   }
+    // }
   },
   computed: {
+    L1_gs: {
+      get() {
+        const v = app?._data?.L1_size ?? this.L1_size;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = this.pow2Step(this.prevL1, v, 32, 2048);
+        app._data.L1_size = n;
+        this.$emit('update:L1_size', n);
+        localStorage.setItem('conf_L1_size', n);
+        this.prevL1 = n;
+        if (this.prevL1 < this.prevL1LC || this.cache_location === "Associative"){ // Se reduce el numero de líneas por cjto
+          this.prevL1LC = this.prevL1;
+          app._data.L1_num_lines = this.prevL1;
+          this.$emit('update:L1_num_lines', n);
+          localStorage.setItem('conf_L1_num_lines', n);
+        }
+      }
+    },
     L1_gsb: {
       get() {
         const v = app?._data?.L1_size_block ?? this.L1_size_block;
@@ -10567,10 +10651,31 @@ var uielto_cache_configuration = {
         return Number.isFinite(n) ? n : 32;
       },
       set(v) {
-        const n = Math.max(32, Math.min(128, Number(v) || 32));
+        const n = this.pow2Step(this.prevL1B, v, 32, 128);
         app._data.L1_size_block = n;
         this.$emit('update:L1_size_block', n);
         localStorage.setItem('conf_L1_size_block', n);
+        this.prevL1B = n;
+      }
+    },
+    L1_gsl: {
+      get() {
+        const v = app?._data?.L1_num_lines ?? this.L1_num_lines;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = this.pow2Step(this.prevL1LC, v, 32, 2048);
+        app._data.L1_num_lines = n;
+        this.$emit('update:L1_num_lines', n);
+        localStorage.setItem('conf_L1_num_lines', n);
+        this.prevL1LC = n;
+        if (this.prevL1LC > this.prevL1) {
+          this.prevL1 = this.prevL1LC;
+          app._data.L1_size = this.prevL1LC;
+          this.$emit('update:L1_size', n);
+          localStorage.setItem('conf_L1_size', n);
+        }
       }
     },
     L1I_gs: {
@@ -10580,10 +10685,17 @@ var uielto_cache_configuration = {
         return Number.isFinite(n) ? n : 32;
       },
       set(v) {
-        const n = Math.max(32, Math.min(1024, Number(v) || 32));
+        const n = this.pow2Step(this.prevL1I, v, 32, 1024);
         app._data.L1_I_size = n;
         this.$emit('update:L1_I_size', n);
         localStorage.setItem('conf_L1_I_size', n);
+        this.prevL1I = n;
+        if (this.prevL1I < this.prevL1ILC || this.cache_location === "Associative"){ // Se reduce el numero de líneas por cjto
+          this.prevL1ILC = this.prevL1I;
+          app._data.L1_I_num_lines = this.prevL1I;
+          this.$emit('update:L1_I_num_lines', n);
+          localStorage.setItem('conf_L1_I_num_lines', n);
+        }
       }
     },
     L1I_gsb: {
@@ -10593,10 +10705,31 @@ var uielto_cache_configuration = {
         return Number.isFinite(n) ? n : 32;
       },
       set(v) {
-        const n = Math.max(32, Math.min(128, Number(v) || 32));
+        const n = this.pow2Step(this.prevL1IB, v, 32, 128);
         app._data.L1_I_size_block = n;
         this.$emit('update:L1_I_size_block', n);
         localStorage.setItem('conf_L1_I_size_block', n);
+        this.prevL1IB = n;
+      }
+    },
+    L1I_gsl: {
+      get() {
+        const v = app?._data?.L1_I_num_lines ?? this.L1_I_num_lines;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = this.pow2Step(this.prevL1ILC, v, 32, 1024);
+        app._data.L1_I_num_lines = n;
+        this.$emit('update:L1_I_num_lines', n);
+        localStorage.setItem('conf_L1_I_num_lines', n);
+        this.prevL1ILC = n;
+        if (this.prevL1ILC > this.prevL1I) {
+          this.prevL1I = this.prevL1ILC;
+          app._data.L1_I_size = this.prevL1ILC;
+          this.$emit('update:L1_I_size', n);
+          localStorage.setItem('conf_L1_I_size', n);
+        }
       }
     },
     L1D_gs: {
@@ -10606,10 +10739,17 @@ var uielto_cache_configuration = {
         return Number.isFinite(n) ? n : 32;
       },
       set(v) {
-        const n = Math.max(32, Math.min(1024, Number(v) || 32));
+        const n = this.pow2Step(this.prevL1D, v, 32, 1024);
         app._data.L1_D_size = n;
         this.$emit('update:L1_D_size', n);
         localStorage.setItem('conf_L1_D_size', n);
+        this.prevL1D = n;
+        if (this.prevL1D < this.prevL1DLC || this.cache_location === "Associative"){ // Se reduce el numero de líneas por cjto
+          this.prevL1DLC = this.prevL1D;
+          app._data.L1_D_num_lines = this.prevL1D;
+          this.$emit('update:L1_D_num_lines', n);
+          localStorage.setItem('conf_L1_D_num_lines', n);
+        }
       }
     },
     L1D_gsb: {
@@ -10619,10 +10759,31 @@ var uielto_cache_configuration = {
         return Number.isFinite(n) ? n : 32;
       },
       set(v) {
-        const n = Math.max(32, Math.min(128, Number(v) || 32));
+        const n = this.pow2Step(this.prevL1DB, v, 32, 128)
         app._data.L1_D_size_block = n;
         this.$emit('update:L1_D_size_block', n);
         localStorage.setItem('conf_L1_D_size_block', n);
+        this.prevL1DB = n;
+      }
+    },
+    L1D_gsl: {
+      get() {
+        const v = app?._data?.L1_D_num_lines ?? this.L1_D_num_lines;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = this.pow2Step(this.prevL1DLC, v, 32, 1024);
+        app._data.L1_D_num_lines = n;
+        this.$emit('update:L1_D_num_lines', n);
+        localStorage.setItem('conf_L1_D_num_lines', n);
+        this.prevL1DLC = n;
+        if (this.prevL1DLC > this.prevL1D) {
+          this.prevL1D = this.prevL1DLC;
+          app._data.L1_D_size = this.prevL1DLC;
+          this.$emit('update:L1_D_size', n);
+          localStorage.setItem('conf_L1_D_size', n);
+        }
       }
     },
     L2I_gs: {
@@ -10632,10 +10793,17 @@ var uielto_cache_configuration = {
         return Number.isFinite(n) ? n : 32;
       },
       set(v) {
-        const n = Math.max(32, Math.min(1024, Number(v) || 32));
+        const n = this.pow2Step(this.prevL2I, v, 32, 1024);
         app._data.L2_I_size = n;
         this.$emit('update:L2_I_size', n);
         localStorage.setItem('conf_L2_I_size', n);
+        this.prevL2I = n;
+        if (this.prevL2I < this.prevL2ILC || this.cache_location === "Associative"){ // Se reduce el numero de líneas por cjto
+          this.prevL2ILC = this.prevL1;
+          app._data.L2_I_num_lines = this.prevL2I;
+          this.$emit('update:L2_I_num_lines', n);
+          localStorage.setItem('conf_L2_I_num_lines', n);
+        }
       }
     },
     L2I_gsb: {
@@ -10645,10 +10813,31 @@ var uielto_cache_configuration = {
         return Number.isFinite(n) ? n : 32;
       },
       set(v) {
-        const n = Math.max(32, Math.min(128, Number(v) || 32));
+        const n = this.pow2Step(this.prevL2IB, v, 32, 128);
         app._data.L2_I_size_block = n;
         this.$emit('update:L2_I_size_block', n);
         localStorage.setItem('conf_L2_I_size_block', n);
+        this.prevL2IB = n;
+      }
+    },
+    L2I_gsl: {
+      get() {
+        const v = app?._data?.L2_I_num_lines ?? this.L2_I_num_lines;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = this.pow2Step(this.prevL2ILC, v, 32, 1024);
+        app._data.L2_I_num_lines = n;
+        this.$emit('update:L2_I_num_lines', n);
+        localStorage.setItem('conf_L2_I_num_lines', n);
+        this.prevL2ILC = n;
+        if (this.prevL2ILC > this.prevL2I) {
+          this.prevL2I = this.prevL2ILC;
+          app._data.L2_I_size = this.prevL2ILC;
+          this.$emit('update:L2_I_size', n);
+          localStorage.setItem('conf_L2_I_size', n);
+        }
       }
     },
     L2D_gs: {
@@ -10658,10 +10847,17 @@ var uielto_cache_configuration = {
         return Number.isFinite(n) ? n : 32;
       },
       set(v) {
-        const n = Math.max(32, Math.min(1024, Number(v) || 32));
+        const n = this.pow2Step(this.prevL2D, v, 32, 1024);
         app._data.L2_D_size = n;
         this.$emit('update:L2_D_size', n);
         localStorage.setItem('conf_L2_D_size', n);
+        this.prevL2D = n;
+        if (this.prevL2D < this.prevL2DLC || this.cache_location === "Associative"){ // Se reduce el numero de líneas por cjto
+          this.prevL2DLC = this.prevL2D;
+          app._data.L2_D_num_lines = this.prevL2D;
+          this.$emit('update:L2_D_num_lines', n);
+          localStorage.setItem('conf_L2_D_num_lines', n);
+        }
       }
     },
     L2D_gsb: {
@@ -10671,10 +10867,51 @@ var uielto_cache_configuration = {
         return Number.isFinite(n) ? n : 32;
       },
       set(v) {
-        const n = Math.max(32, Math.min(128, Number(v) || 32));
+        const n = this.pow2Step(this.prevL2DB, v, 32, 128);
         app._data.L2_D_size_block = n;
         this.$emit('update:L2_D_size_block', n);
         localStorage.setItem('conf_L2_D_size_block', n);
+        this.prevL2DB = n;
+      }
+    },
+    L2D_gsl: {
+      get() {
+        const v = app?._data?.L2_D_num_lines ?? this.L2_D_num_lines;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = this.pow2Step(this.prevL2DLC, v, 32, 1024);
+        app._data.L2_D_num_lines = n;
+        this.$emit('update:L2_D_num_lines', n);
+        localStorage.setItem('conf_L2_D_num_lines', n);
+        this.prevL2DLC = n;
+        if (this.prevL2DLC > this.prevL2D) {
+          this.prevL2D = this.prevL2DLC;
+          app._data.L2_D_size = this.prevL2DLC;
+          this.$emit('update:L2_D_size', n);
+          localStorage.setItem('conf_L2_D_size', n);
+        }
+      }
+    },
+    L2_gs: {
+      get() {
+        const v = app?._data?.L2_size ?? this.L2_size;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = this.pow2Step(this.prevL2, v, 32, 2048);
+        app._data.L2_size = n;
+        this.$emit('update:L2_size', n);
+        localStorage.setItem('conf_L2_size', n);
+        this.prevL2 = n;
+        if (this.prevL2 < this.prevL2LC || this.cache_location === "Associative"){ // Se reduce el numero de líneas por cjto
+          this.prevL2LC = this.prevL2;
+          app._data.L2_num_lines = this.prevL2;
+          this.$emit('update:L2_num_lines', n);
+          localStorage.setItem('conf_L2_num_lines', n);
+        }
       }
     },
     L2_gsb: {
@@ -10684,10 +10921,31 @@ var uielto_cache_configuration = {
         return Number.isFinite(n) ? n : 32;
       },
       set(v) {
-        const n = Math.max(32, Math.min(1024, Number(v) || 32));
+        const n = this.pow2Step(this.prevL2B, v, 32, 128);
         app._data.L2_size_block = n;
         this.$emit('update:L2_size_block', n);
         localStorage.setItem('conf_L2_size_block', n);
+        this.prevL2B = n;
+      }
+    },
+    L2_gsl: {
+      get() {
+        const v = app?._data?.L2_num_lines ?? this.L2_num_lines;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 32;
+      },
+      set(v) {
+        const n = this.pow2Step(this.prevL2LC, v, 32, 2048);
+        app._data.L2_num_lines = n;
+        this.$emit('update:L2_num_lines', n);
+        localStorage.setItem('conf_L2_num_lines', n);
+        this.prevL2LC = n;
+        if (this.prevL2LC > this.prevL2) {
+          this.prevL2 = this.prevL2LC;
+          app._data.L2_size = this.prevL2LC;
+          this.$emit('update:L2_size', n);
+          localStorage.setItem('conf_L2_size', n);
+        }
       }
     },
   },
@@ -10739,6 +10997,16 @@ var uielto_cache_configuration = {
   "     </b-list-group-item>" +
   ''+
   ''+
+  '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
+  '       <label for="range-5">Cache Location:</label>' +
+  '         <b-form-radio-group v-model="cache_location" ' +
+  '                        :options="cache_locations" ' +
+  '                        size="md"' +
+  '                        @change="change_location" ' +
+  '                        title="Cache Location"'+
+  '                        stacked>' +
+  "         </b-form-radio-group>" +
+  "     </b-list-group-item>" +
   ''+
   ''+
   ''+
@@ -10762,15 +11030,25 @@ var uielto_cache_configuration = {
     ""+
     '       <label v-if="cache_type == 0 || cache_type == 2 || cache_type == 4" for="range-5">L1 lines:</label>' +
     '         <b-form-spinbutton id="L1_size"' +
-    '                       v-model="L1_size" ' +
+    '                       v-model="L1_gs" ' +
     '                       v-if="cache_type == 0 || cache_type == 2 || cache_type == 4"' +
-    '                       @change="change_cache_lines(0, 0)" ' +
-    '                       type="range" ' +
+    // '                       @change="change_cache_lines(0, 0)" ' +
+    // '                       type="range" ' +
     '                       min="32" ' +
     '                       max="2048" ' +
-    '                       step="32" ' +
+    '                       step="1" ' +
     '                       title="L1 size">' +
     "         </b-form-spinbutton>" +
+    ''+    
+    '       <label v-if="cache_location == \'Associative_per_sets\' && (cache_type == 0 || cache_type == 2 || cache_type == 4)" for="range-5">L1 lines per set:</label>' +
+    '         <b-form-spinbutton id="L1_lines" key="spin-L1LC"'+
+    '                            v-if="cache_location == \'Associative_per_sets\' && (cache_type == 0 || cache_type == 2 || cache_type == 4)" '+
+    '                            v-model="L1_gsl" '+
+    '                            min="32"'+
+    '                            max="1024"'+
+    '                            step="32"'+ 
+    '                            title="L1 lines"></b-form-spinbutton>' +
+    ''+
 
     " "+
     // '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
@@ -10800,6 +11078,16 @@ var uielto_cache_configuration = {
     '                            max="1024"'+
     '                            step="32"'+ 
     '                            title="L1_I size"></b-form-spinbutton>' +
+    ''+    
+    '       <label v-if="cache_location == \'Associative_per_sets\' && (cache_type == 1 || cache_type == 3 || cache_type == 5)" for="range-5">L1_I lines per set:</label>' +
+    '         <b-form-spinbutton id="L1_I_lines" key="spin-L1ILC"'+
+    '                            v-if="cache_location === \'Associative_per_sets\' && (cache_type == 1 || cache_type == 3 || cache_type == 5)" '+
+    '                            v-model="L1I_gsl" '+
+    '                            min="32"'+
+    '                            max="1024"'+
+    '                            step="32"'+ 
+    '                            title="L1_I lines"></b-form-spinbutton>' +
+    ''+
     '         <label v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" for="range-9">Data Block Cache L1_I Size:</label>' +
     "         <b-input-group>" +
     '           <b-form-spinbutton id="range-7"' +
@@ -10814,6 +11102,16 @@ var uielto_cache_configuration = {
     // L1_D con key + proxy
     '       <label v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" for="range-5">L1_D lines:</label>' +
     '         <b-form-spinbutton id="L1_D_size" key="spin-L1D" v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" v-model="L1D_gs" min="32" max="1024" step="32" title="L1_D size"></b-form-spinbutton>' +
+    ''+    
+    '       <label v-if="cache_location == \'Associative_per_sets\' && (cache_type == 1 || cache_type == 3 || cache_type == 5)" for="range-5">L1_I lines per set:</label>' +
+    '         <b-form-spinbutton id="L1_D_lines" key="spin-L1DLC"'+
+    '                            v-if="cache_location == \'Associative_per_sets\' && (cache_type == 1 || cache_type == 3 || cache_type == 5)" '+
+    '                            v-model="L1D_gsl" '+
+    '                            min="32"'+
+    '                            max="1024"'+
+    '                            step="32"'+ 
+    '                            title="L1_D lines"></b-form-spinbutton>' +
+    ''+
     '         <label v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" for="range-9">Data Block Cache L1_D Size:</label>' +
     "         <b-input-group>" +
     '           <b-form-spinbutton id="range-7"' +
@@ -10832,15 +11130,25 @@ var uielto_cache_configuration = {
 
     '       <label v-if="cache_type == 2 || cache_type == 3" for="range-5">L2 lines:</label>' +
     '         <b-form-spinbutton id="L2_size"' +
-    '                       v-model="L2_size" ' +
+    '                       v-model="L2_gs" ' +
     '                       v-if="cache_type == 2 || cache_type == 3"' +
-    '                       @change="change_cache_lines(3, 0)" ' +
-    '                       type="range" ' +
+    // '                       @change="change_cache_lines(3, 0)" ' +
+    // '                       type="range" ' +
     '                       min="32" ' +
     '                       max="2048" ' +
-    '                       step="32" ' +
+    '                       step="1" ' +
     '                       title="L2 size">' +
     "         </b-form-spinbutton>" +
+    ''+    
+    '       <label v-if="cache_location == \'Associative_per_sets\' && (cache_type == 2 || cache_type == 3)" for="range-5">L2 lines per set:</label>' +
+    '         <b-form-spinbutton id="L2_lines" key="spin-L2LC"'+
+    '                            v-if="cache_location == \'Associative_per_sets\' && (cache_type == 2 || cache_type == 3)" '+
+    '                            v-model="L2_gsl" '+
+    '                            min="32"'+
+    '                            max="1024"'+
+    '                            step="32"'+ 
+    '                            title="L2 lines"></b-form-spinbutton>' +
+    ''+
     
     '       <label v-if="cache_type == 2 || cache_type == 3" for="range-9">Data Block Cache L2 Size:</label>' +
     "       <b-input-group>" +
@@ -10861,6 +11169,16 @@ var uielto_cache_configuration = {
     ""+
     '       <label v-if="cache_type == 4 || cache_type == 5" for="range-5">L2_I lines:</label>' +
     '         <b-form-spinbutton id="L2_I_size" key="spin-L2I" v-if="cache_type == 4 || cache_type == 5" v-model="L2I_gs" min="32" max="1024" step="32" title="L2_I size"></b-form-spinbutton>' +
+    ''+    
+    '       <label v-if="cache_location == \'Associative_per_sets\' && (cache_type == 4 || cache_type == 5)" for="range-5">L2_I lines per set:</label>' +
+    '         <b-form-spinbutton id="L2_I_lines" key="spin-L2ILC"'+
+    '                            v-if="cache_location == \'Associative_per_sets\' && (cache_type == 4 || cache_type == 5)" '+
+    '                            v-model="L2I_gsl" '+
+    '                            min="32"'+
+    '                            max="1024"'+
+    '                            step="32"'+ 
+    '                            title="L2_I lines"></b-form-spinbutton>' +
+    ''+
     '         <label v-if="cache_type == 4 || cache_type == 5" for="range-9">Data Block Cache L2_I Size:</label>' +
     "         <b-input-group>" +
     '           <b-form-spinbutton id="range-7"' +
@@ -10880,7 +11198,16 @@ var uielto_cache_configuration = {
     // L2_D con key + proxy
     '       <label v-if="cache_type == 4 || cache_type == 5" for="range-5">L2_D lines:</label>' +
     '         <b-form-spinbutton id="L2_D_size" key="spin-L2D" v-if="cache_type == 4 || cache_type == 5" v-model="L2D_gs" min="32" max="1024" step="32" title="L2_D size"></b-form-spinbutton>' +
-    
+    ''+    
+    '       <label v-if="cache_location == \'Associative_per_sets\' && (cache_type == 4 || cache_type == 5)" for="range-5">L2_D lines per set:</label>' +
+    '         <b-form-spinbutton id="L2_D_lines" key="spin-L2DLC"'+
+    '                            v-if="cache_location == \'Associative_per_sets\' && (cache_type == 4 || cache_type == 5)" '+
+    '                            v-model="L2D_gsl" '+
+    '                            min="32"'+
+    '                            max="1024"'+
+    '                            step="32"'+ 
+    '                            title="L2_D lines"></b-form-spinbutton>' +
+    ''+
     '         <label v-if="cache_type == 4 || cache_type == 5" for="range-9">Data Block Cache L2_D Size:</label>' +
     "         <b-input-group>" +
     '           <b-form-spinbutton id="range-7"' +
@@ -15405,28 +15732,22 @@ var uielto_memory = {
     '   <b-modal id="cache_modal" ' +
     '            size="m" ' +
     '            title="Cache location element" ' +
-    '            @hidden="hide_cache_modal" ' +
+    '            hide-footer' +
     '            @ok="hide_cache_modal">' +
-    '     <span v-if="cache_info != null & (cache_info.L1_I != 0 || cache_info.L1_D != 0)">L1:<br><br></span>'+
-    // "             <br>"+
-    // "             <br>"+
-    '     <span v-if="cache_info != null & cache_info.L1_I == 3">Instructions: <i class="fa-regular fa-circle-check"> </i>    Only hits in cache<br></span>'+
-    '     <span v-if="cache_info != null & cache_info.L1_I == 4">Instructions: <i class="fa-regular fa-circle-xmark"> </i>    Only misses in cache<br></span>'+
+    '     <span v-if="cache_info != null & (cache_info.L1_I != 0 || cache_info.L1_D != 0)">L1:<br></span>'+
+    '     <span v-if="cache_info != null & cache_info.L1_I == 3">Instructions: <i class="fa-regular fa-circle-check"> </i> Only hits in cache<br></span>'+
+    '     <span v-if="cache_info != null & cache_info.L1_I == 4">Instructions: <i class="fa-regular fa-circle-xmark"> </i> Only misses in cache<br></span>'+
     '     <span v-if="cache_info != null & cache_info.L1_I == 1">Instructions: <i class="fa-solid fa-circle-exclamation"></i> Hits and misses in cache<br></span>'+
     "             <br>"+
     '     <span v-if="cache_info != null & cache_info.L1_D == 3">Data: <i class="fa-regular fa-circle-check"></i> Only hits in cache<br></span>'+
     '     <span v-if="cache_info != null & cache_info.L1_D == 4">Data: <i class="fa-regular fa-circle-xmark"></i> Only misses in cache<br></span>'+
     '     <span v-if="cache_info != null & cache_info.L1_D == 1">Data: <i class="fa-solid fa-circle-exclamation"></i> Hits and misses in cache<br></span>'+
     '     '+
-    // "             <br>"+
-    '     <span v-if="cache_info != null & (cache_info.L2_I != 0 || cache_info.L2_D != 0)">L2: <br><br></span>'+
-    // "             <br>"+
-    // "             <br>"+
+    '     <span v-if="cache_info != null & (cache_info.L2_I != 0 || cache_info.L2_D != 0)">L2: <br></span>'+
     '     <span v-if="cache_info != null & cache_info.L2_I == 3">Instructions: <i class="fa-regular fa-circle-check"></i> Only hits in cache<br></span>'+
     '     <span v-if="cache_info != null & cache_info.L2_I == 4">Instructions: <i class="fa-regular fa-circle-xmark"></i> Only misses in cache<br></span>'+
     '     <span v-if="cache_info != null & cache_info.L2_I == 1">Instructions: <i class="fa-solid fa-circle-exclamation"></i> Hits and misses in cache<br></span>'+
     '     '+
-    // "             <br>"+
     '     <span v-if="cache_info != null & cache_info.L2_D == 3">Data: <i class="fa-regular fa-circle-check"></i> Only hits in cache <br></span>'+
     '     <span v-if="cache_info != null & cache_info.L2_D == 4">Data: <i class="fa-regular fa-circle-xmark"></i> Only misses in cache <br></span>'+
     '     <span v-if="cache_info != null & cache_info.L2_D == 1">Data: <i class="fa-solid fa-circle-exclamation"></i> Hits and misses in cache<br> </span>'+
@@ -15552,7 +15873,7 @@ var uielto_cache_table = {
   },
   data: function() {
     return {
-      cacheFields: ["ID", /*"Tag","Index",*/ "Tag"/*, "Binary"*/],
+      cacheFields: ["Line\sID", /*"Tag","Index",*/ "Tag"/*, "Binary"*/],
       infoFields: ["Configuration", "Value"],
       row_info: null,
       selected_space_view: null,
@@ -15594,7 +15915,7 @@ var uielto_cache_table = {
     '                 :fields="cacheFields" ' +
     '                 class="align-items-start"> ' +
     ''+
-    '           <template v-slot:cell(ID)="{item}">'+
+    '           <template v-slot:cell(Line\sID)="{item}">'+
     '             <b-badge :variant="info">'+
     '             {{item.id}}</b-badge>'+
     '           </template>'+
@@ -16153,6 +16474,7 @@ try {
       creator_mode: "load_architecture",
       default_architecture: "none",
       cache_policy: "FIFO",
+      cache_location: "Associative",
       cache_type: 0, 
       cache_memory: L1_I_cache_memory,
       // data_cache_block_size: 64,
@@ -16186,6 +16508,12 @@ try {
       instructions: instructions,
       data_mode: "int_registers",
       main_memory: {},
+      L1_I_num_lines: 32,
+      L1_D_num_lines: 32,
+      L1_num_lines: 32,
+      L2_num_lines: 32,
+      L2_I_num_lines: 32,
+      L2_D_num_lines: 32,
       L1_I_cache_memory: {},
       L1_D_cache_memory: {},
       L1_cache_memory: {},
