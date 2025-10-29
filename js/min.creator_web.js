@@ -2001,6 +2001,7 @@ function main_memory_packs_forav(addr, value) {
     data_type: null,
     reset: true,
     break: false,
+    set_id: -1,
     L1_D: 0,
     L2_D: 0,
   };
@@ -2023,6 +2024,7 @@ function main_memory_reset() {
   var addrs = main_memory_get_addresses();
   for (i = 0; i < addrs.length; i++) {
     main_memory[addrs[i]].bin = main_memory[addrs[i]].def_bin;
+    main_memory[addrs[i]].set_id = -1;
     main_memory[addrs[i]].L1_I = 0;
     main_memory[addrs[i]].L1_D = 0;
     main_memory[addrs[i]].L2_I = 0;
@@ -2063,6 +2065,7 @@ function main_memory_zerofill(addr, size) {
     data_type: null,
     reset: true,
     break: false,
+    set_id: -1,
     L1_D: 0,
     L2_D: 0,
   };
@@ -2494,6 +2497,7 @@ function creator_memory_updaterow(addr) {
     size: 0,
     hex: [],
     eye: true,
+    set_id: -1,
     L1_D: 0,
     L2_D: 0,
   };
@@ -2760,7 +2764,8 @@ function updateCacheMem(index, type, addr, value) {
     case "L1_I":
       let L1_I_index = L1_I_cache_memory.findIndex(block => block.id === index);
       if (L1_I_index === -1) {
-        L1_I_cache_memory.push({id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
+        let set_id = (app._data.cache_location === "Associative_per_sets") ? Math.floor(index / app._data.L1_I_num_lines) :  -1;
+        L1_I_cache_memory.push({set_id: set_id, id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
       } else {
         // L1_I_cache_memory[L1_I_index].value = value;
         L1_I_cache_memory[L1_I_index].size = /*value.slice(2).length * 4*/ value; // Length in bits
@@ -2771,7 +2776,8 @@ function updateCacheMem(index, type, addr, value) {
     case "L1_D":
       let L1_D_index = L1_D_cache_memory.findIndex(block => block.id === index);
       if (L1_D_index === -1) {
-        L1_D_cache_memory.push({id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
+        let set_id = (app._data.cache_location === "Associative_per_sets") ? Math.floor(index / app._data.L1_D_num_lines) :  -1;
+        L1_D_cache_memory.push({set_id: set_id, id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
       } else {
         // L1_D_cache_memory[L1_D_index].value = value.slice(2);
         L1_D_cache_memory[L1_D_index].size = /*value.slice(2).length * 4*/ value; // Length in bits
@@ -2781,7 +2787,8 @@ function updateCacheMem(index, type, addr, value) {
     case "L1":
       let L1_index = L1_cache_memory.findIndex(block => block.id === index);
       if (L1_index === -1) {
-        L1_cache_memory.push({id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
+        let set_id = (app._data.cache_location === "Associative_per_sets") ? Math.floor(index / app._data.L1_num_lines) :  -1;
+        L1_cache_memory.push({set_id: set_id, id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
       } else {
         // L1_cache_memory[L1_index].value = value.slice(2);
         L1_cache_memory[L1_index].size = /*value.slice(2).length * 4*/ value; // Length in bits
@@ -2791,7 +2798,8 @@ function updateCacheMem(index, type, addr, value) {
     case "L2":
       let L2_index = L2_cache_memory.findIndex(block => block.id === index);
       if (L2_index === -1) {
-        L2_cache_memory.push({id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
+        let set_id = (app._data.cache_location === "Associative_per_sets") ? Math.floor(index / app._data.L2_num_lines) :  -1;
+        L2_cache_memory.push({set_id: set_id, id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
       } else {
         // L2_cache_memory[L2_index].value = value.slice(2);
         L2_cache_memory[L2_index].size = /*value.slice(2).length * 4*/ value; // Length in bits
@@ -2801,7 +2809,8 @@ function updateCacheMem(index, type, addr, value) {
     case "L2_I":
       let L2_I_index = L2_I_cache_memory.findIndex(block => block.id === index);
       if (L2_I_index === -1) {
-        L2_I_cache_memory.push({id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
+        let set_id = (app._data.cache_location === "Associative_per_sets") ? Math.floor(index / app._data.L2_I_num_lines) :  -1;
+        L2_I_cache_memory.push({set_id: set_id, id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
       } else {
         // L2_I_cache_memory[L2_I_index].value = value;
         L2_I_cache_memory[L2_I_index].size = /*value.slice(2).length * 4*/ value; // Length in bits
@@ -2812,7 +2821,8 @@ function updateCacheMem(index, type, addr, value) {
     case "L2_D":
       let L2_D_index = L2_D_cache_memory.findIndex(block => block.id === index);
       if (L2_D_index === -1) {
-        L2_D_cache_memory.push({id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
+        let set_id = (app._data.cache_location === "Associative_per_sets") ? Math.floor(index / app._data.L2_D_num_lines) :  -1;
+        L2_D_cache_memory.push({set_id: set_id, id: index, addr: addr, size: /*value.slice(2).length * 4*/ value/*value.slice(2)*/});
       } else {
         // L2_D_cache_memory[L2_D_index].value = value.slice(2);
         L2_D_cache_memory[L2_D_index].size = /*value.slice(2).length * 4*/ value; // Length in bits
@@ -8032,6 +8042,7 @@ var uielto_toolbar_btngroup = {
         instructions[i].L2_I = 0;
         instructions[i].L1_D = 0;
         instructions[i].L2_D = 0;
+        instructions[i].set_id = -1;
         
         draw.space.push(i);
       }
@@ -10332,8 +10343,9 @@ var uielto_cache_configuration = {
         // { text: "MIPS-32", value: "MIPS-32" },
       ]),
       cache_locations : (locations = [
-        { text: "Associative",  value: "Associative" },
+        { text: "Associative",          value: "Associative"          },
         { text: "Associative per sets", value: "Associative_per_sets" },
+        { text: "Direct",               value: "Direct"               }
       ]),
       running_execution : execution_mode_run,
       cache_policies: (policies = [
@@ -10410,6 +10422,7 @@ var uielto_cache_configuration = {
       this._props.cache_location = value;
       this.cache_location = value;
       app._data.cache_location = value;
+      app._data.isDirect = (this.cache_location === "Direct") ? 1 : 0;
       localStorage.setItem("cache_policy",
         this._props.cache_location,
       );
@@ -10419,6 +10432,32 @@ var uielto_cache_configuration = {
         "configuration.cache_location." +
           this._props.cache_location,
       );
+      if (this.cache_location !== "Associative_per_sets") {
+        this.prevL1LC = this.prevL1;
+        app._data.L1_num_lines = this.prevL1;
+        this.$emit('update:L1_num_lines', this.prevL1);
+        localStorage.setItem('conf_L1_num_lines', this.prevL1);
+        this.prevL1ILC = this.prevL1I;
+        app._data.L1_I_num_lines = this.prevL1I;
+        this.$emit('update:L1_I_num_lines', this.prevL1I);
+        localStorage.setItem('conf_L1_I_num_lines', this.prevL1I);
+        this.prevL1DLC = this.prevL1D;
+        app._data.L1_D_num_lines = this.prevL1D;
+        this.$emit('update:L1_D_num_lines', this.prevL1D);
+        localStorage.setItem('conf_L1_D_num_lines', this.prevL1D);
+        this.prevL2LC = this.prevL2;
+        app._data.L2_num_lines = this.prevL2;
+        this.$emit('update:L2_num_lines', this.prevL2);
+        localStorage.setItem('conf_L2_num_lines', this.prevL2);
+        this.prevL2ILC = this.prevL2I;
+        app._data.L2_I_num_lines = this.prevL2I;
+        this.$emit('update:L2_I_num_lines', this.prevL2I);
+        localStorage.setItem('conf_L2_I_num_lines', this.prevL2I);
+        this.prevL2DLC = this.prevL2D;
+        app._data.L2_D_num_lines = this.prevL2D;
+        this.$emit('update:L2_D_num_lines', this.prevL2D);
+        localStorage.setItem('conf_L2_D_num_lines', this.prevL2D);
+      }
     },
     change_cache_architecture(value){
       // console.log(value);
@@ -10984,19 +11023,20 @@ var uielto_cache_configuration = {
   ''+
   '   <b-row>'+ // Seleccion de politica de reemplazo
   ''+
-  ''+
-  '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
-  '       <label for="range-5">Cache Policy:</label>' +
+  // '   <b-col v-if="cache_location != \'Direct\'">'+
+  '     <b-list-group-item class="justify-content-between align-items-center m-1" v-if="cache_location != \'Direct\'">' +
+  '       <label for="range-5" v-if="cache_location != \'Direct\'">Cache Policy:</label>' +
   '         <b-form-radio-group v-model="cache_policy" ' +
   '                        :options="policies" ' +
   '                        size="md"' +
+  '                        v-if="cache_location != \'Direct\'"' +
   '                        @change="change_policy" ' +
   '                        title="Cache Policy"'+
   '                        stacked>' +
   "         </b-form-radio-group>" +
   "     </b-list-group-item>" +
-  ''+
-  ''+
+  // '   </b-col>'+
+  // '   <b-col>'+
   '     <b-list-group-item class="justify-content-between align-items-center m-1">' +
   '       <label for="range-5">Cache Location:</label>' +
   '         <b-form-radio-group v-model="cache_location" ' +
@@ -11007,7 +11047,7 @@ var uielto_cache_configuration = {
   '                        stacked>' +
   "         </b-form-radio-group>" +
   "     </b-list-group-item>" +
-  ''+
+  // '   </b-col>'+
   ''+
   ''+
   ''+
@@ -15870,6 +15910,7 @@ var uielto_cache_table = {
   props: {
     cache_memory: { type: Array, required: true },
     cache_segment: { type: String, required: true },
+    grouped: {type: Boolean, required: false},
   },
   data: function() {
     return {
@@ -15892,11 +15933,60 @@ var uielto_cache_table = {
     }
   },
   computed: {
-    cache_memory_items() {
+    SetColumn(){
+      this.grouped = (app._data.cache_location === "Associative_per_sets" & this._props.cache_segment !== "cache_information") ? true : false;
+      this._props.grouped = this.grouped;
+      return this.grouped;
+    },
+    cache_memory_items_prev(){
       if (this._props.cache_segment != "cache_information") 
         return Object.values(this.cache_memory).sort((a, b) => a.id - b.id);
-       else 
+      else 
         return Object.values(this.cache_memory);
+    },
+
+    cache_memory_items() {
+      if (!this.SetColumn) return this.cache_memory_items_prev;
+
+      const prev = this.cache_memory_items_prev.slice();
+      const outGrouped = [];
+      let i = 0;
+      let stripe = false;
+
+      while (i < prev.length) {
+        const g = prev[i].set_id;
+        let j = i;
+        while (j < prev.length && prev[j].set_id === g) j++;
+        const size = j - i;
+
+        for (let k = i; k < j; k++) {
+          outGrouped.push({
+            ...prev[k],
+            groupStart: k === i,
+            groupSize: size,
+            _stripe: stripe,
+          });
+        }
+
+        stripe = !stripe;
+        i = j;
+      }
+      return outGrouped;
+    },
+    cache_Fields() {
+      if (!this.SetColumn) return this.cacheFields;
+      return [
+        {
+          key: "SET_ID",
+          label: "SET ID",
+          tdAttr: (v, k, item) =>
+            item.groupStart ? { rowspan: item.groupSize } : { style: "display:none" },
+          tdClass: (v, k, item) => (item.groupStart
+            ? ("setid-cell " + (item._stripe ? "odd" : "even"))
+            : null),
+        },
+        ...this.cacheFields,
+      ];
     }
   },
   template: // Hacer una tabla para las caches y otra tabla para el info
@@ -15912,9 +16002,16 @@ var uielto_cache_table = {
     "                 hover " +
     "                 v-if=\"cache_segment != 'cache_information'\""+
     '                 :items="cache_memory_items" ' +
-    '                 :fields="cacheFields" ' +
+    '                 :fields="cache_Fields" ' +
     '                 class="align-items-start"> ' +
     ''+
+    ''+
+
+    '           <template v-slot:cell(SET_ID)="{ item }">' +
+    '             <b-badge v-if="item.groupStart" :variant="info">{{ item.set_id }}</b-badge>' +
+    '           </template>' +
+
+
     '           <template v-slot:cell(Line\sID)="{item}">'+
     '             <b-badge :variant="info">'+
     '             {{item.id}}</b-badge>'+
@@ -15924,11 +16021,6 @@ var uielto_cache_table = {
     '             <b-badge :variant="info">'+
     '             {{Address(item.addr, item.size)}}</b-badge>'+
     '           </template>'+
-
-    // '           <template v-slot:cell(Binary)="{item}">'+
-    // '             <b-badge :variant="info">'+
-    // '             {{item.value}}</b-badge>'+
-    // '           </template>'+
 
     "       </b-table>" +
 
@@ -16475,6 +16567,7 @@ try {
       default_architecture: "none",
       cache_policy: "FIFO",
       cache_location: "Associative",
+      isDirect: 0,
       cache_type: 0, 
       cache_memory: L1_I_cache_memory,
       // data_cache_block_size: 64,

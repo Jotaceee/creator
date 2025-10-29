@@ -28,6 +28,19 @@ tr:hover { background: #e0e0e0; }
   width: 100%;
 }
 
+.setid-cell {
+  vertical-align: middle;
+  text-align: center;                
+  border-right: 1px solid #dee2e6;  
+}
+
+.setid-cell.even {
+  background-color: var(--bs-table-bg, #fff) !important;
+}
+.setid-cell.odd {
+  background-color: var(--bs-table-striped-bg, rgba(0,0,0,.05)) !important;
+}
+
 .toggle-button {
       position: block;
       margin-top: 0.55%;
@@ -502,6 +515,11 @@ h2 {
 .memoryValue {
   float: right;
   margin-right: 2%;
+}
+
+.cacheValue {
+  float: right;
+  margin-right: 5%;
 }
 
 .memoryBorder {
