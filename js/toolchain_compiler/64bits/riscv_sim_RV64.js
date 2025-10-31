@@ -97,7 +97,8 @@ var memoryExp = /mem\[0x([0-9A-Fa-f]+)\]\s*(<-|->)\s*0x([0-9A-Fa-f]+)/;
 var CSRTypeExp = /(CSR\S*)\s+(\S+)\s+(\S+)\s+(0x)([\dA-Fa-f]{1,16})/;
 var CSRExp = /^(CSR)\s+(\w+)\s+(<-|->)\s+0x([0-9a-fA-F]+)(?:\s+(.*))?$/;
 var jumpExp = /Next_PC:\s*0x([0-9a-fA-F]+)/;
-var cacheExp = /^\[(\d+)\]\s+(L1_I|L1_D|L1|L2|L2_I|L2_D):\s*\((0x[0-9A-Fa-f]+)\)\s$/;
+// var cacheExp = /^\[(\d+)\]\s+(L1_I|L1_D|L1|L2|L2_I|L2_D):\s*\((0x[0-9A-Fa-f]+)\)\s$/;
+var cacheExp = /^\[(\d+)\]\s+(L1_I|L1_D|L1|L2|L2_I|L2_D):\s*\((0x[0-9A-Fa-f]+)\)\s*$/;
 var configCacheExp = /^Configuration:\s*([A-Za-z_][A-Za-z0-9_]*)\s*<-\s*(\S+)\s*$/;
 // var displayExp = /^[A-Za-z\s]+:\s*(.*)$/;
 var displayExp = /^([\w\s]+):\s*(.*)$/;       
@@ -620,12 +621,12 @@ Module['print'] = function (message) {
       inside_function = true;
 
       console.log("Siguiente direccion del jalr: ", next_add);
-    }
+    } 
     if (instructions[current_ins].loaded.includes("jal") && !instructions[current_ins].loaded.includes("jalr")){
       var next_add = instructions[current_ins].loaded.split("\t");
       console.log("Siguiente direccion del jal: ", next_add);
 
-    }
+    } 
     if (instructions[current_ins].loaded.includes("ret") && !instructions[current_ins].loaded.includes("mret")){
       // Mirar el ra
       var aux_reg = crex_findReg("ra");
@@ -640,9 +641,7 @@ Module['print'] = function (message) {
       } else {
         next_add_to_jump = undefined;
       }
-    }
-
-
+    } 
     // Primero caso de paso a paso
     if (execution_mode_run === 1){
       instructions[current_ins]._rowVariant = 'info';
@@ -650,8 +649,8 @@ Module['print'] = function (message) {
         instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)]._rowVariant = 'success';
         is_breakpoint = instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)].Break;
       }
-      if (current_ins > 0 || prev_add_to_jump !== undefined)
-        instructions[(prev_add_to_jump !== undefined && prev_add_to_jump !== current_ins) ? prev_add_to_jump : (current_ins -1)]._rowVariant = '';
+      if ((current_ins > 0 || prev_add_to_jump !== undefined) && (current_ins !== prev_add_to_jump))
+        instructions[(prev_add_to_jump !== undefined && prev_add_to_jump !== current_ins) ? prev_add_to_jump : ((current_ins > 0) ? (current_ins -1) : 0)]._rowVariant = '';
     }
     // Para el caso de run without stop y la siguiente instruccion es un breakpoint
     else if (execution_mode_run === 0){
