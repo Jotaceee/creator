@@ -7739,7 +7739,7 @@ var uielto_navbar = {
     '       <b-container fluid align-h="center" class="mx-0 px-0">' +
     '         <b-row cols="2" align-h="center">' +
     '           <b-col class="headerText col-auto my-0 py-0 pr-1 text-uppercase">' +
-    '             <h1>Creator <b-badge pill variant="secondary">{{version}}</b-badge></h1>' +
+    '             <h1>Creator-Next <b-badge pill variant="secondary">1.0.0</b-badge></h1>' + // '             <h1>Creator-Next <b-badge pill variant="secondary">{{version}}</b-badge></h1>' +
     "           </b-col>" +
     "" +
     '           <b-col class="headerText col-auto my-0 p-0 ml-2">' +
@@ -7751,7 +7751,7 @@ var uielto_navbar = {
     '       <b-container fluid align-h="center" class="mx-0 px-0">' +
     '         <b-row cols="1" align-h="center">' +
     '           <b-col class="headerName col-auto my-0 py-0 font-weight-bold mx-1">' +
-    "             didaCtic and geneRic assEmbly progrAmming simulaTOR" +
+    // "             didaCtic and geneRic assEmbly progrAmming simulaTOR" +
     "           </b-col>" +
     "         </b-row>" +
     "       </b-container>" +
@@ -9735,27 +9735,28 @@ var uielto_new_architecture = {
     },
   },
   template:
-    '<b-card no-body class="overflow-hidden arch_card architectureCard">' +
-    "  <b-row no-gutters" +
-    '         @click="new_arch">' +
-    '    <b-col sm="12" class="center w-100 my-2">' +
-    '      <b-card-img src="./images/new_icon.png" ' +
-    '                  alt="new icon" ' +
-    "                  thumbnail fluid" +
-    '                  class="w-75 rounded-0 architectureImg">' +
-    "      </b-card-img>" +
-    "    </b-col>" +
-    "" +
-    '    <b-col sm="12">' +
-    '      <b-card-body title="New Architecture"' +
-    '                   title-tag="h2" >' +
-    '        <b-card-text class="justify">' +
-    "          Allows you to define an architecture from scratch." +
-    "        </b-card-text>" +
-    "      </b-card-body>" +
-    "    </b-col>" +
-    "  </b-row>" +
-    "</b-card>",
+  ''
+    // '<b-card no-body class="overflow-hidden arch_card architectureCard">' +
+    // "  <b-row no-gutters" +
+    // // '         @click="new_arch">' +
+    // // '    <b-col sm="12" class="center w-100 my-2">' +
+    // // '      <b-card-img src="./images/new_icon.png" ' +
+    // // '                  alt="new icon" ' +
+    // // "                  thumbnail fluid" +
+    // // '                  class="w-75 rounded-0 architectureImg">' +
+    // // "      </b-card-img>" +
+    // // "    </b-col>" +
+    // "" +
+    // // '    <b-col sm="12">' +
+    // // '      <b-card-body title="New Architecture"' +
+    // // '                   title-tag="h2" >' +
+    // // '        <b-card-text class="justify">' +
+    // // "          Allows you to define an architecture from scratch." +
+    // // "        </b-card-text>" +
+    // // "      </b-card-body>" +
+    // // "    </b-col>" +
+    // "  </b-row>" +
+    // "</b-card>",
 };
 Vue.component("new-architecture", uielto_new_architecture);
 var uielto_load_architecture = {
@@ -9843,53 +9844,54 @@ var uielto_load_architecture = {
     },
   },
   template:
-    '<b-card no-body class="overflow-hidden arch_card architectureCard" ' +
-    "        v-b-modal.load_arch>" +
-    "  <b-row no-gutters>" +
-    '    <b-col sm="12" class="center w-100 my-2">' +
-    '      <b-card-img src="./images/load_icon.png" ' +
-    '                  alt="load icon"' +
-    '                  class="w-75 rounded-0 architectureImg">' +
-    "      </b-card-img>" +
-    "    </b-col>" +
-    " " +
-    '    <b-col sm="12">' +
-    '      <b-card-body title="Load Architecture"' +
-    '                   title-tag="h2">' +
-    '        <b-card-text class="justify">' +
-    "          Allows to load the definition of an already created architecture." +
-    "        </b-card-text>" +
-    "      </b-card-body>" +
-    "    </b-col>" +
-    "  </b-row>" +
-    " " +
-    '  <b-modal id="load_arch"' +
-    '           title="Load Architecture"' +
-    '           v-model="show_modal"' +
-    '           @ok="read_arch">' +
-    "    <b-form>" +
-    '      <b-form-input v-model="name_arch" ' +
-    '                    placeholder="Enter the name of the architecture" ' +
-    '                    :state="valid(name_arch)" ' +
-    '                    title="Architecture Name">' +
-    "      </b-form-input>" +
-    "      <br>" +
-    '      <b-form-textarea v-model="description_arch" ' +
-    '                       placeholder="Enter a description of the architecture" ' +
-    '                       rows="3" ' +
-    '                       title="Architecture Description">' +
-    "      </b-form-textarea>" +
-    "      <br>" +
-    '      <b-form-file v-model="load_arch" ' +
-    '                   placeholder="Choose a file..." ' +
-    '                   id="arch_file" ' +
-    '                   accept=".json" ' +
-    '                   :state="valid(load_arch)">' +
-    "      </b-form-file>" +
-    "    </b-form>" +
-    "  </b-modal>" +
-    " " +
-    "</b-card>",
+    ''
+    // '<b-card no-body class="overflow-hidden arch_card architectureCard" ' +
+    // "        v-b-modal.load_arch>" +
+    // "  <b-row no-gutters>" +
+    // '    <b-col sm="12" class="center w-100 my-2">' +
+    // '      <b-card-img src="./images/load_icon.png" ' +
+    // '                  alt="load icon"' +
+    // '                  class="w-75 rounded-0 architectureImg">' +
+    // "      </b-card-img>" +
+    // "    </b-col>" +
+    // " " +
+    // '    <b-col sm="12">' +
+    // '      <b-card-body title="Load Architecture"' +
+    // '                   title-tag="h2">' +
+    // '        <b-card-text class="justify">' +
+    // "          Allows to load the definition of an already created architecture." +
+    // "        </b-card-text>" +
+    // "      </b-card-body>" +
+    // "    </b-col>" +
+    // "  </b-row>" +
+    // " " +
+    // '  <b-modal id="load_arch"' +
+    // '           title="Load Architecture"' +
+    // '           v-model="show_modal"' +
+    // '           @ok="read_arch">' +
+    // "    <b-form>" +
+    // '      <b-form-input v-model="name_arch" ' +
+    // '                    placeholder="Enter the name of the architecture" ' +
+    // '                    :state="valid(name_arch)" ' +
+    // '                    title="Architecture Name">' +
+    // "      </b-form-input>" +
+    // "      <br>" +
+    // '      <b-form-textarea v-model="description_arch" ' +
+    // '                       placeholder="Enter a description of the architecture" ' +
+    // '                       rows="3" ' +
+    // '                       title="Architecture Description">' +
+    // "      </b-form-textarea>" +
+    // "      <br>" +
+    // '      <b-form-file v-model="load_arch" ' +
+    // '                   placeholder="Choose a file..." ' +
+    // '                   id="arch_file" ' +
+    // '                   accept=".json" ' +
+    // '                   :state="valid(load_arch)">' +
+    // "      </b-form-file>" +
+    // "    </b-form>" +
+    // "  </b-modal>" +
+    // " " +
+    // "</b-card>",
 };
 Vue.component("load-architecture", uielto_load_architecture);
 var uielto_delete_architecture = {
@@ -10958,7 +10960,7 @@ var uielto_cache_configuration = {
     '       <label v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" for="range-5">L1_D lines:</label>' +
     '         <b-form-spinbutton id="L1_D_size" key="spin-L1D" v-if="cache_type == 1 || cache_type == 3 || cache_type == 5" v-model="L1D_gs" min="32" max="1024" step="32" title="L1_D size"></b-form-spinbutton>' +
     ''+    
-    '       <label v-if="cache_location == \'Associative_per_sets\' && (cache_type == 1 || cache_type == 3 || cache_type == 5)" for="range-5">L1_I lines per set:</label>' +
+    '       <label v-if="cache_location == \'Associative_per_sets\' && (cache_type == 1 || cache_type == 3 || cache_type == 5)" for="range-5">L1_D lines per set:</label>' +
     '         <b-form-spinbutton id="L1_D_lines" key="spin-L1DLC"'+
     '                            v-if="cache_location == \'Associative_per_sets\' && (cache_type == 1 || cache_type == 3 || cache_type == 5)" '+
     '                            v-model="L1D_gsl" '+
@@ -15823,7 +15825,7 @@ var uielto_cache_table = {
     ''+
 
     '           <template v-slot:cell(SET_ID)="{ item }">' +
-    '             <b-badge v-if="item.groupStart" :variant="info">{{ item.set_id }}</b-badge>' +
+    '             <b-badge class="sticky-col" v-if="item.groupStart" :variant="info">{{ item.set_id }}</b-badge>' +
     '           </template>' +
 
 

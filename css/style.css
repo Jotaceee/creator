@@ -34,6 +34,14 @@ tr:hover { background: #e0e0e0; }
   border-right: 1px solid #dee2e6;  
 }
 
+.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  /* background: #fff;
+  border-right: 1px solid #dee2e6; */
+}
+
 .setid-cell.even {
   background-color: var(--bs-table-bg, #fff) !important;
 }

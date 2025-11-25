@@ -2,6 +2,32 @@ var inputelffile, outputlogfile;
 var is_breakpoint = instructions[0].Break;
 var pc_sail = crex_findReg_bytag("program_counter");
 var last_execution_mode_run = -1;
+var pc_min = parseInt("80000000", 16);
+var hiden_executed, hiden_next_execute;
+
+var registers_before_function = [ 
+  { name: "t0", can_operate : false},
+  { name: "t1", can_operate : false},
+  { name: "t2", can_operate : false},
+  { name: "t3", can_operate : false},
+  { name: "t4", can_operate : false}, 
+  { name: "t5", can_operate : false},
+  { name: "t6", can_operate : false},
+  { name: "s0", can_operate : false},
+  { name: "s1", can_operate : false},
+  { name: "s2", can_operate : false},
+  { name: "s3", can_operate : false},
+  { name: "s4", can_operate : false}, 
+  { name: "s5", can_operate : false},
+  { name: "s6", can_operate : false},
+  { name: "s7", can_operate : false},
+  { name: "s8", can_operate : false},
+  { name: "s9", can_operate : false},
+  { name: "s10", can_operate : false}, 
+  { name: "s11", can_operate : false}
+]
+var callstack_convention = [];
+var inside_function = false;
 
 var Module = typeof Module != "undefined" ? Module : {};
 var ENVIRONMENT_IS_WEB = true;
@@ -11,8 +37,8 @@ var ENVIRONMENT_IS_SHELL = false;
 var moduleOverrides = Object.assign({}, Module);
 var arguments_ = [];
 var thisProgram = "./this.program";
+
 var quit_ = (status, toThrow) => {
-  console.log("Estado:", status);
   throw toThrow;
 };
 var scriptDirectory = "";
@@ -64,11 +90,14 @@ if (ENVIRONMENT_IS_SHELL) {
   throw new Error("environment detection error");
 }
 
-
 // const instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+) ([^,]+), ([^,]+)(?:, (.+))?/;
-var instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) (\w+)(?: ([^,]+), ([^,]+)(?:, (.+))?)?/;
-var registerExp = /(x\d+) (<-) 0x([0-9A-Fa-f]+)/; // /(x\d+) (<-|->) 0x([0-9A-Fa-f]+)/;
+var instructionExp = /\[(\d+)\] \[(\w+)\]: 0x([0-9A-Fa-f]+) \(0x([0-9A-Fa-f]+)\) ([\w.]+)(?: ([^,]+), ([^,]+)(?:, (.+))?)?/;
+var registerExp = /([xf]\d+) (<-) 0x([0-9A-Fa-f]+)/; // /(x\d+) (<-|->) 0x([0-9A-Fa-f]+)/;
+var vectorExp = /(v\d+) (<-) 0x([0-9A-Fa-f]+)/;
 var memoryExp = /mem\[0x([0-9A-Fa-f]+)\]\s*(<-|->)\s*0x([0-9A-Fa-f]+)/;
+var CSRTypeExp = /(CSR\S*)\s+(\S+)\s+(\S+)\s+(0x)([\dA-Fa-f]{1,8})/;
+var CSRExp = /^(CSR)\s+(\w+)\s+(<-|->)\s+0x([0-9a-fA-F]+)(?:\s+(.*))?$/;
+var jumpExp = /Next_PC:\s*(0x[0-9a-fA-F]+)/;
 // var displayExp = /^[A-Za-z\s]+:\s*(.*)$/;
 var displayExp = /^([\w\s]+):\s*(.*)$/;       
 var userMode = false;
@@ -76,21 +105,121 @@ var instoper = "";
 var syscall_print_code = -1;
 var prev_add_to_jump;
 
-Module['print'] = function (message) {
-  var next_add_to_jump;
-  let instMatch = message.match(instructionExp);
-  let regiMatch = message.match(registerExp);
-  let memoMatch = message.match(memoryExp);
-  let printMatch = message.match(displayExp);
-   
-  if (instMatch && instMatch[2] === 'U'){
+async function check_call_convention_temp_regs(instMatch) {
+  if(((instMatch[7] != undefined && (instMatch[7].includes("t") || (instMatch[7].includes("s") && !instMatch[7].includes("sp")) ) ) || (instMatch[8] != undefined && (instMatch[8].includes("t") || (instMatch[8].includes("s") && !instMatch[8].includes("sp")) ))) && instMatch[6] !== undefined && inside_function) {
+    if((instMatch[5] != "li" && instMatch[5] != "lui" && instMatch[5] != "la") ){
+      for (var i = 0; i < callstack_convention[callstack_convention.length - 1].length; i++ ){
+        (callstack_convention[callstack_convention.length - 1][i].name === instMatch[7] || callstack_convention[callstack_convention.length - 1][i].name === instMatch[8]) &&
+        (callstack_convention[callstack_convention.length - 1][i].can_operate === false) ? crex_show_notification("Possible failure in the parameter passing convention", "warning") : 0 ; 
+      }
+        
+        // callstack_convention[callstack_convention.length - 1].name 
 
+    }
+  }
+  if (instMatch[6] !== undefined && (instMatch[6].includes("t") || (instMatch[6].includes("s") && !instMatch[6].includes("sp"))) && inside_function) {
+    for (var i = 0; i < callstack_convention[callstack_convention.length - 1].length; i++ ){
+      callstack_convention[callstack_convention.length - 1][i].can_operate = (callstack_convention[callstack_convention.length - 1][i].name === instMatch[6]) ? true : callstack_convention[callstack_convention.length - 1][i].can_operate; 
+    }
+  }
+}
+
+var to_measure = "";
+var start_m, start_m;
+
+Module['print'] = function (message) {
+  if(message === "err call_convenction"){
+    crex_show_notification("Possible failure in the parameter passing convention", "warning");
+  }
+
+  var next_add_to_jump;
+  let instMatch   = message.match(instructionExp);
+  let regiMatch   = message.match(registerExp);
+  let memoMatch   = message.match(memoryExp);
+  let printMatch  = message.match(displayExp);
+  let CSRMatch    = message.match(CSRTypeExp); 
+  let CSREMatch   = message.match(CSRExp);
+  let vectorMatch = message.match(vectorExp);
+  let jumpMatch   = message.match(jumpExp);
+
+  if (message === "May your execution has an infinity loop."){
+    execution_mode_run = 1;
+    crex_show_notification("May your execution has an infinity loop", "danger");
+    instructions[hiden_executed]._rowVariant = "info";
+    instructions[hiden_next_execute]._rowVariant = "success";
+  }
+  if (jumpMatch){
+    const current_ins = instructions.findIndex(insn => insn.Address === (jumpMatch[1].toLowerCase()));
+    
+      for (var i = 0; i < instructions.length; i++){
+        if(instructions[i]._rowVariant === "success" && execution_mode_run !== 0) // ajustar lo del user mode
+          instructions[i]._rowVariant = "";
+      }
+    if (current_ins !== -1) instructions[current_ins]._rowVariant = "success";
+  }
+
+  if(CSREMatch){
+    console_log(CSREMatch);
+    if (CSREMatch[2] !== "vtype" && CSREMatch[2] !== "vl"){
+      let regtowrite = crex_findReg(CSREMatch[2]);
+      if(regtowrite.match !== 0)
+        writeRegister(CSREMatch[4], regtowrite.indexComp, regtowrite.indexElem);
+    }
+  }
+  if (CSRMatch){
+    if (CSRMatch[2] === "vtype"){
+      var size_elem = parseInt(CSRMatch[5], 16).toString(2).padStart(32, '0');
+      size_elem = size_elem.slice(26, 29);
+      console_log("Tamaño: ", size_elem);
+      if(size_elem === "000"){
+        length_vext = 8;
+        architecture.components[3].total_elements = 64;
+      } else if (size_elem === "001") {
+        length_vext = 16;
+        architecture.components[3].total_elements = 32;
+      } else if (size_elem === "010"){
+        length_vext = 32;
+        architecture.components[3].total_elements = 16;
+      }else {
+        length_vext = 64;
+        architecture.components[3].total_elements = 8;
+      }
+      architecture.components[3].length_elem = length_vext;
+    }
+    else if (CSRMatch[2] === "vl"){
+      architecture.components[3].elems_op = parseInt(CSRMatch[5], 16);
+    }
+  }
+  if (vectorMatch){
+    let regtowrite = crex_findReg(vectorMatch[1]);
+    writeRegister(vectorMatch[3], regtowrite.indexComp, regtowrite.indexElem);
+  }
+  if (instMatch && (instMatch[2] === 'U' || parseInt(instMatch[3], 16) >= pc_min)){
+    if (inside_function) 
+      check_call_convention_temp_regs(instMatch);
+
+    if (to_measure != ""){
+      end_m = performance.now();
+      var measure = end_m - start_m;
+      let string_to_print = "Execution time of " + to_measure + " :" + measure + " ms";
+      console_log(string_to_print);
+      to_measure = "";
+    }
+    start_m = performance.now();
+    to_measure = instMatch[5];
+
+    for (var i = 0; i < instructions.length; i++) {
+      if (instructions[i]._rowVariant === "info")
+        instructions[i]._rowVariant = "";
+    }
+    instoper = "";
     //Actualizamos el pc
     writeRegister(parseInt(instMatch[3], 16), pc_sail.indexComp, pc_sail.indexElem);
     // console.log("PC actual:",pc_sail);
 
+
     userMode = true;
-    console.log("Instruccion: ", instMatch);
+    console_log("Instruccion: ", instMatch);
     const current_ins = instructions.findIndex(insn => insn.Address === ("0x"+instMatch[3].toLowerCase()));
     if(prev_add_to_jump !== undefined){
       instructions[prev_add_to_jump]._rowVariant = "";
@@ -107,19 +236,26 @@ Module['print'] = function (message) {
       next_add_to_jump = instructions.findIndex(insn => insn.Address === ("0x"+next_add_to_jump.toLowerCase()));
       prev_add_to_jump = current_ins;
 
-
-
-      console.log("Siguiente direccion del jalr: ", next_add);
-    }else if (instructions[current_ins].loaded.includes("jal")){
+      // var stack_entry_func = instructions[next_add_to_jump].label;
+      creator_callstack_enter(instructions[next_add_to_jump].Label); 
+      track_stack_enter(instructions[next_add_to_jump].Label);
+      callstack_convention.push(structuredClone(registers_before_function));
+      inside_function = true;
+    }
+    if (instructions[current_ins].loaded.includes("jal") && !instructions[current_ins].loaded.includes("jalr")){
       var next_add = instructions[current_ins].loaded.split("\t");
-      console.log("Siguiente direccion del jal: ", next_add);
 
-    }else if (instructions[current_ins].loaded.includes("ret")){
+    }
+    if (instructions[current_ins].loaded.includes("ret") && !instructions[current_ins].loaded.includes("mret")){
       // Mirar el ra
       var aux_reg = crex_findReg("ra");
       next_add_to_jump = readRegister(aux_reg.indexComp, aux_reg.indexElem).toString(16);
       next_add_to_jump = instructions.findIndex(insn => insn.Address === ("0x"+next_add_to_jump.toLowerCase()));
       prev_add_to_jump = current_ins;
+      track_stack_leave();
+      creator_callstack_leave();
+      callstack_convention.pop();
+      inside_function = (callstack_convention.length > 0); 
     }
 
 
@@ -135,6 +271,14 @@ Module['print'] = function (message) {
     }
     // Para el caso de run without stop y la siguiente instruccion es un breakpoint
     else if (execution_mode_run === 0){
+      // se almacena el estado de la instruccion en caso de que haya una parada por infinity loop
+      hiden_executed = current_ins;
+      if (current_ins < instructions.length - 1  || next_add_to_jump !== undefined) {
+        hiden_next_execute = (next_add_to_jump !== undefined) ? next_add_to_jump : current_ins + 1;
+      } else 
+        hiden_next_execute = current_ins + 1;
+
+
       if (current_ins < instructions.length - 1 || next_add_to_jump !== undefined) {
         is_breakpoint = instructions[(next_add_to_jump !== undefined) ? next_add_to_jump : (current_ins + 1)].Break;
       }
@@ -242,8 +386,23 @@ Module['print'] = function (message) {
 
     instoper = instMatch[5];
 
+
+
+
+
+
   }
-  else if (instMatch && instMatch[2] !== 'U')
+  else if (instMatch /*&& instMatch[2] !== 'U'*/){
+    if (to_measure != ""){
+      end_m = performance.now();
+      var measure = end_m - start_m;
+      let string_to_print = "Execution time of " + to_measure + " :" + measure + " ms";
+      console_log(string_to_print);
+      to_measure = "";
+    }
+    start_m = performance.now();
+    to_measure = instMatch[5];
+  }
     userMode = false;
 
   if (regiMatch /*&& userMode === true*/) {
@@ -251,16 +410,27 @@ Module['print'] = function (message) {
     if (regiMatch[2] === '<-'){
       let regtowrite = crex_findReg(regiMatch[1]);
       // console.log("Registro identificado: ", regtowrite);
-      if (regiMatch[1] !== 'x2')
+      // if (regiMatch[1] !== 'x2')
+      if (regtowrite.indexComp === 2){
+        if (regiMatch[3].startsWith("0x")) regiMatch[3] = regiMatch[3].slice(2).replace(/^0+/, '');
+        else regiMatch[3] = regiMatch[3].replace(/^0+/, '');
+        if (regiMatch[3].length <= 8){
+          regiMatch[3] = regiMatch[3].padStart(8, "0");
+          writeRegister(hex2float(regiMatch[3]), regtowrite.indexComp, regtowrite.indexElem, "SFP-Reg");
+        }
+        else{
+            writeRegister(hex2double(regiMatch[3]), regtowrite.indexComp, regtowrite.indexElem, "DFP-Reg");
+        }
+          
+      }
+      else  
         writeRegister(parseInt(regiMatch[3], 16), regtowrite.indexComp, regtowrite.indexElem);
     }
     
   }
 
-  if (memoMatch && userMode === true) {
-    // En caso de ser escritura '<-' pintamos el valor en la posicion de memoria
+  if (memoMatch /*&& userMode === true*/) {
     if (memoMatch[2] === '<-'){
-      // console.log("Operador: ", instoper);
       switch(instoper){
         case 'sh': // Para almacenar un half
         writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'half');
@@ -277,23 +447,33 @@ Module['print'] = function (message) {
         case 'fsd': // Para almacenar un double
         writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'double');
         break;
+        case 'vse8.v':
+        writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'byte');
+          break;
+        case 'vse16.v':
+        writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'half');
+          break;
+        case 'vse32.v':
+        writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'word');
+          break;
+        case 'vse64.v':
+          writeMemory(memoMatch[3], parseInt(memoMatch[1], 16), 'double');
+          break;
         default:
           break;
       }
 
-      instoper = "";
+      // instoper = "";
     }
   
   }
 
-  
-
   if(printMatch && syscall_print_code !== -1){
 
     let value_2_print = printMatch[2].trim();
-    console.log("Estoy dentro de ecall a imprimir");
-    console.log(message);
-    console.log("Valor a imprimir: ", value_2_print); 
+    console_log("Estoy dentro de ecall a imprimir");
+    console_log(message);
+    console_log("Valor a imprimir: ", value_2_print); 
     switch(syscall_print_code){
 
       case 1: // Print int
@@ -328,16 +508,20 @@ Module['print'] = function (message) {
 
   }
 
-
-
-  
-  console.log(message);
+  console_log(message);
 
 }
 
-var out = Module["print"] /*|| console.log.bind(console)*/;
-var err = Module["printErr"] || console.warn.bind(console);
+Module['printErr'] = function (message) {
+  if (message.includes("Execution:") || message.includes("Instructions:") || message.includes("Perf:"))
+    crex_show_notification(message, "success");
+  else console.warn(message);
+}
 
+
+var out = Module["print"] /*|| console.log.bind(console)*/;
+// var out = console.log.bind(console);
+var err = Module["printErr"] /*|| console.warn.bind(console)*/;
 Object.assign(Module, moduleOverrides);
 moduleOverrides = null;
 checkIncomingModuleAPI();
@@ -700,7 +884,7 @@ function createExportWrapper(name, nargs) {
 }
 var wasmBinaryFile;
 function findWasmBinary() {
-  return locateFile("wasm64_riscv_sim_RV32.wasm");
+  return locateFile("riscv_sim_RV32.wasm");
 }
 function getBinarySync(file) {
   if (file == wasmBinaryFile && wasmBinary) {
@@ -3586,19 +3770,10 @@ var _proc_exit = (code) => {
   quit_(code, new ExitStatus(code));
 };
 var exitJS = (status, implicit) => {
-  for (let i = 0; i < instructions.length && implicit === undefined; i++){
-    instructions[i]._rowVariant = '';
-  }
-  if (status === 1){
-    let init_index = instructions.findIndex(insn => insn.Address === "0x" + entry_elf);
-    if(init_index !== undefined)
-      instructions[init_index]._rowVariant = 'success';
-  }
   EXITSTATUS = status;
   checkUnflushedContent();
   if (keepRuntimeAlive() && !implicit) {
     var msg = `program exited (with status: ${status}), but keepRuntimeAlive() is set (counter=${runtimeKeepaliveCounter}) due to an async operation, so halting execution but not exiting the runtime or preventing further async execution (you can use emscripten_force_exit, if you want to force a true shutdown)`;
-    can_reset = true;
     err(msg);
   }
   _proc_exit(status);
@@ -4355,8 +4530,8 @@ var wasmImports = {
 var wasmExports;
 createWasm();
 var ___wasm_call_ctors = createExportWrapper("__wasm_call_ctors", 0);
-var _malloc = createExportWrapper("malloc", 1);
-var _free = createExportWrapper("free", 1);
+var _malloc = (Module["_malloc"] = createExportWrapper("malloc", 1));
+var _free = (Module["_free"] = createExportWrapper("free", 1));
 var _send_int_to_C = (Module["_send_int_to_C"] = createExportWrapper(
   "send_int_to_C",
   1,
@@ -4836,9 +5011,10 @@ function run(args = arguments_) {
     return;
   }
   stackCheckInit();
+  shouldRunNow = true;
   preRun();
   if (runDependencies > 0) {
-    // dependenciesFulfilled = run;
+    dependenciesFulfilled = run;
     return;
   }
   function doRun() {
@@ -4852,7 +5028,7 @@ function run(args = arguments_) {
     Module["onRuntimeInitialized"]?.();
     var noInitialRun = Module["noInitialRun"];
     legacyModuleProp("noInitialRun", "noInitialRun");
-    if (!noInitialRun) callMain(args);
+    if (shouldRunNow) callMain(args);
     postRun();
   }
   if (Module["setStatus"]) {
@@ -4901,21 +5077,57 @@ if (Module["preInit"]) {
     Module["preInit"].pop()();
   }
 }
-
 var shouldRunNow = false;
 
 function preprocess_sail(elffile, enablefpd, enablevec, entry_add){
   inputelffile = elffile;
   // run(["--config-flags", "4"]);
   // enablefpd = true;
-  console.log("FPD y VEC: ", enablefpd, enablevec);
-  if(enablefpd)
-    run(["--entry-address", entry_add, "--config-flags", "8", "-p", "output.elf"]);
-  if(enablevec)
-    run(["--entry-address", entry_add, "--config-flags", "4", "-p", "output.elf"]);
-  if(!enablefpd && !enablevec)
-    run(["--entry-address", entry_add, "--config-flags", "0", "-p", "output.elf"]);
+  // console.log("FPD y VEC: ", enablefpd, enablevec);
+  var argumentsToRun = [];
+  for (var i = 0; i < set_extensions.length; i++){
+    switch(set_extensions[i].name){
+      case "FD":
+        if (!set_extensions[i].activated)
+          argumentsToRun.push("--disable-fdext");
+        break;
+      case "V":
+        if (!set_extensions[i].activated)
+          argumentsToRun.push("-W");
+        break;
+      case "C":
+        if (!set_extensions[i].activated)
+          argumentsToRun.push("--disable-compressed");
+        break;
+      case "B":
+        if (set_extensions[i].activated)
+          argumentsToRun.push("-B");
+        break;
+    }
+  }
+  console_log("Argumentos: ", argumentsToRun);
+
+    if (!app.c_kernel){
+    for (let i = 0; i < instructions.length; i++){
+      if (instructions[i].Label.includes("kernel") && entry_add !== instructions[i].Address)
+        entry_add = instructions[i].Address;
+    }
+  }
+
+  run(["--entry-address", entry_add, ...argumentsToRun, "-p", "output.elf"]);
+
+  // if(enablefpd)
+  //   run(["--entry-address", entry_add, "--config-flags", "8", "-p", "output.elf"]);
+  // if(enablevec)
+  //   run(["--entry-address", entry_add, "--config-flags", "4", "-p", "output.elf"]);
+  // if(!enablefpd && !enablevec)
+  //   run(["--entry-address", entry_add, "--config-flags", "0", "-p", "output.elf"]);
 
 
 }
 
+function update_vector(){
+  for (let au = 0; au < 31; au++){
+    creator_callstack_writeRegister(3, au);
+  }
+}
